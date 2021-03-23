@@ -15,3 +15,6 @@
 # vendor/
 
 .idea
+
+# ignore all go v1 files until we want to release it
+*.go
