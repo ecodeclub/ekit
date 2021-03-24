@@ -1,1 +1,115 @@
 package stream
+
+//type mapfunc[S, T any] func(S)T
+
+//type Stream[E any] interface {
+//	Filter(func(e E) bool) Stream[E]
+//	OrElse(e E) Stream[E]
+//	First(func(e E) bool) E
+//}
+
+func Of[E any](elems []E) *stream[E] {
+	return &stream[E]{
+		eles: elems,
+	}
+}
+
+
+type stream[E any] struct {
+	eles []E
+	def  E
+}
+
+func (s *stream[E]) OrElse(e E) *stream[E] {
+	s.def = e
+	return s
+}
+
+func (s *stream[E]) Filter(m match[E]) *stream[E] {
+	res := make([]E, 0, len(s.eles))
+	for i, e := range s.eles {
+		if m(e) {
+			res = append(res, s.eles[i])
+		}
+	}
+
+	return Of[E](res)
+}
+
+// Distinct return the slice that contains unique element
+func (s *stream[E]) Distinct() *stream[E] {
+	panic("implement me")
+}
+
+func (s *stream[E]) Sort(c comparable[E]) *stream[E] {
+	panic("implement me")
+}
+
+func (s *stream[E]) Limit(offset int, limit int) *stream[E] {
+	panic("implement me")
+}
+
+func (s *stream[E]) Skip(num int) *stream[E] {
+	panic("implement me")
+}
+
+func (s *stream[E]) ForEach(func(e E)) *stream[E] {
+	panic("implement me")
+}
+
+func (s *stream[E]) ToSlice() []E {
+	panic("implement me")
+}
+
+func (s *stream[E]) Max(c comparable[E]) E {
+	panic("implement me")
+}
+
+func (s *stream[E]) Min(c comparable[E]) E {
+	panic("implement me")
+}
+
+func (s *stream[E]) AnyMatch(m match[E]) bool {
+	panic("implement me")
+}
+
+func (s *stream[E]) AllMatch(m match[E]) bool {
+	panic("implement me")
+}
+
+func (s *stream[E]) NoneMatch(m match[E]) bool {
+	panic("implement me")
+}
+
+func (s *stream[E]) Count() int {
+	panic("implement me")
+}
+
+func (s *stream[E]) FindFirst(m match[E]) E {
+	for _, e := range s.eles {
+		if m(e) {
+			return e
+		}
+	}
+	return s.def
+}
+
+func (s *stream[E]) FindLast(m match[E]) E {
+	panic("implement me")
+}
+
+func (s *stream[E]) FindAny(m match[E]) E {
+	panic("implement me")
+}
+
+func (s *stream[E]) FindNth(m match[E]) E {
+	panic("implement me")
+}
+
+func (s *stream[E]) Concat(tail *stream[E]) *stream[E] {
+	panic("implement me")
+}
+
+type match[E any] func(e E) bool
+
+type comparable[E any] func(e1, e2 E) int
