@@ -88,11 +88,17 @@ func (s *stream[E]) AllMatch(m match[E]) bool {
 }
 
 func (s *stream[E]) NoneMatch(m match[E]) bool {
-	panic("implement me")
+	for _, e := range s.eles {
+		if m(e) {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *stream[E]) Count() int {
-	panic("implement me")
+	count := len(s.eles)
+	return count
 }
 
 func (s *stream[E]) FindFirst(m match[E]) E {
