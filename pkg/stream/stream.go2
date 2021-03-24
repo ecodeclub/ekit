@@ -70,11 +70,21 @@ func (s *stream[E]) Min(c comparable[E]) E {
 }
 
 func (s *stream[E]) AnyMatch(m match[E]) bool {
-	panic("implement me")
+	for _, e := range s.eles {
+		if m(e) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *stream[E]) AllMatch(m match[E]) bool {
-	panic("implement me")
+	for _, e := range s.eles {
+		if !m(e) {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *stream[E]) NoneMatch(m match[E]) bool {
