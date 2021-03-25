@@ -142,7 +142,9 @@ func (s *stream[E]) FindNth(m match[E]) E {
 }
 
 func (s *stream[E]) Concat(tail *stream[E]) *stream[E] {
-	panic("implement me")
+	res := make([]E, 0)
+	res = append(s.eles, tail.eles...)
+	return  Of[E](res)
 }
 
 type match[E any] func(e E) bool
