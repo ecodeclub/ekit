@@ -46,15 +46,34 @@ func (s *stream[E]) Sort(c comparable[E]) *stream[E] {
 }
 
 func (s *stream[E]) Limit(offset int, limit int) *stream[E] {
-	panic("implement me")
+	res := make([]E, 0, len(s.eles))
+	for i, e := range s.eles {
+		if i >= offset && len(res) <= limit {
+			res = append(res, s.eles[i])
+		}
+	}
+
+	return Of[E](res)
 }
 
 func (s *stream[E]) Skip(num int) *stream[E] {
-	panic("implement me")
+	res := make([]E, 0, len(s.eles))
+	for i, e := range s.eles {
+		if i >= num {
+			res = append(res, s.eles[i])
+		}
+	}
+
+	return Of[E](res)
 }
 
-func (s *stream[E]) ForEach(func(e E)) *stream[E] {
-	panic("implement me")
+func (s *stream[E]) ForEach(f func(e E) E) *stream[E] {
+	res := make([]E, 0, len(s.eles))
+	for i, e := range s.eles {
+		res = append(res, f(e))
+	}
+
+	return Of[E](res)
 }
 
 func (s *stream[E]) ToSlice() []E {
