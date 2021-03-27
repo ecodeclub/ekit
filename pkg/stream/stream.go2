@@ -130,11 +130,27 @@ func (s *stream[E]) FindFirst(m match[E]) E {
 }
 
 func (s *stream[E]) FindLast(m match[E]) E {
-	panic("implement me")
+	res := make([]E, 0, len(s.eles))
+	for _, e := range s.eles {
+		if m(e) {
+			res = append(res, e)
+		}
+	}
+
+	if len(res) == 0 {
+		return  s.def
+	}
+
+	return res[len(res)- 1]
 }
 
 func (s *stream[E]) FindAny(m match[E]) E {
-	panic("implement me")
+	for _, e := range s.eles {
+		if m(e) {
+			return e
+		}
+	}
+	return s.def
 }
 
 func (s *stream[E]) FindNth(m match[E]) E {
