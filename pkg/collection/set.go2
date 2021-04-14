@@ -1,0 +1,47 @@
+package collection
+
+type Set[E any]interface {
+	Put(e E) error
+	Exist(e E) (bool, error)
+	ForEach(func(e E))
+	ToSlice() []E
+}
+
+type OrderedSet[K any] interface {
+	Set[K]
+}
+
+type List[E any] interface {
+	Append(e E) error
+	Add(e E, index int) error
+	Delete(index int) error
+	Clear() error
+}
+
+type Map[K any, V any] interface {
+
+}
+
+type Queue[E any] interface {
+
+}
+
+type Stack[E any] interface {
+
+}
+
+type Heap[E any] interface {
+
+}
+
+type Tree[E any] interface {
+
+}
+
+type BinaryTree[E any] interface {
+	Tree[E]
+}
+
+type RedBlackTree[E any] interface {
+	Tree[E]
+}

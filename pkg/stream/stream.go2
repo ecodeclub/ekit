@@ -1,5 +1,7 @@
 package stream
 
+import "sort"
+
 //type mapfunc[S, T any] func(S)T
 
 //type Stream[E any] interface {
@@ -36,29 +38,49 @@ func (s *stream[E]) Filter(m match[E]) *stream[E] {
 	return Of[E](res)
 }
 
+//func (s *stream[E]) Map(m mapFunc[E, T])  {
+
+//}
+
 // Distinct return the slice that contains unique element
-func (s *stream[E]) Distinct() *stream[E] {
-	panic("implement me")
+func (s *stream[E]) Distinct(c comparator[E]) *stream[E] {
+	res := make([]E, 0, len(s.eles))
+	// TODO optimize
+	for i := 0; i < len(s.eles); i++ {
+		found := false
+		for j := i + 1; j < len(s.eles); j++ {
+			if c(s.eles[i], s.eles[j]) == 0 {
+				found = true
+			}
+		}
+		if !found {
+			res = append(res, s.eles[i])
+		}
+	}
+	return Of[E](res)
 }
 
-func (s *stream[E]) Sort(c comparable[E]) *stream[E] {
-	panic("implement me")
+// Sort stable sort
+func (s *stream[E]) Sort(c comparator[E]) *stream[E] {
+	sort.SliceStable(s.eles, func(i, j int) bool {
+		return c(s.eles[i], s.eles[j]) < 0
+	})
+	return s
 }
 
 func (s *stream[E]) Limit(offset int, limit int) *stream[E] {
 	res := make([]E, 0, len(s.eles))
-	for i, e := range s.eles {
+	for i := range s.eles {
 		if i >= offset && len(res) <= limit {
 			res = append(res, s.eles[i])
 		}
 	}
-
 	return Of[E](res)
 }
 
 func (s *stream[E]) Skip(num int) *stream[E] {
 	res := make([]E, 0, len(s.eles))
-	for i, e := range s.eles {
+	for i := range s.eles {
 		if i >= num {
 			res = append(res, s.eles[i])
 		}
@@ -67,24 +89,22 @@ func (s *stream[E]) Skip(num int) *stream[E] {
 	return Of[E](res)
 }
 
-func (s *stream[E]) ForEach(f func(e E) E) *stream[E] {
-	res := make([]E, 0, len(s.eles))
-	for i, e := range s.eles {
-		res = append(res, f(e))
+func (s *stream[E]) ForEach(f func(e E)) *stream[E] {
+	for i := range s.eles {
+		f(s.eles[i])
 	}
-
-	return Of[E](res)
+	return s
 }
 
 func (s *stream[E]) ToSlice() []E {
+	return s.eles
+}
+
+func (s *stream[E]) Max(c comparator[E]) E {
 	panic("implement me")
 }
 
-func (s *stream[E]) Max(c comparable[E]) E {
-	panic("implement me")
-}
-
-func (s *stream[E]) Min(c comparable[E]) E {
+func (s *stream[E]) Min(c comparator[E]) E {
 	panic("implement me")
 }
 
@@ -116,8 +136,7 @@ func (s *stream[E]) NoneMatch(m match[E]) bool {
 }
 
 func (s *stream[E]) Count() int {
-	count := len(s.eles)
-	return count
+	return len(s.eles)
 }
 
 func (s *stream[E]) FindFirst(m match[E]) E {
@@ -165,4 +184,6 @@ func (s *stream[E]) Concat(tail *stream[E]) *stream[E] {
 
 type match[E any] func(e E) bool
 
-type comparable[E any] func(e1, e2 E) int
+type comparator[E any] func(e1, e2 E) int
+
+type mapFunc[S any, T any] func()
