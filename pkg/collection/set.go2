@@ -15,6 +15,7 @@ type List[E any] interface {
 	Append(e E) error
 	Add(e E, index int) error
 	Delete(index int) error
+	Set(e E, index int) error
 	Clear() error
 }
 
