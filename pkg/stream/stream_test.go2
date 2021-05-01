@@ -1,0 +1,51 @@
+package stream
+
+import (
+	"testing"
+)
+
+func TestStreamAPI(t *testing.T) {
+	ints := []int{1, 2, 3, 4, 5}
+	s := Of(ints)
+	//s := Of[int](ints)
+	if s == nil {
+		t.Fail()
+	}
+
+	anyMatch := s.AnyMatch(func(e int) bool {
+		return e == 3
+	})
+
+	if !anyMatch {
+		t.Fatal("AnyMatch failed")
+	}
+
+	res := s.FindAny(func(e int) bool {
+		return e == 4
+	})
+
+	if res == 0 {
+		t.Fatal("FindAny failed")
+	}
+
+	allMatch := s.AllMatch(func(e int) bool {
+		return e > 0
+	})
+	if !allMatch {
+		t.Fatal("AllMatch failed")
+	}
+
+	ns := s.ConcatArray([]int{1, 2, 3})
+
+	if ns.Count() != 8 {
+		t.Fatal("ConCatArray Failed")
+	}
+
+	ds := s.Distinct(func(e1, e2 int) int {
+		return e1 - e2
+	})
+
+	if ds.Count() != 5 {
+		t.Fatal("Distinct Failed")
+	}
+}

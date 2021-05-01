@@ -182,6 +182,12 @@ func (s *stream[E]) Concat(tail *stream[E]) *stream[E] {
 	return  Of[E](res)
 }
 
+func (s *stream[E]) ConcatArray(tail []E) *stream[E] {
+	res := make([]E, 0)
+	res = append(s.eles, tail...)
+	return Of[E](res)
+}
+
 type match[E any] func(e E) bool
 
 type comparator[E any] func(e1, e2 E) int
