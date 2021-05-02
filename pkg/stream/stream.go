@@ -13,10 +13,249 @@ import (
 //line stream.go2:1
 )
 
-//line stream.go2:1
-type Importable୦ int
-//line stream.go2:1
+//line stream.go2:38
+var _ instantiate୦୦Stream୦int = instantiate୦୦Of୦int([]int{1})
+
+//line stream.go2:38
+type instantiate୦୦Stream୦int interface {
+//line stream.go2:10
+ OrElse(e int) instantiate୦୦Stream୦int
+			Filter(m instantiate୦୦match୦int,) instantiate୦୦Stream୦int
+			Distinct(c instantiate୦୦comparator୦int,) instantiate୦୦Stream୦int
+			Sort(c instantiate୦୦comparator୦int,) instantiate୦୦Stream୦int
+			Limit(offset int, limit int) instantiate୦୦Stream୦int
+			Skip(num int) instantiate୦୦Stream୦int
+			ForEach(f func(e int)) instantiate୦୦Stream୦int
+			ToSlice() []int
+			Max(c instantiate୦୦comparator୦int,) int
+			Min(c instantiate୦୦comparator୦int,) int
+			AnyMatch(m instantiate୦୦match୦int,) bool
+			AllMatch(m instantiate୦୦match୦int,) bool
+			NoneMatch(m instantiate୦୦match୦int,) bool
+			Count() int
+			FindFirst(m instantiate୦୦match୦int,) int
+			FindLast(m instantiate୦୦match୦int,) int
+			FindAny(m instantiate୦୦match୦int,) int
+			FindNth(m instantiate୦୦match୦int,) int
+			Concat(tail instantiate୦୦Stream୦int,) instantiate୦୦Stream୦int
+			ConcatArray(tail []int) instantiate୦୦Stream୦int
+}
+
+func instantiate୦୦Of୦int(elems []int) *instantiate୦୦SequantialStream୦int {
+	return &instantiate୦୦SequantialStream୦int{
+		eles: elems,
+	}
+}
+
+//line stream.go2:36
+type instantiate୦୦match୦int func(e int,
+
+//line stream.go2:227
+) bool
+//line stream.go2:227
+type instantiate୦୦comparator୦int func(e1, e2 int,
+
+) int
+//line stream.go2:229
+type instantiate୦୦SequantialStream୦int struct {
+//line stream.go2:41
+ eles []int
+
+//line stream.go2:42
+ def int
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) OrElse(e int,
+
+//line stream.go2:45
+) instantiate୦୦Stream୦int {
+	s.def = e
+	return s
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) Filter(m instantiate୦୦match୦int,) instantiate୦୦Stream୦int {
+	res := make([]int, 0, len(s.eles))
+	for i, e := range s.eles {
+		if m(e) {
+			res = append(res, s.eles[i])
+		}
+	}
+
+	return instantiate୦୦Of୦int(res)
+}
+
+//line stream.go2:66
+func (s *instantiate୦୦SequantialStream୦int,) Distinct(c instantiate୦୦comparator୦int,) instantiate୦୦Stream୦int {
+	res := make([]int, 0, len(s.eles))
+
+	for i := 0; i < len(s.eles); i++ {
+		found := false
+		for j := i + 1; j < len(s.eles); j++ {
+			if c(s.eles[i], s.eles[j]) == 0 {
+				found = true
+			}
+		}
+		if !found {
+			res = append(res, s.eles[i])
+		}
+	}
+	return instantiate୦୦Of୦int(res)
+}
+
+//line stream.go2:84
+func (s *instantiate୦୦SequantialStream୦int,) Sort(c instantiate୦୦comparator୦int,) instantiate୦୦Stream୦int {
+	sort.SliceStable(s.eles, func(i, j int) bool {
+		return c(s.eles[i], s.eles[j]) < 0
+	})
+	return s
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) Limit(offset int, limit int) instantiate୦୦Stream୦int {
+	res := make([]int, 0, len(s.eles))
+	for i := range s.eles {
+		if i >= offset && len(res) <= limit {
+			res = append(res, s.eles[i])
+		}
+	}
+	return instantiate୦୦Of୦int(res)
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) Skip(num int) instantiate୦୦Stream୦int {
+	res := make([]int, 0, len(s.eles))
+	for i := range s.eles {
+		if i >= num {
+			res = append(res, s.eles[i])
+		}
+	}
+
+	return instantiate୦୦Of୦int(res)
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) ForEach(f func(e int,
+
+//line stream.go2:112
+)) instantiate୦୦Stream୦int {
+	for i := range s.eles {
+		f(s.eles[i])
+	}
+	return s
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) ToSlice() []int {
+	return s.eles
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) Max(c instantiate୦୦comparator୦int,) int {
+	res := s.eles[0]
+	for i := 1; i < len(s.eles); i++ {
+		cur := s.eles[i]
+		if c(res, cur) < 0 {
+			res = cur
+		}
+	}
+	return res
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) Min(c instantiate୦୦comparator୦int,) int {
+	res := s.eles[0]
+	for i := 1; i < len(s.eles); i++ {
+		cur := s.eles[i]
+		if c(res, cur) > 0 {
+			res = cur
+		}
+	}
+	return res
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) AnyMatch(m instantiate୦୦match୦int,) bool {
+	for _, e := range s.eles {
+		if m(e) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) AllMatch(m instantiate୦୦match୦int,) bool {
+	for _, e := range s.eles {
+		if !m(e) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) NoneMatch(m instantiate୦୦match୦int,) bool {
+	for _, e := range s.eles {
+		if m(e) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) Count() int {
+	return len(s.eles)
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) FindFirst(m instantiate୦୦match୦int,) int {
+	for _, e := range s.eles {
+		if m(e) {
+			return e
+		}
+	}
+	return s.def
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) FindLast(m instantiate୦୦match୦int,) int {
+	res := make([]int, 0, len(s.eles))
+	for _, e := range s.eles {
+		if m(e) {
+			res = append(res, e)
+		}
+	}
+
+	if len(res) == 0 {
+		return s.def
+	}
+
+	return res[len(res)-1]
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) FindAny(m instantiate୦୦match୦int,) int {
+	for _, e := range s.eles {
+		if m(e) {
+			return e
+		}
+	}
+	return s.def
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) FindNth(m instantiate୦୦match୦int,) int {
+	panic("implement me")
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) Concat(tail instantiate୦୦Stream୦int,) instantiate୦୦Stream୦int {
+	res := make([]int, 0)
+	tail.ForEach(func(e int,
+
+//line stream.go2:215
+ ) { res = append(s.eles, e) })
+//line stream.go2:218
+ return instantiate୦୦Of୦int(res)
+}
+
+func (s *instantiate୦୦SequantialStream୦int,) ConcatArray(tail []int,
+
+//line stream.go2:221
+) instantiate୦୦Stream୦int {
+	res := make([]int, 0)
+	res = append(s.eles, tail...)
+	return instantiate୦୦Of୦int(res)
+}
+
+//line stream.go2:225
 type _ sort.Float64Slice
 
-//line stream.go2:1
+//line stream.go2:225
 var _ = testing.AllocsPerRun

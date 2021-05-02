@@ -1,0 +1,85 @@
+package stream
+
+type ParallelStream[E any] struct {
+
+}
+
+func (p *ParallelStream[E]) OrElse(e E) Stream[E] {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) Filter(m match[E]) Stream[E] {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) Distinct(c comparator[E]) Stream[E] {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) Sort(c comparator[E]) Stream[E] {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) Limit(offset int, limit int) Stream[E] {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) Skip(num int) Stream[E] {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) ForEach(f func(e E)) Stream[E] {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) ToSlice() []E {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) Max(c comparator[E]) E {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) Min(c comparator[E]) E {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) AnyMatch(m match[E]) bool {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) AllMatch(m match[E]) bool {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) NoneMatch(m match[E]) bool {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) Count() int {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) FindFirst(m match[E]) E {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) FindLast(m match[E]) E {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) FindAny(m match[E]) E {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) FindNth(m match[E]) E {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) Concat(tail Stream[E]) Stream[E] {
+	panic("implement me")
+}
+
+func (p *ParallelStream[E]) ConcatArray(tail []E) Stream[E] {
+	panic("implement me")
+}

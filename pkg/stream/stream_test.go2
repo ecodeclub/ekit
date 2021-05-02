@@ -48,4 +48,27 @@ func TestStreamAPI(t *testing.T) {
 	if ds.Count() != 5 {
 		t.Fatal("Distinct Failed")
 	}
+
+	ns = s.Filter(func(e int) bool {
+		return e < 4
+	})
+
+	if ns.Count() != 3 {
+		t.Fatal("filter failed")
+	}
+
+	max := s.Max(func(e1, e2 int) int {
+		return e1 - e2
+	})
+
+	if max != 5 {
+		t.Fatal("Max failed")
+	}
+	min := s.Min(func(e1, e2 int) int {
+		return e1 - e2
+	})
+
+	if min != 1 {
+		t.Fatal("Min failed")
+	}
 }

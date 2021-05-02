@@ -1,33 +1,53 @@
 package stream
 
-import "sort"
+import (
+	"sort"
+)
 
 //type mapfunc[S, T any] func(S)T
 
-//type Stream[E any] interface {
-//	Filter(func(e E) bool) Stream[E]
-//	OrElse(e E) Stream[E]
-//	First(func(e E) bool) E
-//}
+type Stream[E any] interface {
+	OrElse(e E) Stream[E]
+	Filter(m match[E]) Stream[E]
+	Distinct(c comparator[E]) Stream[E]
+	Sort(c comparator[E]) Stream[E]
+	Limit(offset int, limit int) Stream[E]
+	Skip(num int) Stream[E]
+	ForEach(f func(e E)) Stream[E]
+	ToSlice() []E
+	Max(c comparator[E]) E
+	Min(c comparator[E]) E
+	AnyMatch(m match[E]) bool
+	AllMatch(m match[E]) bool
+	NoneMatch(m match[E]) bool
+	Count() int
+	FindFirst(m match[E]) E
+	FindLast(m match[E]) E
+	FindAny(m match[E]) E
+	FindNth(m match[E]) E
+	Concat(tail Stream[E]) Stream[E]
+	ConcatArray(tail []E) Stream[E]
+}
 
-func Of[E any](elems []E) *stream[E] {
-	return &stream[E]{
+func Of[E any](elems []E) *SequantialStream[E] {
+	return &SequantialStream[E]{
 		eles: elems,
 	}
 }
 
+var _ Stream[int] = Of[int]([]int{1})
 
-type stream[E any] struct {
+type SequantialStream[E any] struct {
 	eles []E
 	def  E
 }
 
-func (s *stream[E]) OrElse(e E) *stream[E] {
+func (s *SequantialStream[E]) OrElse(e E) Stream[E] {
 	s.def = e
 	return s
 }
 
-func (s *stream[E]) Filter(m match[E]) *stream[E] {
+func (s *SequantialStream[E]) Filter(m match[E]) Stream[E] {
 	res := make([]E, 0, len(s.eles))
 	for i, e := range s.eles {
 		if m(e) {
@@ -38,12 +58,12 @@ func (s *stream[E]) Filter(m match[E]) *stream[E] {
 	return Of[E](res)
 }
 
-//func (s *stream[E]) Map(m mapFunc[E, T])  {
+//func (s *SequantialStream[E]) Map(m mapFunc[E, T])  {
 
 //}
 
 // Distinct return the slice that contains unique element
-func (s *stream[E]) Distinct(c comparator[E]) *stream[E] {
+func (s *SequantialStream[E]) Distinct(c comparator[E]) Stream[E] {
 	res := make([]E, 0, len(s.eles))
 	// TODO optimize
 	for i := 0; i < len(s.eles); i++ {
@@ -61,14 +81,14 @@ func (s *stream[E]) Distinct(c comparator[E]) *stream[E] {
 }
 
 // Sort stable sort
-func (s *stream[E]) Sort(c comparator[E]) *stream[E] {
+func (s *SequantialStream[E]) Sort(c comparator[E]) Stream[E] {
 	sort.SliceStable(s.eles, func(i, j int) bool {
 		return c(s.eles[i], s.eles[j]) < 0
 	})
 	return s
 }
 
-func (s *stream[E]) Limit(offset int, limit int) *stream[E] {
+func (s *SequantialStream[E]) Limit(offset int, limit int) Stream[E] {
 	res := make([]E, 0, len(s.eles))
 	for i := range s.eles {
 		if i >= offset && len(res) <= limit {
@@ -78,7 +98,7 @@ func (s *stream[E]) Limit(offset int, limit int) *stream[E] {
 	return Of[E](res)
 }
 
-func (s *stream[E]) Skip(num int) *stream[E] {
+func (s *SequantialStream[E]) Skip(num int) Stream[E] {
 	res := make([]E, 0, len(s.eles))
 	for i := range s.eles {
 		if i >= num {
@@ -89,26 +109,40 @@ func (s *stream[E]) Skip(num int) *stream[E] {
 	return Of[E](res)
 }
 
-func (s *stream[E]) ForEach(f func(e E)) *stream[E] {
+func (s *SequantialStream[E]) ForEach(f func(e E)) Stream[E] {
 	for i := range s.eles {
 		f(s.eles[i])
 	}
 	return s
 }
 
-func (s *stream[E]) ToSlice() []E {
+func (s *SequantialStream[E]) ToSlice() []E {
 	return s.eles
 }
 
-func (s *stream[E]) Max(c comparator[E]) E {
-	panic("implement me")
+func (s *SequantialStream[E]) Max(c comparator[E]) E {
+	res := s.eles[0]
+	for i := 1; i < len(s.eles); i++ {
+		cur := s.eles[i]
+		if c(res, cur) < 0 {
+			res = cur
+		}
+	}
+	return res
 }
 
-func (s *stream[E]) Min(c comparator[E]) E {
-	panic("implement me")
+func (s *SequantialStream[E]) Min(c comparator[E]) E {
+	res := s.eles[0]
+	for i := 1; i < len(s.eles); i++ {
+		cur := s.eles[i]
+		if c(res, cur) > 0 {
+			res = cur
+		}
+	}
+	return res
 }
 
-func (s *stream[E]) AnyMatch(m match[E]) bool {
+func (s *SequantialStream[E]) AnyMatch(m match[E]) bool {
 	for _, e := range s.eles {
 		if m(e) {
 			return true
@@ -117,7 +151,7 @@ func (s *stream[E]) AnyMatch(m match[E]) bool {
 	return false
 }
 
-func (s *stream[E]) AllMatch(m match[E]) bool {
+func (s *SequantialStream[E]) AllMatch(m match[E]) bool {
 	for _, e := range s.eles {
 		if !m(e) {
 			return false
@@ -126,7 +160,7 @@ func (s *stream[E]) AllMatch(m match[E]) bool {
 	return true
 }
 
-func (s *stream[E]) NoneMatch(m match[E]) bool {
+func (s *SequantialStream[E]) NoneMatch(m match[E]) bool {
 	for _, e := range s.eles {
 		if m(e) {
 			return false
@@ -135,11 +169,11 @@ func (s *stream[E]) NoneMatch(m match[E]) bool {
 	return true
 }
 
-func (s *stream[E]) Count() int {
+func (s *SequantialStream[E]) Count() int {
 	return len(s.eles)
 }
 
-func (s *stream[E]) FindFirst(m match[E]) E {
+func (s *SequantialStream[E]) FindFirst(m match[E]) E {
 	for _, e := range s.eles {
 		if m(e) {
 			return e
@@ -148,7 +182,7 @@ func (s *stream[E]) FindFirst(m match[E]) E {
 	return s.def
 }
 
-func (s *stream[E]) FindLast(m match[E]) E {
+func (s *SequantialStream[E]) FindLast(m match[E]) E {
 	res := make([]E, 0, len(s.eles))
 	for _, e := range s.eles {
 		if m(e) {
@@ -157,13 +191,13 @@ func (s *stream[E]) FindLast(m match[E]) E {
 	}
 
 	if len(res) == 0 {
-		return  s.def
+		return s.def
 	}
 
-	return res[len(res)- 1]
+	return res[len(res)-1]
 }
 
-func (s *stream[E]) FindAny(m match[E]) E {
+func (s *SequantialStream[E]) FindAny(m match[E]) E {
 	for _, e := range s.eles {
 		if m(e) {
 			return e
@@ -172,17 +206,19 @@ func (s *stream[E]) FindAny(m match[E]) E {
 	return s.def
 }
 
-func (s *stream[E]) FindNth(m match[E]) E {
+func (s *SequantialStream[E]) FindNth(m match[E]) E {
 	panic("implement me")
 }
 
-func (s *stream[E]) Concat(tail *stream[E]) *stream[E] {
+func (s *SequantialStream[E]) Concat(tail Stream[E]) Stream[E] {
 	res := make([]E, 0)
-	res = append(s.eles, tail.eles...)
-	return  Of[E](res)
+	tail.ForEach(func(e E) {
+		res = append(s.eles, e)
+	})
+	return Of[E](res)
 }
 
-func (s *stream[E]) ConcatArray(tail []E) *stream[E] {
+func (s *SequantialStream[E]) ConcatArray(tail []E) Stream[E] {
 	res := make([]E, 0)
 	res = append(s.eles, tail...)
 	return Of[E](res)
@@ -191,5 +227,3 @@ func (s *stream[E]) ConcatArray(tail []E) *stream[E] {
 type match[E any] func(e E) bool
 
 type comparator[E any] func(e1, e2 E) int
-
-type mapFunc[S any, T any] func()
