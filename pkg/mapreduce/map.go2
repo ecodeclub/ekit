@@ -10,7 +10,7 @@ func MapSlice[S, T](s []S, mapper Mapper[S, T]) []T {
 	return res
 }
 
-func MapStream[S, T](s *stream.SequantialStream[S], mapper Mapper) *stream.SequantialStream[T] {
+func MapStream[S, T](s *stream.SequentialStream[S], mapper Mapper) *stream.SequentialStream[T] {
 	res := make([]T, 0, s.Count())
 	s.ForEach(func(e S) {
 		res = append(res, mapper(e))
@@ -26,7 +26,7 @@ func ReduceSlice[E, R](slice []E, base R, accumulator Accumulator) R {
 	return res
 }
 
-func ReduceStream[E, R](s *stream.SequantialStream, base R, accumulator Accumulator) R {
+func ReduceStream[E, R](s *stream.SequentialStream, base R, accumulator Accumulator) R {
 	res := base
 	s.ForEach(func(e E) {
 		res = accumulator(res, e)
