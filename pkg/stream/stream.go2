@@ -1,10 +1,11 @@
 package stream
 
 import (
+	"errors"
 	"sort"
 )
 
-//type mapfunc[S, T any] func(S)T
+var ErrNotFound = errors.New("element not found")
 
 type Stream[E any] interface {
 	OrElse(e E) Stream[E]
@@ -15,16 +16,16 @@ type Stream[E any] interface {
 	Skip(num int) Stream[E]
 	ForEach(f func(e E)) Stream[E]
 	ToSlice() []E
-	Max(c comparator[E]) E
-	Min(c comparator[E]) E
+	Max(c comparator[E]) (E, error)
+	Min(c comparator[E]) (E, error)
 	AnyMatch(m match[E]) bool
 	AllMatch(m match[E]) bool
 	NoneMatch(m match[E]) bool
 	Count() int
-	FindFirst(m match[E]) E
-	FindLast(m match[E]) E
-	FindAny(m match[E]) E
-	FindNth(m match[E]) E
+	FindFirst(m match[E]) (E, error)
+	FindLast(m match[E]) (E, error)
+	FindAny(m match[E]) (E, error)
+	FindNth(n int, m match[E]) (E, error)
 	Concat(tail Stream[E]) Stream[E]
 	ConcatArray(tail []E) Stream[E]
 }
@@ -32,6 +33,7 @@ type Stream[E any] interface {
 func Of[E any](elems []E) *SequentialStream[E] {
 	return &SequentialStream[E]{
 		eles: elems,
+		filters: make([]match[E], 0, 4),
 	}
 }
 
@@ -40,6 +42,7 @@ var _ Stream[int] = Of[int]([]int{1})
 type SequentialStream[E any] struct {
 	eles []E
 	def  E
+	filters []match[E]
 }
 
 func (s *SequentialStream[E]) OrElse(e E) Stream[E] {
@@ -48,33 +51,43 @@ func (s *SequentialStream[E]) OrElse(e E) Stream[E] {
 }
 
 func (s *SequentialStream[E]) Filter(m match[E]) Stream[E] {
-	res := make([]E, 0, len(s.eles))
-	for i, e := range s.eles {
-		if m(e) {
-			res = append(res, s.eles[i])
-		}
-	}
-
-	return Of[E](res)
+	s.filters = append(s.filters, m)
+	return s
 }
 
-//func (s *SequentialStream[E]) Map(m mapFunc[E, T])  {
+func (s *SequentialStream[E]) doFilters() []E {
+	res := make([]E, 0, 4)
+	for _, ele := range s.eles {
+		if s.matchAll(s.filters, ele) {
+			res = append(res, ele)
+		}
+	}
+	return res
+}
 
-//}
+func (s *SequentialStream[E]) matchAll(filters []match[E], e E) bool {
+	for _, filter := range filters {
+		if !filter(e) {
+			return false
+		}
+	}
+	return true
+}
 
 // Distinct return the slice that contains unique element
 func (s *SequentialStream[E]) Distinct(c comparator[E]) Stream[E] {
-	res := make([]E, 0, len(s.eles))
+	eles := s.doFilters()
+	res := make([]E, 0, len(eles))
 	// TODO optimize
-	for i := 0; i < len(s.eles); i++ {
+	for i := 0; i < len(eles); i++ {
 		found := false
-		for j := i + 1; j < len(s.eles); j++ {
+		for j := i + 1; j < len(eles); j++ {
 			if c(s.eles[i], s.eles[j]) == 0 {
 				found = true
 			}
 		}
 		if !found {
-			res = append(res, s.eles[i])
+			res = append(res, eles[i])
 		}
 	}
 	return Of[E](res)
@@ -82,27 +95,30 @@ func (s *SequentialStream[E]) Distinct(c comparator[E]) Stream[E] {
 
 // Sort stable sort
 func (s *SequentialStream[E]) Sort(c comparator[E]) Stream[E] {
-	sort.SliceStable(s.eles, func(i, j int) bool {
-		return c(s.eles[i], s.eles[j]) < 0
+	eles := s.doFilters()
+	sort.SliceStable(eles, func(i, j int) bool {
+		return c(eles[i], eles[j]) < 0
 	})
-	return s
+	return Of[E](eles)
 }
 
 func (s *SequentialStream[E]) Limit(offset int, limit int) Stream[E] {
-	res := make([]E, 0, len(s.eles))
-	for i := range s.eles {
+	eles := s.doFilters()
+	res := make([]E, 0, len(eles))
+	for i := range eles {
 		if i >= offset && len(res) <= limit {
-			res = append(res, s.eles[i])
+			res = append(res, eles[i])
 		}
 	}
 	return Of[E](res)
 }
 
 func (s *SequentialStream[E]) Skip(num int) Stream[E] {
-	res := make([]E, 0, len(s.eles))
-	for i := range s.eles {
+	eles := s.doFilters()
+	res := make([]E, 0, len(eles))
+	for i := range eles {
 		if i >= num {
-			res = append(res, s.eles[i])
+			res = append(res, eles[i])
 		}
 	}
 
@@ -110,41 +126,51 @@ func (s *SequentialStream[E]) Skip(num int) Stream[E] {
 }
 
 func (s *SequentialStream[E]) ForEach(f func(e E)) Stream[E] {
-	for i := range s.eles {
-		f(s.eles[i])
+	eles := s.doFilters()
+	for i := range eles {
+		f(eles[i])
 	}
-	return s
+	return Of[E](eles)
 }
 
 func (s *SequentialStream[E]) ToSlice() []E {
-	return s.eles
+	return s.doFilters()
 }
 
-func (s *SequentialStream[E]) Max(c comparator[E]) E {
-	res := s.eles[0]
-	for i := 1; i < len(s.eles); i++ {
-		cur := s.eles[i]
+func (s *SequentialStream[E]) Max(c comparator[E]) (E, error) {
+	eles := s.doFilters()
+	if len(eles) == 0 {
+		return s.def, ErrNotFound
+	}
+	res := eles[0]
+	for i := 1; i < len(eles); i++ {
+		cur := eles[i]
 		if c(res, cur) < 0 {
 			res = cur
 		}
 	}
-	return res
+	return res, nil
 }
 
-func (s *SequentialStream[E]) Min(c comparator[E]) E {
-	res := s.eles[0]
-	for i := 1; i < len(s.eles); i++ {
-		cur := s.eles[i]
+func (s *SequentialStream[E]) Min(c comparator[E]) (E, error) {
+	eles := s.doFilters()
+	if len(eles) == 0 {
+		return s.def, ErrNotFound
+	}
+	res := eles[0]
+	for i := 1; i < len(eles); i++ {
+		cur := eles[i]
 		if c(res, cur) > 0 {
 			res = cur
 		}
 	}
-	return res
+	return res, nil
 }
 
 func (s *SequentialStream[E]) AnyMatch(m match[E]) bool {
+	filters := append(s.filters, m)
 	for _, e := range s.eles {
-		if m(e) {
+		if s.matchAll(filters, e) {
 			return true
 		}
 	}
@@ -152,8 +178,9 @@ func (s *SequentialStream[E]) AnyMatch(m match[E]) bool {
 }
 
 func (s *SequentialStream[E]) AllMatch(m match[E]) bool {
+	filters := append(s.filters, m)
 	for _, e := range s.eles {
-		if !m(e) {
+		if !s.matchAll(filters, e) {
 			return false
 		}
 	}
@@ -161,8 +188,9 @@ func (s *SequentialStream[E]) AllMatch(m match[E]) bool {
 }
 
 func (s *SequentialStream[E]) NoneMatch(m match[E]) bool {
+	filters := append(s.filters, m)
 	for _, e := range s.eles {
-		if m(e) {
+		if s.matchAll(filters, e) {
 			return false
 		}
 	}
@@ -170,44 +198,40 @@ func (s *SequentialStream[E]) NoneMatch(m match[E]) bool {
 }
 
 func (s *SequentialStream[E]) Count() int {
-	return len(s.eles)
+	eles := s.doFilters()
+	return len(eles)
 }
 
-func (s *SequentialStream[E]) FindFirst(m match[E]) E {
-	for _, e := range s.eles {
-		if m(e) {
-			return e
+func (s *SequentialStream[E]) FindFirst(m match[E]) (E, error) {
+	return s.FindNth(0, m)
+}
+
+func (s *SequentialStream[E]) FindLast(m match[E]) (E, error) {
+	filters := append(s.filters, m)
+	for i := len(s.eles) - 1; i  >= 0; i -- {
+		if s.matchAll(filters, s.eles[i]) {
+			return s.eles[i], nil
 		}
 	}
-	return s.def
+	return s.def, ErrNotFound
 }
 
-func (s *SequentialStream[E]) FindLast(m match[E]) E {
-	res := make([]E, 0, len(s.eles))
+func (s *SequentialStream[E]) FindAny(m match[E]) (E, error) {
+	return s.FindFirst(m)
+}
+
+func (s *SequentialStream[E]) FindNth(n int, m match[E]) (E, error) {
+	filters := append(s.filters, m)
+	cnt := 0
 	for _, e := range s.eles {
-		if m(e) {
-			res = append(res, e)
+		if s.matchAll(filters, e) {
+			if cnt == n {
+				return e, nil
+			}
+			cnt ++
 		}
 	}
-
-	if len(res) == 0 {
-		return s.def
-	}
-
-	return res[len(res)-1]
-}
-
-func (s *SequentialStream[E]) FindAny(m match[E]) E {
-	for _, e := range s.eles {
-		if m(e) {
-			return e
-		}
-	}
-	return s.def
-}
-
-func (s *SequentialStream[E]) FindNth(m match[E]) E {
-	panic("implement me")
+	return s.def, ErrNotFound
 }
 
 func (s *SequentialStream[E]) Concat(tail Stream[E]) Stream[E] {

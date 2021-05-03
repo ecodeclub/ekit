@@ -20,7 +20,7 @@ func TestStreamAPI(t *testing.T) {
 		t.Fatal("AnyMatch failed")
 	}
 
-	res := s.FindAny(func(e int) bool {
+	res, _ := s.FindAny(func(e int) bool {
 		return e == 4
 	})
 
@@ -57,14 +57,16 @@ func TestStreamAPI(t *testing.T) {
 		t.Fatal("filter failed")
 	}
 
-	max := s.Max(func(e1, e2 int) int {
+	s = Of(ints)
+
+	max, _ := s.Max(func(e1, e2 int) int {
 		return e1 - e2
 	})
 
 	if max != 5 {
 		t.Fatal("Max failed")
 	}
-	min := s.Min(func(e1, e2 int) int {
+	min, _ := s.Min(func(e1, e2 int) int {
 		return e1 - e2
 	})
 

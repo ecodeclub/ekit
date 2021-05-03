@@ -7,6 +7,8 @@ package stream
 //line stream_test.go2:1
 import (
 //line stream_test.go2:1
+ "errors"
+//line stream_test.go2:1
  "sort"
 //line stream_test.go2:1
  "testing"
@@ -30,7 +32,7 @@ func TestStreamAPI(t *testing.T) {
 		t.Fatal("AnyMatch failed")
 	}
 
-	res := s.FindAny(func(e int) bool {
+	res, _ := s.FindAny(func(e int) bool {
 		return e == 4
 	})
 
@@ -67,14 +69,16 @@ func TestStreamAPI(t *testing.T) {
 		t.Fatal("filter failed")
 	}
 
-	max := s.Max(func(e1, e2 int) int {
+	s = instantiate୦୦Of୦int(ints)
+
+	max, _ := s.Max(func(e1, e2 int) int {
 		return e1 - e2
 	})
 
 	if max != 5 {
 		t.Fatal("Max failed")
 	}
-	min := s.Min(func(e1, e2 int) int {
+	min, _ := s.Min(func(e1, e2 int) int {
 		return e1 - e2
 	})
 
@@ -83,8 +87,11 @@ func TestStreamAPI(t *testing.T) {
 	}
 }
 
-//line stream_test.go2:74
+//line stream_test.go2:76
+var _ = errors.As
+
+//line stream_test.go2:76
 type _ sort.Float64Slice
 
-//line stream_test.go2:74
+//line stream_test.go2:76
 var _ = testing.AllocsPerRun

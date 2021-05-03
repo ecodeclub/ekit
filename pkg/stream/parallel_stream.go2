@@ -1,8 +1,10 @@
 package stream
 
 type ParallelStream[E any] struct {
-
+	
 }
+
+var _ Stream[int] = &ParallelStream[int]{}
 
 func (p *ParallelStream[E]) OrElse(e E) Stream[E] {
 	panic("implement me")
@@ -36,11 +38,11 @@ func (p *ParallelStream[E]) ToSlice() []E {
 	panic("implement me")
 }
 
-func (p *ParallelStream[E]) Max(c comparator[E]) E {
+func (p *ParallelStream[E]) Max(c comparator[E]) (E, error) {
 	panic("implement me")
 }
 
-func (p *ParallelStream[E]) Min(c comparator[E]) E {
+func (p *ParallelStream[E]) Min(c comparator[E]) (E, error) {
 	panic("implement me")
 }
 
@@ -60,19 +62,19 @@ func (p *ParallelStream[E]) Count() int {
 	panic("implement me")
 }
 
-func (p *ParallelStream[E]) FindFirst(m match[E]) E {
+func (p *ParallelStream[E]) FindFirst(m match[E]) (E, error) {
 	panic("implement me")
 }
 
-func (p *ParallelStream[E]) FindLast(m match[E]) E {
+func (p *ParallelStream[E]) FindLast(m match[E]) (E, error) {
 	panic("implement me")
 }
 
-func (p *ParallelStream[E]) FindAny(m match[E]) E {
+func (p *ParallelStream[E]) FindAny(m match[E]) (E, error) {
 	panic("implement me")
 }
 
-func (p *ParallelStream[E]) FindNth(m match[E]) E {
+func (p *ParallelStream[E]) FindNth(n int, m match[E]) (E, error) {
 	panic("implement me")
 }
 
@@ -83,3 +85,4 @@ func (p *ParallelStream[E]) Concat(tail Stream[E]) Stream[E] {
 func (p *ParallelStream[E]) ConcatArray(tail []E) Stream[E] {
 	panic("implement me")
 }
+
