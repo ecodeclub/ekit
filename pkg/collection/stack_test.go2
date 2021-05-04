@@ -6,15 +6,13 @@ import (
 )
 
 func TestStack(t *testing.T) {
-	//1. 新建一个队列
+	//init a stack
 	s := InitStack[int]()
 
-	//2. 向队列加入元素
 	s.Push(100)
 	s.Push(79)
 	s.Push(38)
 
-	//判断长度是否为3
 	if s.Len() != 3 {
 		t.Fatalf("unexpected length of queue.")
 	}
@@ -27,7 +25,6 @@ func TestStack(t *testing.T) {
 		t.Fatalf("unexpected top of stack.")
 	}
 
-	//弹出元素
 	val := s.Pop()
 	if val != 38 {
 		t.Fatalf("unexpected value.")
@@ -46,7 +43,7 @@ func TestStack(t *testing.T) {
 		t.Fatalf("unexpected top of stack.")
 	}
 
-	//清空元素
+	//remove all elements of stack
 	s.Clear()
 	if !s.Empty() {
 		t.Fatalf("expected empty.")

@@ -6,15 +6,14 @@ import (
 )
 
 func TestQueueAPI(t *testing.T) {
-	//1. 新建一个队列
+	//init a queue
 	q := InitQueue[int]()
 
-	//2. 向队列加入元素
+	//add three integers to the queue
 	q.Push(100)
 	q.Push(79)
 	q.Push(38)
 
-	//判断长度是否为3
 	if q.Len() != 3 {
 		t.Fatalf("unexpected length of queue.")
 	}
@@ -30,13 +29,11 @@ func TestQueueAPI(t *testing.T) {
 		t.Fatalf("unexpected last value.")
 	}
 
-	//弹出元素
 	val := q.Pop()
 	if val != 100 {
 		t.Fatalf("unexpected value.")
 	}
 
-	//判断第一个元素与最后一个元素
 	if q.Front() != 79 {
 		t.Fatalf("unexpected first value.")
 	}
@@ -49,7 +46,6 @@ func TestQueueAPI(t *testing.T) {
 		t.Fatalf("unexpected value.")
 	}
 
-	//判断长度是否为1
 	if q.Len() != 1 {
 		t.Fatalf("unexpected length of queue.")
 	}
@@ -61,7 +57,6 @@ func TestQueueAPI(t *testing.T) {
 		t.Fatalf("unexpected last value.")
 	}
 
-	//清空元素
 	q.Clear()
 	if !q.Empty() {
 		t.Fatalf("expected empty.")

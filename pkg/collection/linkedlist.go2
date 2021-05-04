@@ -1,14 +1,17 @@
 package collection
 
+//node of linkedlist
 type LinkedListNode[E any] struct {
 	Val        E
 	Prev, Next *LinkedListNode[E]
 }
 
+//linkedlist is a circular doubly linked list
+//linkedlist has two dummy nodes, one is head dummyNode, the other is tail dummyNode
 type LinkedList[E any] struct {
 	//一个头节点一个尾节点
 	head, tail *LinkedListNode[E]
-	//链表的长度
+	//length of linkedlist
 	len int
 }
 
@@ -44,10 +47,15 @@ func (l *LinkedList[E]) Traverse() []E {
 	return ret
 }
 
+//add a linkedlist node to the given index
+//note: won't do anything if the index is illegal
+//If the index is a non-negative number, the index is [0, l.len],
+//which means that the value is added to the position where the index is index
+//If the index is a negative number, the index is [-1,-l.len-1],
+//-index means the I-th node from the tail
+//for example, -1 means the prev node of the dummy tail node.
 func (l *LinkedList[E]) Add(val E, index int) {
-	//验证index是否合法
-	//l.Len()>=index>=0
-	//l.Len()从-1到-index-1 ：如果为-index-1表示添加到倒数第index+1个
+	//check if index is illegal
 	if index > l.len || index < -l.len-1 {
 		return
 	}
@@ -61,13 +69,11 @@ func (l *LinkedList[E]) Add(val E, index int) {
 	l.len++
 }
 
-//index从1开始到我们的长度+1，或者负数是从-1到我们的-长度-1
 func (l *LinkedList[E]) addFromFirst(val E, index int) {
 	cur := l.head
 	for i := 0; i < index; i++ {
 		cur = cur.Next
 	}
-	//此时cur指向的是我们要加入的的位置的前一个节点
 	node := &LinkedListNode[E]{
 		Val: val,
 	}
@@ -79,15 +85,21 @@ func (l *LinkedList[E]) addFromLast(val E, index int) {
 	for i := 0; i < index; i++ {
 		cur = cur.Prev
 	}
-	//此时cur指向的是我们要加入的的位置的前一个节点
 	node := &LinkedListNode[E]{
 		Val: val,
 	}
 	node.Prev, node.Next, cur.Next, cur.Next.Prev = cur, cur.Next, node, node
 }
 
-//index从1开始到我们的len都是合法的
+//set the value of a given index
+//note: won't do anything if the index is illegal
+//If the index is a non-negative number, the index is [0, l.len-1],
+//which means that the value is added to the position where the index is index
+//If the index is a negative number, the index is [-1,-l.len],
+//-index means the I-th node from the tail
+//for example, -1 means the prev node of the dummy tail node.
 func (l *LinkedList[E]) Set(val E, index int) {
+	//check if index is illegal
 	if l.Empty() || index >= l.len || index <= -l.len-1 {
 		return
 	}
@@ -100,69 +112,66 @@ func (l *LinkedList[E]) Set(val E, index int) {
 }
 
 func (l *LinkedList[E]) setFromFirst(val E, index int) {
-	//否则就找到第index个索引对应的节点
 	cur := l.head
 	for i := 0; i < index; i++ {
 		cur = cur.Next
 	}
-	//此时cur指向的是我们要修改的节点前面一个节点
 	cur.Next.Val = val
 }
 
 func (l *LinkedList[E]) setFromLast(val E, index int) {
-	//否则就找到第index个索引对应的节点
 	cur := l.tail
 	for i := 0; i < index-1; i++ {
 		cur = cur.Prev
 	}
-	//此时cur指向的是我们要修改的节点的后一个节点
 	cur.Prev.Val = val
 }
 
-//删除的时候，index可能为负数，此时我们需要倒着去找到我们的节点
+//remove the value of a given index
+//note: won't do anything if the index is illegal
+//If the index is a non-negative number, the index is [0, l.len-1],
+//which means that the value is added to the position where the index is index
+//If the index is a negative number, the index is [-1,-l.len],
+//-index means the I-th node from the tail
+//for example, -1 means the prev node of the dummy tail node.
 func (l *LinkedList[E]) Remove(index int) {
-	//索引非法
+	//check if index is illegal
 	if l.Empty() || index >= l.len || index <= -l.len-1 {
 		return
 	}
-	//删除对应索引的节点
 	if index < 0 {
 		l.removeFromLast(-index)
 	} else {
 		l.removeFromFirst(index)
 	}
-	//删除之后长度减去1
 	l.len--
 }
 
-//-1表示删除倒数第1个节点
 func (l *LinkedList[E]) removeFromLast(index int) {
 	cur := l.tail
 	for i := 0; i < index; i++ {
 		cur = cur.Prev
 	}
-	//此时cur指向的是要删除的节点
 	cur.Prev, cur.Next, cur.Prev.Next, cur.Next.Prev = nil, nil, cur.Next, cur.Prev
 }
 
-//第一个节点是index为1的
-//如果index=1表明删除第1个节点
 func (l *LinkedList[E]) removeFromFirst(index int) {
 	cur := l.head
 	for i := 0; i < index+1; i++ {
 		cur = cur.Next
 	}
-	//此时cur指向的是我们要删除的节点
 	cur.Prev, cur.Next, cur.Prev.Next, cur.Next.Prev = nil, nil, cur.Next, cur.Prev
 }
 
-//将我们传入的值加入到我们链表的末尾
+//Add an element to the end of the linkedlist with the given value
 func (l *LinkedList[E]) Append(val E) {
 	node := &LinkedListNode[E]{Val: val}
 	l.tail.Prev.Next, l.tail.Prev, node.Prev, node.Next = node, node, l.tail.Prev, l.tail
 	l.len++
 }
 
+//return the value of the first node of the linkedlist
+//if linkedlist is empty, return the default value of the corresponding generic
 func (l *LinkedList[E]) Front() (e E) {
 	if !l.Empty() {
 		return l.head.Next.Val
@@ -170,10 +179,11 @@ func (l *LinkedList[E]) Front() (e E) {
 	return
 }
 
+//return the value of the last node of the linkedlist
+//if linkedlist is empty, return the default value of the corresponding generic
 func (l *LinkedList[E]) Back() (e E) {
 	if !l.Empty() {
 		return l.tail.Prev.Val
 	}
 	return
 }
-

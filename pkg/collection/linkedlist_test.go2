@@ -8,20 +8,19 @@ import (
 )
 
 func TestLinkedListAPI(t *testing.T) {
-	//初始化一个链表
+	//init a linkedlist
 	l := InitLinkedList[int]()
 
-	//-----------------------------------int----------------------------
 	rand.Seed(time.Now().UnixNano())
 	size := 10
-	//随机生成一个int数组
+	// generate a int slice if a given size
 	array := make([]int, size)
 
 	for i := 0; i < size; i++ {
 		array[i] = rand.Intn(10000)
 	}
 
-	//向链表里面添加10个元素
+	//add ten elements to the linkedlist
 	for i := 0; i < 10; i++ {
 		l.Append(array[i])
 	}
@@ -42,12 +41,12 @@ func TestLinkedListAPI(t *testing.T) {
 		t.Fatalf("unexpected Back!")
 	}
 
-	//遍历看一下是否与我们的内容一样
+	//check the linkedlist after adding elements is the same as our slice
 	if !reflect.DeepEqual(l.Traverse(), array[:10]) {
 		t.Fatalf("unexpected Traverse!")
 	}
 
-	//修改元素
+	//set the value of a given index
 	l.Set(1050, 0)
 	if l.Front() != 1050 {
 		t.Fatalf("unexpected Set!")
@@ -58,19 +57,19 @@ func TestLinkedListAPI(t *testing.T) {
 		t.Fatalf("unexpected Set!")
 	}
 
-	//删除元素
+	//remove the value of a given index
 	l.Remove(-1)
 	if l.Len() != 9 {
 		t.Fatalf("unexpected Remove!")
 	}
 
-	//添加元素
+	//add the value to the given index of linkedlist
 	l.Add(1232, 3)
 	if l.Len() != 10 {
 		t.Fatalf("unexpected Add!")
 	}
 
-	//最后将其置空判断长度
+	//remove all elements
 	l.Clear()
 	if !l.Empty() {
 		t.Fatalf("unexpected Clear!")

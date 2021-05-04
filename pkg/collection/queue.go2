@@ -32,18 +32,25 @@ func (q *Queue[E]) Traverse() []E {
 	return ret
 }
 
+//return the head of queue
+//if queue is empty, return the default value of the corresponding generic
 func (q *Queue[E]) Front() E {
 	return q.l.Front()
 }
 
+//return the tail of queue
+//if queue is empty, return the default value of the corresponding generic
 func (q *Queue[E]) Back() E {
 	return q.l.Back()
 }
 
+//add a given value to the tail of queue
 func (q *Queue[E]) Push(val E) {
 	q.l.Append(val)
 }
 
+//remove and return value at the head of queue
+//if queue is empty, return the default value of the corresponding generic
 func (q *Queue[E]) Pop() E {
 	val := q.Front()
 	q.l.Remove(0)

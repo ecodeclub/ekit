@@ -19,6 +19,7 @@ func (s *Stack[E]) Empty() bool {
 	return s.l.len == 0
 }
 
+//remove all elements of stack
 func (s *Stack[E]) Clear() {
 	s.l.Clear()
 }
@@ -33,17 +34,19 @@ func (s *Stack[E]) Traverse() []E {
 	return ret
 }
 
-//查看栈顶的元素
+//return the value at the top of stack
+//if stack is empty, return the default value of the corresponding generic
 func (s *Stack[E]) Peek() E {
 	return s.l.Back()
 }
 
-//将元素加入到栈中
+//Add the given value to the top of the stack
 func (s *Stack[E]) Push(val E) {
 	s.l.Append(val)
 }
 
-//从栈顶弹出我们的元素
+//remove and return the value at the top of stack
+//if stack is empty, return the default value of the corresponding generic
 func (s *Stack[E]) Pop() E {
 	val := s.l.Back()
 	s.l.Remove(-1)
