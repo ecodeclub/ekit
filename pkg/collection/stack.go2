@@ -1,0 +1,51 @@
+package collection
+
+
+type Stack[E any] struct {
+	l *LinkedList[E]
+}
+
+func InitStack[E any]() *Stack[E] {
+	return &Stack[E]{
+		l: InitLinkedList[E](),
+	}
+}
+
+func (s *Stack[E]) Len() int {
+	return s.l.len
+}
+
+func (s *Stack[E]) Empty() bool {
+	return s.l.len == 0
+}
+
+func (s *Stack[E]) Clear() {
+	s.l.Clear()
+}
+
+func (s *Stack[E]) Traverse() []E {
+	ret := []E{}
+	cur := s.l.head.Next
+	for i := 0; i < s.l.Len(); i++ {
+		ret = append(ret, cur.Val)
+		cur = cur.Next
+	}
+	return ret
+}
+
+//查看栈顶的元素
+func (s *Stack[E]) Peek() E {
+	return s.l.Back()
+}
+
+//将元素加入到栈中
+func (s *Stack[E]) Push(val E) {
+	s.l.Append(val)
+}
+
+//从栈顶弹出我们的元素
+func (s *Stack[E]) Pop() E {
+	val := s.l.Back()
+	s.l.Remove(-1)
+	return val
+}

@@ -1,0 +1,179 @@
+package collection
+
+type LinkedListNode[E any] struct {
+	Val        E
+	Prev, Next *LinkedListNode[E]
+}
+
+type LinkedList[E any] struct {
+	//一个头节点一个尾节点
+	head, tail *LinkedListNode[E]
+	//链表的长度
+	len int
+}
+
+func InitLinkedList[E any]() *LinkedList[E] {
+	h, t := &LinkedListNode[E]{}, &LinkedListNode[E]{}
+	h.Prev, h.Next, t.Prev, t.Next = t, t, h, h
+	return &LinkedList[E]{
+		h,
+		t,
+		0,
+	}
+}
+
+func (l *LinkedList[E]) Len() int {
+	return l.len
+}
+
+func (l *LinkedList[E]) Empty() bool {
+	return l.len == 0
+}
+
+func (l *LinkedList[E]) Clear() {
+	l.len = 0
+	l.head.Next, l.head.Prev, l.tail.Prev, l.tail.Next = l.tail, l.tail, l.head, l.head
+}
+
+func (l *LinkedList[E]) Traverse() []E {
+	ret := make([]E, l.len)
+	cur := l.head.Next
+	for i := 0; i < l.Len(); i++ {
+		ret[i], cur = cur.Val, cur.Next
+	}
+	return ret
+}
+
+func (l *LinkedList[E]) Add(val E, index int) {
+	//验证index是否合法
+	//l.Len()>=index>=0
+	//l.Len()从-1到-index-1 ：如果为-index-1表示添加到倒数第index+1个
+	if index > l.len || index < -l.len-1 {
+		return
+	}
+
+	if index >= 0 {
+		l.addFromFirst(val, index)
+	} else {
+		l.addFromLast(val, -index)
+	}
+
+	l.len++
+}
+
+//index从1开始到我们的长度+1，或者负数是从-1到我们的-长度-1
+func (l *LinkedList[E]) addFromFirst(val E, index int) {
+	cur := l.head
+	for i := 0; i < index; i++ {
+		cur = cur.Next
+	}
+	//此时cur指向的是我们要加入的的位置的前一个节点
+	node := &LinkedListNode[E]{
+		Val: val,
+	}
+	node.Prev, node.Next, cur.Next, cur.Next.Prev = cur, cur.Next, node, node
+}
+
+func (l *LinkedList[E]) addFromLast(val E, index int) {
+	cur := l.tail
+	for i := 0; i < index; i++ {
+		cur = cur.Prev
+	}
+	//此时cur指向的是我们要加入的的位置的前一个节点
+	node := &LinkedListNode[E]{
+		Val: val,
+	}
+	node.Prev, node.Next, cur.Next, cur.Next.Prev = cur, cur.Next, node, node
+}
+
+//index从1开始到我们的len都是合法的
+func (l *LinkedList[E]) Set(val E, index int) {
+	if l.Empty() || index >= l.len || index <= -l.len-1 {
+		return
+	}
+
+	if index >= 0 {
+		l.setFromFirst(val, index)
+	} else {
+		l.setFromLast(val, -index)
+	}
+}
+
+func (l *LinkedList[E]) setFromFirst(val E, index int) {
+	//否则就找到第index个索引对应的节点
+	cur := l.head
+	for i := 0; i < index; i++ {
+		cur = cur.Next
+	}
+	//此时cur指向的是我们要修改的节点前面一个节点
+	cur.Next.Val = val
+}
+
+func (l *LinkedList[E]) setFromLast(val E, index int) {
+	//否则就找到第index个索引对应的节点
+	cur := l.tail
+	for i := 0; i < index-1; i++ {
+		cur = cur.Prev
+	}
+	//此时cur指向的是我们要修改的节点的后一个节点
+	cur.Prev.Val = val
+}
+
+//删除的时候，index可能为负数，此时我们需要倒着去找到我们的节点
+func (l *LinkedList[E]) Remove(index int) {
+	//索引非法
+	if l.Empty() || index >= l.len || index <= -l.len-1 {
+		return
+	}
+	//删除对应索引的节点
+	if index < 0 {
+		l.removeFromLast(-index)
+	} else {
+		l.removeFromFirst(index)
+	}
+	//删除之后长度减去1
+	l.len--
+}
+
+//-1表示删除倒数第1个节点
+func (l *LinkedList[E]) removeFromLast(index int) {
+	cur := l.tail
+	for i := 0; i < index; i++ {
+		cur = cur.Prev
+	}
+	//此时cur指向的是要删除的节点
+	cur.Prev, cur.Next, cur.Prev.Next, cur.Next.Prev = nil, nil, cur.Next, cur.Prev
+}
+
+//第一个节点是index为1的
+//如果index=1表明删除第1个节点
+func (l *LinkedList[E]) removeFromFirst(index int) {
+	cur := l.head
+	for i := 0; i < index+1; i++ {
+		cur = cur.Next
+	}
+	//此时cur指向的是我们要删除的节点
+	cur.Prev, cur.Next, cur.Prev.Next, cur.Next.Prev = nil, nil, cur.Next, cur.Prev
+}
+
+//将我们传入的值加入到我们链表的末尾
+func (l *LinkedList[E]) Append(val E) {
+	node := &LinkedListNode[E]{Val: val}
+	l.tail.Prev.Next, l.tail.Prev, node.Prev, node.Next = node, node, l.tail.Prev, l.tail
+	l.len++
+}
+
+func (l *LinkedList[E]) Front() (e E) {
+	if !l.Empty() {
+		return l.head.Next.Val
+	}
+	return
+}
+
+func (l *LinkedList[E]) Back() (e E) {
+	if !l.Empty() {
+		return l.tail.Prev.Val
+	}
+	return
+}
+

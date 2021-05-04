@@ -1,0 +1,51 @@
+package collection
+
+type Queue[E any] struct {
+	l *LinkedList[E]
+}
+
+func InitQueue[E any]() *Queue[E] {
+	return &Queue[E]{
+		l: InitLinkedList[E](),
+	}
+}
+
+func (q *Queue[E]) Len() int {
+	return q.l.len
+}
+
+func (q *Queue[E]) Empty() bool {
+	return q.l.len == 0
+}
+
+func (q *Queue[E]) Clear() {
+	q.l.Clear()
+}
+
+func (q *Queue[E]) Traverse() []E {
+	ret := []E{}
+	cur := q.l.head.Next
+	for i := 0; i < q.l.Len(); i++ {
+		ret = append(ret, cur.Val)
+		cur = cur.Next
+	}
+	return ret
+}
+
+func (q *Queue[E]) Front() E {
+	return q.l.Front()
+}
+
+func (q *Queue[E]) Back() E {
+	return q.l.Back()
+}
+
+func (q *Queue[E]) Push(val E) {
+	q.l.Append(val)
+}
+
+func (q *Queue[E]) Pop() E {
+	val := q.Front()
+	q.l.Remove(0)
+	return val
+}

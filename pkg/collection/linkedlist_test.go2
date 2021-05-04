@@ -1,0 +1,78 @@
+package collection
+
+import (
+	"math/rand"
+	"reflect"
+	"testing"
+	"time"
+)
+
+func TestLinkedListAPI(t *testing.T) {
+	//初始化一个链表
+	l := InitLinkedList[int]()
+
+	//-----------------------------------int----------------------------
+	rand.Seed(time.Now().UnixNano())
+	size := 10
+	//随机生成一个int数组
+	array := make([]int, size)
+
+	for i := 0; i < size; i++ {
+		array[i] = rand.Intn(10000)
+	}
+
+	//向链表里面添加10个元素
+	for i := 0; i < 10; i++ {
+		l.Append(array[i])
+	}
+
+	if l.Empty() {
+		t.Fatalf("unexpected empty!")
+	}
+
+	if l.Len() != 10 {
+		t.Fatalf("unexpected length!")
+	}
+
+	if l.Front() != array[0] {
+		t.Fatalf("unexpected Front!")
+	}
+
+	if l.Back() != array[9] {
+		t.Fatalf("unexpected Back!")
+	}
+
+	//遍历看一下是否与我们的内容一样
+	if !reflect.DeepEqual(l.Traverse(), array[:10]) {
+		t.Fatalf("unexpected Traverse!")
+	}
+
+	//修改元素
+	l.Set(1050, 0)
+	if l.Front() != 1050 {
+		t.Fatalf("unexpected Set!")
+	}
+
+	l.Set(1050, -1)
+	if l.Back() != 1050 {
+		t.Fatalf("unexpected Set!")
+	}
+
+	//删除元素
+	l.Remove(-1)
+	if l.Len() != 9 {
+		t.Fatalf("unexpected Remove!")
+	}
+
+	//添加元素
+	l.Add(1232, 3)
+	if l.Len() != 10 {
+		t.Fatalf("unexpected Add!")
+	}
+
+	//最后将其置空判断长度
+	l.Clear()
+	if !l.Empty() {
+		t.Fatalf("unexpected Clear!")
+	}
+}
