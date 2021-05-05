@@ -7,7 +7,7 @@ import (
 
 func TestStack(t *testing.T) {
 	//init a stack
-	s := InitStack[int]()
+	s := CreateStack[int]()
 
 	s.Push(100)
 	s.Push(79)
@@ -17,7 +17,7 @@ func TestStack(t *testing.T) {
 		t.Fatalf("unexpected length of queue.")
 	}
 
-	if !reflect.DeepEqual(s.Traverse(), []int{100, 79, 38}) {
+	if !reflect.DeepEqual(s.Traverse(), []int{38, 79, 100}) {
 		t.Fatalf("unexpected Traverse!")
 	}
 

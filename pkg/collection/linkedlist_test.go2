@@ -9,7 +9,7 @@ import (
 
 func TestLinkedListAPI(t *testing.T) {
 	//init a linkedlist
-	l := InitLinkedList[int]()
+	l := CreateLinkedList[int]()
 
 	rand.Seed(time.Now().UnixNano())
 	size := 10

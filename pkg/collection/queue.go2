@@ -1,57 +1,58 @@
 package collection
 
-type Queue[E any] struct {
-	l *LinkedList[E]
+import "container/list"
+
+type queue[E any] struct {
+	l *linkedList[E]
 }
 
-func InitQueue[E any]() *Queue[E] {
-	return &Queue[E]{
-		l: InitLinkedList[E](),
+func CreateQueue[E any]() *queue[E] {
+	return &queue[E]{
+		l: CreateLinkedList[E](),
 	}
 }
 
-func (q *Queue[E]) Len() int {
+func (q *queue[E]) Len() int {
 	return q.l.len
 }
 
-func (q *Queue[E]) Empty() bool {
+func (q *queue[E]) Empty() bool {
 	return q.l.len == 0
 }
 
-func (q *Queue[E]) Clear() {
+func (q *queue[E]) Clear() {
 	q.l.Clear()
 }
 
-func (q *Queue[E]) Traverse() []E {
-	ret := []E{}
+func (q *queue[E]) Traverse() []E {
+	ret := make([]E, q.l.len)
 	cur := q.l.head.Next
 	for i := 0; i < q.l.Len(); i++ {
-		ret = append(ret, cur.Val)
-		cur = cur.Next
+		ret[i], cur = cur.Val, cur.Next
 	}
 	return ret
 }
 
 //return the head of queue
 //if queue is empty, return the default value of the corresponding generic
-func (q *Queue[E]) Front() E {
+func (q *queue[E]) Front() E {
 	return q.l.Front()
 }
 
 //return the tail of queue
 //if queue is empty, return the default value of the corresponding generic
-func (q *Queue[E]) Back() E {
+func (q *queue[E]) Back() E {
 	return q.l.Back()
 }
 
 //add a given value to the tail of queue
-func (q *Queue[E]) Push(val E) {
+func (q *queue[E]) Push(val E) {
 	q.l.Append(val)
 }
 
 //remove and return value at the head of queue
 //if queue is empty, return the default value of the corresponding generic
-func (q *Queue[E]) Pop() E {
+func (q *queue[E]) Pop() E {
 	val := q.Front()
 	q.l.Remove(0)
 	return val

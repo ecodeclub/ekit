@@ -7,7 +7,7 @@ import (
 
 func TestQueueAPI(t *testing.T) {
 	//init a queue
-	q := InitQueue[int]()
+	q := CreateQueue[int]()
 
 	//add three integers to the queue
 	q.Push(100)
