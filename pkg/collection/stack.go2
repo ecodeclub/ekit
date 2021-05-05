@@ -1,0 +1,52 @@
+package collection
+
+type stack[E any] struct {
+	l *linkedList[E]
+}
+
+func CreateStack[E any]() *stack[E] {
+	return &stack[E]{
+		l: CreateLinkedList[E](),
+	}
+}
+
+func (s *stack[E]) Len() int {
+	return s.l.len
+}
+
+func (s *stack[E]) Empty() bool {
+	return s.l.len == 0
+}
+
+//remove all elements of stack
+func (s *stack[E]) Clear() {
+	s.l.Clear()
+}
+
+func (s *stack[E]) Traverse() []E {
+	ret := make([]E, s.l.len)
+	cur := s.l.tail.Prev
+	for i := 0; i < s.l.Len(); i++ {
+		ret[i], cur = cur.Val, cur.Prev
+	}
+	return ret
+}
+
+//return the value at the top of stack
+//if stack is empty, return the default value of the corresponding generic
+func (s *stack[E]) Peek() E {
+	return s.l.Back()
+}
+
+//Add the given value to the top of the stack
+func (s *stack[E]) Push(val E) {
+	s.l.Append(val)
+}
+
+//remove and return the value at the top of stack
+//if stack is empty, return the default value of the corresponding generic
+func (s *stack[E]) Pop() E {
+	val := s.l.Back()
+	s.l.Remove(-1)
+	return val
+}
