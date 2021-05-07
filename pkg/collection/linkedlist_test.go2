@@ -1,0 +1,77 @@
+package collection
+
+import (
+	"math/rand"
+	"reflect"
+	"testing"
+	"time"
+)
+
+func TestLinkedListAPI(t *testing.T) {
+	//init a linkedlist
+	l := CreateLinkedList[int]()
+
+	rand.Seed(time.Now().UnixNano())
+	size := 10
+	// generate a int slice if a given size
+	array := make([]int, size)
+
+	for i := 0; i < size; i++ {
+		array[i] = rand.Intn(10000)
+	}
+
+	//add ten elements to the linkedlist
+	for i := 0; i < 10; i++ {
+		l.Append(array[i])
+	}
+
+	if l.Empty() {
+		t.Fatalf("unexpected empty!")
+	}
+
+	if l.Len() != 10 {
+		t.Fatalf("unexpected length!")
+	}
+
+	if l.Front() != array[0] {
+		t.Fatalf("unexpected Front!")
+	}
+
+	if l.Back() != array[9] {
+		t.Fatalf("unexpected Back!")
+	}
+
+	//check the linkedlist after adding elements is the same as our slice
+	if !reflect.DeepEqual(l.Traverse(), array[:10]) {
+		t.Fatalf("unexpected Traverse!")
+	}
+
+	//set the value of a given index
+	l.Set(1050, 0)
+	if l.Front() != 1050 {
+		t.Fatalf("unexpected Set!")
+	}
+
+	l.Set(1050, -1)
+	if l.Back() != 1050 {
+		t.Fatalf("unexpected Set!")
+	}
+
+	//remove the value of a given index
+	l.Remove(-1)
+	if l.Len() != 9 {
+		t.Fatalf("unexpected Remove!")
+	}
+
+	//add the value to the given index of linkedlist
+	l.Add(1232, 3)
+	if l.Len() != 10 {
+		t.Fatalf("unexpected Add!")
+	}
+
+	//remove all elements
+	l.Clear()
+	if !l.Empty() {
+		t.Fatalf("unexpected Clear!")
+	}
+}

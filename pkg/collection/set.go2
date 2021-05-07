@@ -1,6 +1,6 @@
 package collection
 
-type Set[E any]interface {
+type Set[E any] interface {
 	Put(e E) error
 	Exist(e E) (bool, error)
 	ForEach(func(e E))
@@ -12,31 +12,35 @@ type OrderedSet[K any] interface {
 }
 
 type List[E any] interface {
-	Append(e E) error
-	Add(e E, index int) error
-	Delete(index int) error
-	Set(e E, index int) error
-	Clear() error
+	//return the number of elements of corresponding collection
+	Len() int
+	Empty() bool
+	Clear()
+	Traverse() []E
 }
 
 type Map[K any, V any] interface {
-
 }
 
 type Queue[E any] interface {
-
+	List[E]
+	Front() E
+	Back() E
+	Push(e E)
+	Pop() E
 }
 
 type Stack[E any] interface {
-
+	List[E]
+	Push(e E)
+	Pop() E
+	Peek() E
 }
 
 type Heap[E any] interface {
-
 }
 
 type Tree[E any] interface {
-
 }
 
 type BinaryTree[E any] interface {

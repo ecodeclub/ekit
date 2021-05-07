@@ -1,0 +1,52 @@
+package collection
+
+import (
+	"reflect"
+	"testing"
+)
+
+func TestStack(t *testing.T) {
+	//init a stack
+	s := CreateStack[int]()
+
+	s.Push(100)
+	s.Push(79)
+	s.Push(38)
+
+	if s.Len() != 3 {
+		t.Fatalf("unexpected length of queue.")
+	}
+
+	if !reflect.DeepEqual(s.Traverse(), []int{38, 79, 100}) {
+		t.Fatalf("unexpected Traverse!")
+	}
+
+	if s.Peek() != 38 {
+		t.Fatalf("unexpected top of stack.")
+	}
+
+	val := s.Pop()
+	if val != 38 {
+		t.Fatalf("unexpected value.")
+	}
+
+	val = s.Pop()
+	if val != 79 {
+		t.Fatalf("unexpected value.")
+	}
+
+	if s.Len() != 1 {
+		t.Fatalf("unexpected length of queue.")
+	}
+
+	if s.Peek() != 100 {
+		t.Fatalf("unexpected top of stack.")
+	}
+
+	//remove all elements of stack
+	s.Clear()
+	if !s.Empty() {
+		t.Fatalf("expected empty.")
+	}
+}
+

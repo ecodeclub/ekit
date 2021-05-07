@@ -1,0 +1,65 @@
+package collection
+
+import (
+	"reflect"
+	"testing"
+)
+
+func TestQueueAPI(t *testing.T) {
+	//init a queue
+	q := CreateQueue[int]()
+
+	//add three integers to the queue
+	q.Push(100)
+	q.Push(79)
+	q.Push(38)
+
+	if q.Len() != 3 {
+		t.Fatalf("unexpected length of queue.")
+	}
+
+	if !reflect.DeepEqual(q.Traverse(), []int{100, 79, 38}) {
+		t.Fatalf("unexpected Traverse!")
+	}
+
+	if q.Front() != 100 {
+		t.Fatalf("unexpected first value.")
+	}
+	if q.Back() != 38 {
+		t.Fatalf("unexpected last value.")
+	}
+
+	val := q.Pop()
+	if val != 100 {
+		t.Fatalf("unexpected value.")
+	}
+
+	if q.Front() != 79 {
+		t.Fatalf("unexpected first value.")
+	}
+	if q.Back() != 38 {
+		t.Fatalf("unexpected last value.")
+	}
+
+	val = q.Pop()
+	if val != 79 {
+		t.Fatalf("unexpected value.")
+	}
+
+	if q.Len() != 1 {
+		t.Fatalf("unexpected length of queue.")
+	}
+
+	if q.Front() != 38 {
+		t.Fatalf("unexpected first value.")
+	}
+	if q.Back() != 38 {
+		t.Fatalf("unexpected last value.")
+	}
+
+	q.Clear()
+	if !q.Empty() {
+		t.Fatalf("expected empty.")
+	}
+
+}
