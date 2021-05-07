@@ -1,0 +1,48 @@
+package orm
+
+import (
+	"database/sql"
+	"encoding/json"
+	"github.com/gotomicro/ego-kit/pkg/proxy"
+	"reflect"
+)
+
+type InvocationHandler[T] struct {
+
+}
+
+
+func (i *InvocationHandler[T]) Handle(target *T, inv *proxy.Invocation) []reflect.Value {
+	tag := inv.Tag
+	query := tag.Get("sql")
+	db := sql.DB{}
+	result, err := db.Exec(query, inv.Args)
+	return result.
+}
+
+type UserDAO struct {
+	Insert func(u *User) error
+	// @sql SELECT * from xxx
+	BatchInsert func(us []*User) error
+	Delete func(id int) (int, error)
+	Update func(t *User) (int, error)
+	Find func(id int)(*User, error) `sql:"SELECT * FROM USER WHERE id = ?"`
+}
+
+type User struct {
+
+}
+
+func NewDAO[T]() *T {
+	return proxy.New(&InvocationHandler[T]{})
+}
+
+func BuildUser()  {
+	u, _ := JsonUnmarshal[User]([]byte("{}"))
+}
+
+func JsonUnmarshal[T any](bytes []byte) (*T, error) {
+	t := new(T)
+	err := json.Unmarshal(bytes, t)
+	return t, err
+}

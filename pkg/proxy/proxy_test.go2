@@ -1,0 +1,31 @@
+package proxy
+
+import (
+	"errors"
+	"reflect"
+	"testing"
+)
+
+func TestNewProxy(t *testing.T) {
+	ho := New[HelloObj](&LogInvocationHandler[HelloObj]{})
+	err := ho.Hello("Tom")
+	println(err.Error())
+}
+
+type LogInvocationHandler[T any] struct {
+
+}
+
+func (l *LogInvocationHandler[T]) Handle(target *T, inv *Invocation) []reflect.Value {
+	println("before")
+	println("running " + inv.Method.Name)
+	//res := inv.Invoke()
+	println("after")
+	return []reflect.Value{reflect.ValueOf(errors.New("this is error"))}
+}
+
+type HelloObj struct {
+	Hello func(name string) error
+}
+
+

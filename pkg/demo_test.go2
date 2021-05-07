@@ -1,0 +1,24 @@
+package pkg
+
+import (
+	"testing"
+)
+
+func TestHello(t *testing.T)  {
+	sum1 := Sum([]int32{0, 1, 2, 3})
+	println(sum1)
+	sum2 := Sum([]int64{0, 1, 2, 3, 4})
+	println(sum2)
+}
+
+type Numeric interface {
+	type int, int64, int32
+}
+
+func Sum[T Numeric](values []T) T {
+	var res T
+	for _, val := range values {
+		res = res + val
+	}
+	return res
+}

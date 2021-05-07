@@ -1,0 +1,69 @@
+package proxy
+
+import (
+	"net/mail"
+	"reflect"
+)
+
+type proxyOpt[T any] func(target *T)
+
+func New[T any](handler InvocationHandler[T], opts ...proxyOpt[T]) *T {
+	obj := new(T)
+	objValue := reflect.ValueOf(obj)
+	objElem := objValue.Elem()
+	num := objElem.NumField()
+
+	for i := 0; i < num; i++ {
+		field := objElem.Field(i)
+		objElemType := objElem.Type()
+		tag := objElemType.Field(i).Tag
+		mn := tag.Get("proxy_method")
+		var method reflect.Method
+		if len(mn) != 0 {
+			method, _ = objValue.Type().MethodByName(mn)
+		}
+		if field.Kind() == reflect.Func && field.CanSet(){
+
+			rts := make([]reflect.Type, 0, objElemType.NumOut())
+			for j := 0; j < objElemType.NumOut(); j++ {
+				rts = append(rts, objElemType.Out(j))
+			}
+
+			field.Set(reflect.MakeFunc(field.Type(), func(args []reflect.Value) (results []reflect.Value) {
+				inv := &Invocation{
+					Args: args,
+					Method: method,
+					Tag: tag,
+					ReturnTypes: rts,
+				}
+				return handler.Handle(obj, inv)
+			}))
+		}
+	}
+	return obj
+}
+
+type InvocationHandler[T any] interface {
+	Handle(target *T, inv *Invocation) []reflect.Value
+}
+
+type Invocation struct {
+	// target method, sometimes is nil
+	Method reflect.Method
+	Args []reflect.Value
+	// proxy target field tag
+	Tag reflect.StructTag
+	ReturnTypes []reflect.Type
+}
+
+func (inv *Invocation) Invoke() []reflect.Value {
+	return inv.Method.Func.Call(inv.Args)
+}
+
+func (inv *Invocation) ArgsValues() []interface{} {
+	res := make([]interface{}, 0, len(inv.Args))
+	for _, a := range inv.Args {
+		res = append(res, a.Interface())
+	}
+	return res
+}
