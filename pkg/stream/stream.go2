@@ -2,6 +2,7 @@ package stream
 
 import (
 	"errors"
+	"github.com/gotomicro/ego-kit/pkg/mapreduce"
 	"sort"
 )
 
@@ -28,6 +29,14 @@ type Stream[E any] interface {
 	FindNth(n int, m match[E]) (E, error)
 	Concat(tail Stream[E]) Stream[E]
 	ConcatArray(tail []E) Stream[E]
+
+	MapToInt(m func(e E) int) Stream[int]
+	MapToString(m func(e E) string) Stream[string]
+	MapToInterface(m func(e E)interface{}) Stream[interface{}]
+
+	ReduceToInt(base int, r func(acc int, e E) int) int
+	ReduceToString(base string, r func(acc string, e E) string) string
+	ReduceToInterface(base interface{}, r func(acc interface{}, e E)) interface{}
 }
 
 func Of[E any](elems []E) *SequentialStream[E] {

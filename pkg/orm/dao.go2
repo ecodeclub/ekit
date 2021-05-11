@@ -1,0 +1,57 @@
+package dao
+
+import (
+	"context"
+	"errors"
+	"github.com/gotomicro/ego-kit/pkg/proxy"
+	"reflect"
+)
+
+type User struct {
+	Name string
+	Gender string
+	Email string
+}
+
+type UserDAO struct{
+	Base *BaseDAO[User]
+	FindByEmail func(ctx context.Context, email string) (*User, error) `sql:"SELECT * FROM USER WHERE EMAIL = ?"`
+}
+
+type BaseDAO[T any] struct {
+	Insert func(ctx context.Context, t *T) (int64, error)
+	Update func(ctx context.Context, t *T, cols ...string) (int64, error)
+	Delete func(ctx context.Context, t *T) (int64, error)
+	Find func(ctx context.Context, t *T) ([]*T, error)
+	FindOne func(ctx context.Context, t *T) ([]*T, error)
+	Get func(ctx context.Context, id int64) (*T, error)
+}
+
+func NewDAO[T any]() *T {
+	var handler proxy.InvocationHandler[T] = &InvocationHandler[T]{}
+	return proxy.New(handler)
+}
+
+type InvocationHandler[D any] struct {
+	//o orm.Ormer
+}
+
+func (i *InvocationHandler[D]) Handle(target *D, inv *proxy.Invocation) []reflect.Value {
+	println("hello")
+	return []reflect.Value{reflect.ValueOf(int64(10)), reflect.ValueOf(errors.New("this is error"))}
+	//query := inv.Tag.Get("sql")
+	//ins := inv.ArgsValues()
+	//if _, ok := ins[0].(context.Context); ok {
+	//	ins = ins[1:]
+	//}
+	//
+	//rs := i.o.Raw(query, ins...)
+	//rts := inv.ReturnTypes
+	//// assume return two values, the first is entity(entities), the second is error
+	//ret := reflect.New(rts[0])
+	//err := rs.QueryRow(ret.Interface())
+	//return []reflect.Value{reflect.ValueOf(ret), reflect.ValueOf(err)}
+}
+
+
+

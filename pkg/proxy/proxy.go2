@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"net/mail"
 	"reflect"
 )
 
@@ -12,21 +11,23 @@ func New[T any](handler InvocationHandler[T], opts ...proxyOpt[T]) *T {
 	objValue := reflect.ValueOf(obj)
 	objElem := objValue.Elem()
 	num := objElem.NumField()
+	objElemType := objElem.Type()
 
 	for i := 0; i < num; i++ {
 		field := objElem.Field(i)
-		objElemType := objElem.Type()
-		tag := objElemType.Field(i).Tag
+		fieldType := objElemType.Field(i)
+		tag := fieldType.Tag
 		mn := tag.Get("proxy_method")
+		//println( objElemType.Field(i).)
 		var method reflect.Method
 		if len(mn) != 0 {
 			method, _ = objValue.Type().MethodByName(mn)
 		}
-		if field.Kind() == reflect.Func && field.CanSet(){
 
-			rts := make([]reflect.Type, 0, objElemType.NumOut())
-			for j := 0; j < objElemType.NumOut(); j++ {
-				rts = append(rts, objElemType.Out(j))
+		if field.Kind() == reflect.Func && field.CanSet(){
+			rts := make([]reflect.Type, 0, fieldType.Type.NumOut())
+			for j := 0; j < fieldType.Type.NumOut(); j++ {
+				rts = append(rts, fieldType.Type.Out(j))
 			}
 
 			field.Set(reflect.MakeFunc(field.Type(), func(args []reflect.Value) (results []reflect.Value) {
@@ -34,7 +35,7 @@ func New[T any](handler InvocationHandler[T], opts ...proxyOpt[T]) *T {
 					Args: args,
 					Method: method,
 					Tag: tag,
-					ReturnTypes: rts,
+					//ReturnTypes: rts,
 				}
 				return handler.Handle(obj, inv)
 			}))

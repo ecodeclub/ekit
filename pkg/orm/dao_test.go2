@@ -1,0 +1,13 @@
+package dao
+
+import (
+	"context"
+	"testing"
+)
+
+func TestDaoInsert(t *testing.T) {
+	userDAO := NewDAO[UserDAO]()
+	userDAO.Base = NewDAO[BaseDAO[User]]()
+	i , _ := userDAO.Base.Insert(context.Background(), &User{})
+	println(i)
+}

@@ -7,26 +7,42 @@ package proxy
 //line proxy.go2:1
 import (
 //line proxy.go2:1
+ "errors"
+//line proxy.go2:1
  "reflect"
 //line proxy.go2:1
  "testing"
 //line proxy.go2:1
 )
 
-//line proxy.go2:38
+//line proxy.go2:51
 type Invocation struct {
-	Method reflect.Method
-	Args   []reflect.Value
+//line proxy.go2:53
+ Method reflect.Method
+	Args []reflect.Value
+
+	Tag         reflect.StructTag
+	ReturnTypes []reflect.Type
 }
 
 func (inv *Invocation) Invoke() []reflect.Value {
 	return inv.Method.Func.Call(inv.Args)
 }
 
-//line proxy.go2:45
+func (inv *Invocation) ArgsValues() []interface{} {
+	res := make([]interface{}, 0, len(inv.Args))
+	for _, a := range inv.Args {
+		res = append(res, a.Interface())
+	}
+	return res
+}
+
+//line proxy.go2:70
 type Importable୦ int
 
-//line proxy.go2:45
+//line proxy.go2:70
+var _ = errors.As
+//line proxy.go2:70
 var _ = reflect.Append
-//line proxy.go2:45
+//line proxy.go2:70
 var _ = testing.AllocsPerRun

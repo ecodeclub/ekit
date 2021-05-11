@@ -4,7 +4,7 @@ type Set[E any] interface {
 	Put(e E) error
 	Exist(e E) (bool, error)
 	ForEach(func(e E))
-	ToSlice() []E
+	Traverse() []E
 }
 
 type OrderedSet[K any] interface {
@@ -25,6 +25,17 @@ type List[E any] interface {
 }
 
 type Map[K any, V any] interface {
+	Put(key K, val V)
+	PutIfAbsent(key K, val V)
+
+	Get(key K) (V, bool)
+	GetOrDefault(key K, defProvider func()V) V
+
+	Remote(key K)(V, bool)
+}
+
+type Hashable interface {
+	HashCode() int
 }
 
 type Queue[E any] interface {
