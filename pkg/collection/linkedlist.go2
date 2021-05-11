@@ -226,3 +226,10 @@ func (l *linkedList[E]) getFromLast(index int) (E, bool) {
 }
 
 
+func (l *linkedList[E]) ForEach(f func(e E)) {
+	cur := l.head.Next
+	for i := 0; i < l.len; i++ {
+		f(cur.Val)
+		cur = cur.Next
+	}
+}
