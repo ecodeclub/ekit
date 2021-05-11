@@ -11,6 +11,8 @@ import (
 //line linkedlist.go2:1
  "reflect"
 //line linkedlist.go2:1
+ "sync"
+//line linkedlist.go2:1
  "testing"
 //line linkedlist.go2:1
  "time"
@@ -24,6 +26,10 @@ type Importable୦ int
 var _ = rand.ExpFloat64
 //line linkedlist.go2:1
 var _ = reflect.Append
+
+//line linkedlist.go2:1
+type _ sync.Cond
+
 //line linkedlist.go2:1
 var _ = testing.AllocsPerRun
 

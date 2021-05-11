@@ -11,6 +11,8 @@ import (
 //line queue.go2:1
  "reflect"
 //line queue.go2:1
+ "sync"
+//line queue.go2:1
  "testing"
 //line queue.go2:1
  "time"
@@ -21,6 +23,10 @@ import (
 var _ = rand.ExpFloat64
 //line queue.go2:1
 var _ = reflect.Append
+
+//line queue.go2:1
+type _ sync.Cond
+
 //line queue.go2:1
 var _ = testing.AllocsPerRun
 

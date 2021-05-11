@@ -11,6 +11,8 @@ import (
 //line stack_test.go2:1
  "reflect"
 //line stack_test.go2:1
+ "sync"
+//line stack_test.go2:1
  "testing"
 //line stack_test.go2:1
  "time"
@@ -122,6 +124,10 @@ func (s *instantiate୦୦stack୦int,) Pop() int {
 var _ = rand.ExpFloat64
 //line stack.go2:52
 var _ = reflect.Append
+
+//line stack.go2:52
+type _ sync.Cond
+
 //line stack.go2:52
 var _ = testing.AllocsPerRun
 

@@ -11,6 +11,8 @@ import (
 //line queue_test.go2:1
  "reflect"
 //line queue_test.go2:1
+ "sync"
+//line queue_test.go2:1
  "testing"
 //line queue_test.go2:1
  "time"
@@ -140,6 +142,10 @@ func (q *instantiate୦୦queue୦int,) Pop() int {
 var _ = rand.ExpFloat64
 //line queue.go2:58
 var _ = reflect.Append
+
+//line queue.go2:58
+type _ sync.Cond
+
 //line queue.go2:58
 var _ = testing.AllocsPerRun
 

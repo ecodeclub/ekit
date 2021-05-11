@@ -1,1 +1,70 @@
 package collection
+
+import "sync"
+
+type SafeList[E any] struct {
+	list List[E]
+	mutex sync.RWMutex
+}
+
+func (s *SafeList[E]) Len() int {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.list.Len()
+}
+
+func (s *SafeList[E]) Empty() bool {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.list.Empty()
+}
+
+func (s *SafeList[E]) Clear() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.list.Clear()
+}
+
+func (s *SafeList[E]) Add(val E, index int) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.list.Add(val, index)
+}
+
+func (s *SafeList[E]) Set(val E, index int) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.list.Set(val, index)
+}
+
+func (s *SafeList[E]) Remove(index int) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.list.Remove(index)
+}
+
+func (s *SafeList[E]) Append(val E) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.list.Append(val)
+}
+
+func (s *SafeList[E]) ForEach(f func(e E)) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	s.list.ForEach(f)
+}
+
+func (s *SafeList[E]) Get(index int) (E, bool) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.list.Get(index)
+}
+
+func (s *SafeList[E]) Traverse() []E {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.list.Traverse()
+}
+
+

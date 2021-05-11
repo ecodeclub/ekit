@@ -11,18 +11,29 @@ import (
 //line type.go2:1
  "reflect"
 //line type.go2:1
+ "sync"
+//line type.go2:1
  "testing"
 //line type.go2:1
  "time"
 //line type.go2:1
 )
 
-//line type.go2:1
+//line type.go2:37
+type Hashable interface {
+	HashCode() int
+}
+
+//line type.go2:39
 var _ = rand.ExpFloat64
-//line type.go2:1
+//line type.go2:39
 var _ = reflect.Append
-//line type.go2:1
+
+//line type.go2:39
+type _ sync.Cond
+
+//line type.go2:39
 var _ = testing.AllocsPerRun
 
-//line type.go2:1
+//line type.go2:39
 const _ = time.ANSIC

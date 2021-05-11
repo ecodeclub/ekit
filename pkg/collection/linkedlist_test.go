@@ -11,6 +11,8 @@ import (
 //line linkedlist_test.go2:1
  "reflect"
 //line linkedlist_test.go2:1
+ "sync"
+//line linkedlist_test.go2:1
  "testing"
 //line linkedlist_test.go2:1
  "time"
@@ -287,6 +289,10 @@ type instantiate୦୦linkedListNode୦int struct {
 var _ = rand.ExpFloat64
 //line linkedlist.go2:7
 var _ = reflect.Append
+
+//line linkedlist.go2:7
+type _ sync.Cond
+
 //line linkedlist.go2:7
 var _ = testing.AllocsPerRun
 
