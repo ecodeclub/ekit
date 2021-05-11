@@ -5,27 +5,4 @@
 package collection
 
 //line linkedlist.go2:1
-import (
-//line linkedlist.go2:1
- "math/rand"
-//line linkedlist.go2:1
- "reflect"
-//line linkedlist.go2:1
- "testing"
-//line linkedlist.go2:1
- "time"
-//line linkedlist.go2:1
-)
-
-//line linkedlist.go2:1
 type Importable୦ int
-
-//line linkedlist.go2:1
-var _ = rand.ExpFloat64
-//line linkedlist.go2:1
-var _ = reflect.Append
-//line linkedlist.go2:1
-var _ = testing.AllocsPerRun
-
-//line linkedlist.go2:1
-const _ = time.ANSIC
