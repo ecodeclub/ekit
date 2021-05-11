@@ -186,3 +186,43 @@ func (l *linkedList[E]) Back() (e E) {
 	}
 	return
 }
+
+
+//get the value of the corresponding index node
+//note: the second returned result value will be false if the index is illegal
+//If the index is a non-negative number, the index is [0, l.len-1],
+//which means that the value is added to the position where the index is index
+//If the index is a negative number, the index is [-1,-l.len],
+//-index means the I-th node from the tail
+//for example, -1 means the prev node of the dummy tail node.s
+func (l *linkedList[E]) Get(index int) (val E, ok bool) {
+	if l.Empty() || index >= l.len || index <= -l.len-1 {
+		return
+	}
+
+	if index < 0 {
+		val, ok = l.getFromLast(-index)
+	} else {
+		val, ok = l.getFromFirst(index)
+	}
+	return val, ok
+}
+
+func (l *linkedList[E]) getFromFirst(index int) (E, bool) {
+	cur := l.head.Next
+	for i := 0; i < index; i++ {
+		cur = cur.Next
+	}
+	return cur.Val, true
+}
+
+
+func (l *linkedList[E]) getFromLast(index int) (E, bool) {
+	cur := l.tail
+	for i := 0; i < index; i++ {
+		cur = cur.Prev
+	}
+	return cur.Val, true
+}
+
+

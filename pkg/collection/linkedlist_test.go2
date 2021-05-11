@@ -57,6 +57,14 @@ func TestLinkedListAPI(t *testing.T) {
 		t.Fatalf("unexpected Set!")
 	}
 
+	if val, ok := l.Get(0); ok && val != 1050 {
+		t.Fatalf("unexpected Get!")
+	}
+
+	if val, ok := l.Get(-1); ok && val != 1050 {
+		t.Fatalf("unexpected Get!")
+	}
+
 	//remove the value of a given index
 	l.Remove(-1)
 	if l.Len() != 9 {
@@ -67,6 +75,10 @@ func TestLinkedListAPI(t *testing.T) {
 	l.Add(1232, 3)
 	if l.Len() != 10 {
 		t.Fatalf("unexpected Add!")
+	}
+
+	if val, ok := l.Get(3); ok && val != 1232 {
+		t.Fatalf("unexpected Get!")
 	}
 
 	//remove all elements
