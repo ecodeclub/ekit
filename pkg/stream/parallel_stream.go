@@ -11,196 +11,22 @@ import (
 //line parallel_stream.go2:1
  "sort"
 //line parallel_stream.go2:1
+ "sync"
+//line parallel_stream.go2:1
  "testing"
 //line parallel_stream.go2:1
 )
 
-//line parallel_stream.go2:7
-var _ instantiate୦୦Stream୦int = &instantiate୦୦ParallelStream୦int{}
-
-//line parallel_stream.go2:7
-type instantiate୦୦Stream୦int interface {
-//line stream.go2:11
- OrElse(e int,
-
-//line stream.go2:11
- ) instantiate୦୦Stream୦int
-	Filter(m instantiate୦୦match୦int,) instantiate୦୦Stream୦int
-	Distinct(c instantiate୦୦comparator୦int,) instantiate୦୦Stream୦int
-	Sort(c instantiate୦୦comparator୦int,) instantiate୦୦Stream୦int
-	Limit(offset int, limit int) instantiate୦୦Stream୦int
-	Skip(num int) instantiate୦୦Stream୦int
-	ForEach(f func(e int,
-
-//line stream.go2:17
- )) instantiate୦୦Stream୦int
-			ToSlice() []int
-
-//line stream.go2:19
- Max(c instantiate୦୦comparator୦int,) (int,
-
-//line stream.go2:19
-  error)
-			Min(c instantiate୦୦comparator୦int,) (int,
-
-//line stream.go2:20
-  error)
-			AnyMatch(m instantiate୦୦match୦int,) bool
-			AllMatch(m instantiate୦୦match୦int,) bool
-			NoneMatch(m instantiate୦୦match୦int,) bool
-			Count() int
-			FindFirst(m instantiate୦୦match୦int,) (int,
-
-//line stream.go2:25
-  error)
-			FindLast(m instantiate୦୦match୦int,) (int,
-
-//line stream.go2:26
-  error)
-			FindAny(m instantiate୦୦match୦int,) (int,
-
-//line stream.go2:27
-  error)
-			FindNth(n int, m instantiate୦୦match୦int,) (int,
-
-//line stream.go2:28
-  error)
-			Concat(tail instantiate୦୦Stream୦int,) instantiate୦୦Stream୦int
-			ConcatArray(tail []int,
-
-//line stream.go2:30
- ) instantiate୦୦Stream୦int
-}
-//line stream.go2:31
-type instantiate୦୦ParallelStream୦int struct {
-//line parallel_stream.go2:5
-}
-
-//line parallel_stream.go2:9
-func (p *instantiate୦୦ParallelStream୦int,) OrElse(e int,
-
-//line parallel_stream.go2:9
-) instantiate୦୦Stream୦int {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) Filter(m instantiate୦୦match୦int,) instantiate୦୦Stream୦int {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) Distinct(c instantiate୦୦comparator୦int,) instantiate୦୦Stream୦int {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) Sort(c instantiate୦୦comparator୦int,) instantiate୦୦Stream୦int {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) Limit(offset int, limit int) instantiate୦୦Stream୦int {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) Skip(num int) instantiate୦୦Stream୦int {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) ForEach(f func(e int,
-
-//line parallel_stream.go2:33
-)) instantiate୦୦Stream୦int {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) ToSlice() []int {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) Max(c instantiate୦୦comparator୦int,) (int,
-
-//line parallel_stream.go2:41
- error) {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) Min(c instantiate୦୦comparator୦int,) (int,
-
-//line parallel_stream.go2:45
- error) {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) AnyMatch(m instantiate୦୦match୦int,) bool {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) AllMatch(m instantiate୦୦match୦int,) bool {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) NoneMatch(m instantiate୦୦match୦int,) bool {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) Count() int {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) FindFirst(m instantiate୦୦match୦int,) (int,
-
-//line parallel_stream.go2:65
- error) {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) FindLast(m instantiate୦୦match୦int,) (int,
-
-//line parallel_stream.go2:69
- error) {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) FindAny(m instantiate୦୦match୦int,) (int,
-
-//line parallel_stream.go2:73
- error) {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) FindNth(n int, m instantiate୦୦match୦int,) (int,
-
-//line parallel_stream.go2:77
- error) {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) Concat(tail instantiate୦୦Stream୦int,) instantiate୦୦Stream୦int {
-	panic("implement me")
-}
-
-func (p *instantiate୦୦ParallelStream୦int,) ConcatArray(tail []int,
-
-//line parallel_stream.go2:85
-) instantiate୦୦Stream୦int {
-	panic("implement me")
-}
-
-//line parallel_stream.go2:87
-type instantiate୦୦match୦int func(e int,
-
-//line stream.go2:251
-) bool
-//line stream.go2:251
-type instantiate୦୦comparator୦int func(e1, e2 int,
-
-) int
-//line stream.go2:253
+//line parallel_stream.go2:1
 type Importable୦ int
 
-//line stream.go2:253
+//line parallel_stream.go2:1
 var _ = errors.As
 
-//line stream.go2:253
+//line parallel_stream.go2:1
 type _ sort.Float64Slice
+//line parallel_stream.go2:1
+type _ sync.Cond
 
-//line stream.go2:253
+//line parallel_stream.go2:1
 var _ = testing.AllocsPerRun

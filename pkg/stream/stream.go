@@ -11,6 +11,8 @@ import (
 //line stream.go2:1
  "sort"
 //line stream.go2:1
+ "sync"
+//line stream.go2:1
  "testing"
 //line stream.go2:1
 )
@@ -21,7 +23,59 @@ var ErrNotFound = errors.New("element not found")
 //line stream.go2:40
 var _ instantiate୦୦Stream୦int = instantiate୦୦Of୦int([]int{1})
 
-//line stream.go2:33
+//line stream.go2:255
+type Streamable interface {
+	Next() (Streamable, bool)
+}
+//line stream.go2:257
+type instantiate୦୦Stream୦int interface {
+//line stream.go2:11
+ OrElse(e int) instantiate୦୦Stream୦int
+			Filter(m instantiate୦୦match୦int,) instantiate୦୦Stream୦int
+			Distinct(c instantiate୦୦comparator୦int,) instantiate୦୦Stream୦int
+			Sort(c instantiate୦୦comparator୦int,) instantiate୦୦Stream୦int
+			Limit(offset int, limit int) instantiate୦୦Stream୦int
+			Skip(num int) instantiate୦୦Stream୦int
+			ForEach(f func(e int)) instantiate୦୦Stream୦int
+			ToSlice() []int
+			Max(c instantiate୦୦comparator୦int,) (
+
+//line stream.go2:40
+  int, error)
+//line stream.go2:20
+ Min(c instantiate୦୦comparator୦int,) (
+
+//line stream.go2:40
+  int, error)
+//line stream.go2:21
+ AnyMatch(m instantiate୦୦match୦int,) bool
+			AllMatch(m instantiate୦୦match୦int,) bool
+			NoneMatch(m instantiate୦୦match୦int,) bool
+			Count() int
+			FindFirst(m instantiate୦୦match୦int,) (
+
+//line stream.go2:40
+  int, error)
+//line stream.go2:26
+ FindLast(m instantiate୦୦match୦int,) (
+
+//line stream.go2:40
+  int, error)
+//line stream.go2:27
+ FindAny(m instantiate୦୦match୦int,) (
+
+//line stream.go2:40
+  int, error)
+//line stream.go2:28
+ FindNth(n int, m instantiate୦୦match୦int,) (
+
+//line stream.go2:40
+  int, error)
+//line stream.go2:29
+ Concat(tail instantiate୦୦Stream୦int,) instantiate୦୦Stream୦int
+			ConcatArray(tail []int) instantiate୦୦Stream୦int
+}
+
 func instantiate୦୦Of୦int(elems []int) *instantiate୦୦SequentialStream୦int {
 	return &instantiate୦୦SequentialStream୦int{
 		eles:    elems,
@@ -30,6 +84,15 @@ func instantiate୦୦Of୦int(elems []int) *instantiate୦୦SequentialStream�
 }
 
 //line stream.go2:38
+type instantiate୦୦match୦int func(e int,
+
+//line stream.go2:251
+) bool
+//line stream.go2:251
+type instantiate୦୦comparator୦int func(e1, e2 int,
+
+) int
+//line stream.go2:253
 type instantiate୦୦SequentialStream୦int struct {
 //line stream.go2:43
  eles []int
@@ -281,6 +344,8 @@ var _ = errors.As
 
 //line stream.go2:249
 type _ sort.Float64Slice
+//line stream.go2:249
+type _ sync.Cond
 
 //line stream.go2:249
 var _ = testing.AllocsPerRun

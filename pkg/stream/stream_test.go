@@ -11,6 +11,8 @@ import (
 //line stream_test.go2:1
  "sort"
 //line stream_test.go2:1
+ "sync"
+//line stream_test.go2:1
  "testing"
 //line stream_test.go2:1
 )
@@ -92,6 +94,8 @@ var _ = errors.As
 
 //line stream_test.go2:76
 type _ sort.Float64Slice
+//line stream_test.go2:76
+type _ sync.Cond
 
 //line stream_test.go2:76
 var _ = testing.AllocsPerRun

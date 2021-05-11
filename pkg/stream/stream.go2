@@ -251,3 +251,7 @@ func (s *SequentialStream[E]) ConcatArray(tail []E) Stream[E] {
 type match[E any] func(e E) bool
 
 type comparator[E any] func(e1, e2 E) int
+
+type Streamable interface {
+	Next() (Streamable, bool)
+}

@@ -1,0 +1,12 @@
+package slices
+
+import (
+	"fmt"
+	"testing"
+)
+
+func TestDelete(t *testing.T)  {
+	values := []int{1, 2, 3, 4}
+	values = Delete[int](values, 1)
+	fmt.Printf("%v", values)
+}

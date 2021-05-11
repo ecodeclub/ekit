@@ -1,6 +1,5 @@
 package collection
 
-import "container/list"
 
 type queue[E any] struct {
 	l *linkedList[E]

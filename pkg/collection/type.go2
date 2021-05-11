@@ -12,10 +12,15 @@ type OrderedSet[K any] interface {
 }
 
 type List[E any] interface {
-	//return the number of elements of corresponding collection
 	Len() int
 	Empty() bool
 	Clear()
+	Add(val E, index int)
+	Set(val E, index int)
+	Remove(index int)
+	Append(val E)
+	ForEach(f func(e E))
+	Get(index int) (E, bool)
 	Traverse() []E
 }
 
@@ -23,7 +28,6 @@ type Map[K any, V any] interface {
 }
 
 type Queue[E any] interface {
-	List[E]
 	Front() E
 	Back() E
 	Push(e E)
@@ -31,7 +35,6 @@ type Queue[E any] interface {
 }
 
 type Stack[E any] interface {
-	List[E]
 	Push(e E)
 	Pop() E
 	Peek() E

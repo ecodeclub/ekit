@@ -1,0 +1,20 @@
+package slices
+
+func Delete[T any](values []T, index int) []T {
+	if index <0 || index > len(values) - 1{
+		return values
+	}
+	if len(values) == 0 {
+		return []T{}
+	}
+	res := make([]T, 0, len(values) - 1)
+	for i := range values {
+		if i != index {
+			res = append(res, values[i])
+		}
+	}
+	return res
+}
+
+//
+
