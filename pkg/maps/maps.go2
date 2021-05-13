@@ -1,0 +1,11 @@
+package maps
+
+
+func PutIfAbsent[K any, V any](m map[K]V, key K, val V) (V, bool) {
+	old, ok := m[key]
+	if ok {
+		return old, false
+	}
+	m[key] = val
+	return val, true
+}

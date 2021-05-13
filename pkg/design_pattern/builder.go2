@@ -1,0 +1,38 @@
+package design_pattern
+
+type Animal interface {
+
+}
+
+type Builder[T Animal] interface {
+	Part1() Builder[T]
+	Part2() Builder[T]
+	Part3() Builder[T]
+	Build() T
+}
+
+var _ Builder[Cat] = &CatBuilder{}
+type Cat struct {
+}
+
+type CatBuilder struct {
+
+}
+
+func (c *CatBuilder) Part1() Builder[Cat] {
+	panic("implement me")
+}
+
+func (c *CatBuilder) Part2()  Builder[Cat] {
+	panic("implement me")
+}
+
+func (c *CatBuilder) Part3()  Builder[Cat] {
+	panic("implement me")
+}
+
+func (c *CatBuilder) Build() Cat {
+	panic("implement me")
+}
+
+

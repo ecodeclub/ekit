@@ -74,3 +74,20 @@ func TestStreamAPI(t *testing.T) {
 		t.Fatal("Min failed")
 	}
 }
+
+type Constraint1 interface {
+	Method1()
+}
+
+type Constraint2 interface {
+	Method2()
+}
+
+type Constraint3 interface {
+	Constraint1
+	Constraint2
+}
+
+func MultipleConstraints[T Constraint3]()  {
+	
+}

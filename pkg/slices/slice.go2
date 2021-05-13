@@ -1,5 +1,7 @@
 package slices
 
+import "errors"
+
 func Delete[T any](values []T, index int) []T {
 	if index <0 || index > len(values) - 1{
 		return values
@@ -16,5 +18,26 @@ func Delete[T any](values []T, index int) []T {
 	return res
 }
 
-//
+func Add[T any] (values []T, val T, index int) ([]T, error) {
+	if index < 0 || index > len(values) - 1 {
+		return nil, errors.New("index out of range")
+	}
+	res := make([]T, 0, len(values) + 1)
+	for i := 0; i < index; i++ {
+		res = append(res, values[i])
+	}
 
+	res = append(res, val)
+
+	for i := index; i < len(values); i++ {
+		res = append(res, values[i])
+	}
+
+	return res, nil
+}
+
+type Slice[T] []T
+
+func (s Slice[T]) Add(val T, index int) (Slice[T], error) {
+	//
+}
