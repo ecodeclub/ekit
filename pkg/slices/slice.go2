@@ -19,10 +19,10 @@ func Delete[T any](values []T, index int) []T {
 }
 
 func Add[T any] (values []T, val T, index int) ([]T, error) {
-	if index < 0 || index > len(values) - 1 {
+	if index < 0 || index > len(values)-1 {
 		return nil, errors.New("index out of range")
 	}
-	res := make([]T, 0, len(values) + 1)
+	res := make([]T, 0, len(values)+1)
 	for i := 0; i < index; i++ {
 		res = append(res, values[i])
 	}
@@ -34,10 +34,4 @@ func Add[T any] (values []T, val T, index int) ([]T, error) {
 	}
 
 	return res, nil
-}
-
-type Slice[T] []T
-
-func (s Slice[T]) Add(val T, index int) (Slice[T], error) {
-	//
 }
