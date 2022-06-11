@@ -1,0 +1,50 @@
+#!/bin/sh
+# Copyright 2021 gotomicro
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# git test pre-push hook
+#
+# To use, store as .git/hooks/pre-push inside your repository and make sure
+# it has execute permissions.
+#
+# This script does not handle file names that contain spaces.
+
+# Pre-push configuration
+remote=$1
+url=$2
+echo >&2 "Try pushing $2 to $1"
+
+TEST="go test ./... -race -cover -failfast"
+LINTER="golangci-lint run"
+
+# Run test and return if failed
+printf "Running go test..."
+$TEST
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+  echo >&2 "$TEST"
+  echo >&2 "Check code to pass test."
+  exit 1
+fi
+
+# Run linter and return if failed
+printf "Running go linter..."
+$LINTER
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+  echo >&2 "$LINTER"
+  echo >&2 "Check code to pass linter."
+  exit 1
+fi
+
+exit 0
