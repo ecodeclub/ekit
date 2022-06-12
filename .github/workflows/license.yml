@@ -19,6 +19,7 @@ on:
     branches:
       - develop
       - main
+      - dev
 jobs:
   check-license-lines:
     runs-on: ubuntu-latest

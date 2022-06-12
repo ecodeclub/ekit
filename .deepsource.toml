@@ -19,14 +19,10 @@ name = "go"
 enabled = true
 
   [analyzers.meta]
-  import_root = "github.com/gotomicro/ego-kit"
+  import_root = "github.com/gotomicro/ekit"
   dependencies_vendored = false
 
 [[analyzers]]
 name = "test-coverage"
-enabled = true
-
-[[analyzers]]
-name = "sql"
 enabled = true
 

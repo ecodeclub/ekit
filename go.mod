@@ -1,4 +1,4 @@
-module github.com/gotomicro/ego-kit
+module github.com/gotomicro/ekit
 
 go 1.18
 

@@ -53,6 +53,6 @@ linters:
 
 linters-settings:
   gci:
-    local-prefixes: github.com/gotomicro/ego-kit
+    local-prefixes: github.com/gotomicro/ekit
   goimports:
-    local-prefixes: github.com/gotomicro/ego-kit
+    local-prefixes: github.com/gotomicro/ekit

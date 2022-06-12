@@ -1,7 +1,7 @@
 bench:
 	@go test -bench=. -benchmem  ./...
 
-test:
+ut:
 	@go test -race ./...
 
 setup:
