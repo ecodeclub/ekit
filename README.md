@@ -1,2 +1,2 @@
-# ego-kit
-Stream API, Collection and ...
+# ekit
+泛型工具库
