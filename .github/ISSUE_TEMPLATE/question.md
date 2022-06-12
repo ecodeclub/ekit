@@ -16,7 +16,7 @@ labels: question
 
 ### 你的问题
 
-### 你使用的是 ego-kit 哪个版本?
+### 你使用的是 ekit 哪个版本?
 
 ### 你设置的的 Go 环境?
 > 上传 `go env` 的结果

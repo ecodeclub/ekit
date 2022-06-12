@@ -51,7 +51,7 @@ func ExampleNew() {
 
 // goos: linux
 // goarch: amd64
-// pkg: github.com/gotomicro/ego-kit/pkg/pool
+// pkg: github.com/gotomicro/ekit/pkg/pool
 // cpu: Intel(R) Core(TM) i5-10400F CPU @ 2.90GHz
 // BenchmarkPool_Get/Pool-12                9190246               130.0 ns/op             0 B/op          0 allocs/op
 // BenchmarkPool_Get/sync.Pool-12           9102818               128.6 ns/op             0 B/op          0 allocs/op

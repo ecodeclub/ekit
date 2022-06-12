@@ -20,6 +20,7 @@ on:
     branches:
       - develop
       - main
+      - dev
 
 jobs:
   changelog:
