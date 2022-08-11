@@ -64,14 +64,14 @@ func TestArrayList_Cap(t *testing.T) {
 		list      *ArrayList[int]
 	}{
 		{
-			name:      "Cap test",
+			name:      "与实际容量相等",
 			expectCap: 5,
 			list: &ArrayList[int]{
 				vals: make([]int, 5),
 			},
 		},
 		{
-			name:      "Cap test nil",
+			name:      "用户传入nil",
 			expectCap: 0,
 			list: &ArrayList[int]{
 				vals: nil,
