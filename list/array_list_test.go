@@ -58,30 +58,50 @@ import (
 //	}
 
 func TestArrayList_Cap(t *testing.T) {
-	testCase := struct {
+	testCases := []struct {
 		name      string
 		expectCap int
 		list      *ArrayList[int]
 	}{
-		name:      "Cap test",
-		expectCap: 5,
-		list: &ArrayList[int]{
-			vals: make([]int, 5),
+		{
+			name:      "Cap test",
+			expectCap: 5,
+			list: &ArrayList[int]{
+				vals: make([]int, 5),
+			},
+		},
+		{
+			name:      "Cap test nil",
+			expectCap: 0,
+			list: &ArrayList[int]{
+				vals: nil,
+			},
 		},
 	}
-	t.Run(testCase.name, func(t *testing.T) {
-		actual := testCase.list.Cap()
-		assert.Equal(t, testCase.expectCap, actual)
-	})
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			actual := testCase.list.Cap()
+			assert.Equal(t, testCase.expectCap, actual)
+		})
+	}
 }
 
 func BenchmarkArrayList_Cap(b *testing.B) {
 	list := &ArrayList[int]{
-		vals: make([]int, 0, 0),
+		vals: make([]int, 0),
 	}
-	for i := 0; i < b.N; i++ {
-		list.Cap()
-	}
+
+	b.Run("Cap", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			list.Cap()
+		}
+	})
+
+	b.Run("Runtime cap", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_ = cap(list.vals)
+		}
+	})
 }
 
 //
