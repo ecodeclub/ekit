@@ -14,47 +14,67 @@
 
 package list
 
-// func TestArrayList_Add(t *testing.T) {
-// 	testCases := []struct {
-// 		name      string
-// 		list      *ArrayList[int]
-// 		index     int
-// 		newVal    int
-// 		wantSlice []int
-// 		wantErr   error
-// 	}{
-// 		// 仿照这个例子，继续添加测试
-// 		// 你需要综合考虑下标的各种可能取值
-// 		// 往两边增加，往中间加
-// 		// 下标可能是负数，也可能超出你的长度
-// 		{
-// 			name:      "index 0",
-// 			list:      NewArrayListOf[int]([]int{123}),
-// 			newVal:    100,
-// 			wantSlice: []int{100, 123},
-// 		},
-// 	}
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
+
+//	func TestArrayList_Add(t *testing.T) {
+//		testCases := []struct {
+//			name      string
+//			list      *ArrayList[int]
+//			index     int
+//			newVal    int
+//			wantSlice []int
+//			wantErr   error
+//		}{
+//			// 仿照这个例子，继续添加测试
+//			// 你需要综合考虑下标的各种可能取值
+//			// 往两边增加，往中间加
+//			// 下标可能是负数，也可能超出你的长度
+//			{
+//				name:      "index 0",
+//				list:      NewArrayListOf[int]([]int{123}),
+//				newVal:    100,
+//				wantSlice: []int{100, 123},
+//			},
+//		}
 //
-// 	for _, tc := range testCases {
-// 		t.Run(tc.name, func(t *testing.T) {
-// 			err := tc.list.Add(tc.index, tc.newVal)
-// 			assert.Equal(t, tc.wantErr, err)
-// 			// 因为返回了 error，所以我们不用继续往下比较了
-// 			if err != nil {
-// 				return
-// 			}
-// 			assert.Equal(t, tc.wantSlice, tc.list.vals)
-// 		})
-// 	}
-// }
+//		for _, tc := range testCases {
+//			t.Run(tc.name, func(t *testing.T) {
+//				err := tc.list.Add(tc.index, tc.newVal)
+//				assert.Equal(t, tc.wantErr, err)
+//				// 因为返回了 error，所以我们不用继续往下比较了
+//				if err != nil {
+//					return
+//				}
+//				assert.Equal(t, tc.wantSlice, tc.list.vals)
+//			})
+//		}
+//	}
 //
-// func TestArrayList_Append(t *testing.T) {
-// 	// 这个比较简单，只需要增加元素，然后判断一下 Append 之后是否符合预期
-// }
-//
-// func TestArrayList_Cap(t *testing.T) {
-//
-// }
+//	func TestArrayList_Append(t *testing.T) {
+//		// 这个比较简单，只需要增加元素，然后判断一下 Append 之后是否符合预期
+//	}
+
+func TestArrayList_Cap(t *testing.T) {
+	testCase := struct {
+		name      string
+		expectCap int
+		list      *ArrayList[int]
+	}{
+		name:      "Cap test",
+		expectCap: 5,
+		list: &ArrayList[int]{
+			vals: make([]int, 5),
+		},
+	}
+	t.Run(testCase.name, func(t *testing.T) {
+		actual := testCase.list.Cap()
+		assert.Equal(t, testCase.expectCap, actual)
+	})
+}
+
 //
 // func TestArrayList_Delete(t *testing.T) {
 // 	testCases := []struct {
