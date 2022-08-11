@@ -20,55 +20,74 @@ type ArrayList[T any] struct {
 }
 
 func NewArrayList[T any](cap int) *ArrayList[T] {
-	panic("implement me")
+	return &ArrayList[T]{vals: make([]T, 0, cap)}
 }
 
 // NewArrayListOf 直接使用 ts，而不会执行复制
 func NewArrayListOf[T any](ts []T) *ArrayList[T] {
-	panic("implement me")
+	return &ArrayList[T]{vals: ts}
 }
 
 func (a *ArrayList[T]) Get(index int) (T, error) {
-	// TODO implement me
-	panic("implement me")
+	if len(a.vals) <= index || index < 0 {
+		var zero T
+		return zero, newErrIndexOutOfRange(len(a.vals), index)
+	}
+	return a.vals[index], nil
 }
 
 func (a *ArrayList[T]) Append(t T) error {
-	// TODO implement me
-	panic("implement me")
+	a.vals = append(a.vals, t)
+	return nil
 }
 
 func (a *ArrayList[T]) Add(index int, t T) error {
-	// TODO implement me
-	panic("implement me")
+	if len(a.vals) < index || index < 0 {
+		return newErrIndexOutOfRange(len(a.vals), index)
+	}
+	origin := append([]T{}, a.vals...)
+	a.vals = append(a.vals[:index], t)
+	a.vals = append(a.vals, origin[index:]...)
+	return nil
 }
 
 func (a *ArrayList[T]) Set(index int, t T) error {
-	// TODO implement me
-	panic("implement me")
+	if len(a.vals) <= index || index < 0 {
+		return newErrIndexOutOfRange(len(a.vals), index)
+	}
+	a.vals[index] = t
+	return nil
 }
 
 func (a *ArrayList[T]) Delete(index int) (T, error) {
-	// TODO implement me
-	panic("implement me")
+	if len(a.vals) <= index || index < 0 {
+		var zero T
+		return zero, newErrIndexOutOfRange(len(a.vals), index)
+	}
+	res := a.vals[index]
+	a.vals = append(a.vals[:index], a.vals[index+1:]...)
+	return res, nil
 }
 
 func (a *ArrayList[T]) Len() int {
-	// TODO implement me
-	panic("implement me")
+	return len(a.vals)
 }
 
 func (a *ArrayList[T]) Cap() int {
-	// TODO implement me
-	panic("implement me")
+	return cap(a.vals)
 }
 
 func (a *ArrayList[T]) Range(fn func(index int, t T) error) error {
-	// TODO implement me
-	panic("implement me")
+
+	for i, v := range a.vals {
+		err := fn(i, v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (a *ArrayList[T]) AsSlice() []T {
-	// TODO implement me
-	panic("implement me")
+	return append([]T{}, a.vals...)
 }
