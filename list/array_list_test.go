@@ -75,6 +75,15 @@ func TestArrayList_Cap(t *testing.T) {
 	})
 }
 
+func BenchmarkArrayList_Cap(b *testing.B) {
+	list := &ArrayList[int]{
+		vals: make([]int, 0, 0),
+	}
+	for i := 0; i < b.N; i++ {
+		list.Cap()
+	}
+}
+
 //
 // func TestArrayList_Delete(t *testing.T) {
 // 	testCases := []struct {
