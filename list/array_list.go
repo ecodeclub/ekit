@@ -20,42 +20,75 @@ type ArrayList[T any] struct {
 }
 
 func NewArrayList[T any](cap int) *ArrayList[T] {
-	panic("implement me")
+	return &ArrayList[T]{vals: make([]T, cap)}
+	// panic("implement me")
 }
 
 // NewArrayListOf 直接使用 ts，而不会执行复制
 func NewArrayListOf[T any](ts []T) *ArrayList[T] {
-	panic("implement me")
+	return &ArrayList[T]{vals: ts}
+	// panic("implement me")
 }
 
 func (a *ArrayList[T]) Get(index int) (T, error) {
+	var zero T
+	flag, err := isIndexOutOfBound(len(a.vals), index)
+	if flag {
+		return zero, err
+	}
+	return a.vals[index], nil
 	// TODO implement me
-	panic("implement me")
+	// panic("implement me")
 }
 
 func (a *ArrayList[T]) Append(t T) error {
+	a.vals = append(a.vals, t)
+	return nil
 	// TODO implement me
-	panic("implement me")
+	// panic("implement me")
 }
 
 func (a *ArrayList[T]) Add(index int, t T) error {
+	flag, err := isIndexOutOfBound(len(a.vals), index)
+	if flag {
+		return err
+	}
+	tmp := append(make([]T, 0), a.vals[index:]...)
+	a.vals = append(append(a.vals[:index], t), tmp...)
+	return nil
 	// TODO implement me
-	panic("implement me")
+	// panic("implement me")
 }
 
 func (a *ArrayList[T]) Set(index int, t T) error {
+	flag, err := isIndexOutOfBound(len(a.vals), index)
+	if flag {
+		return err
+	}
+	a.vals[index] = t
+	return nil
 	// TODO implement me
-	panic("implement me")
+	// panic("implement me")
 }
 
 func (a *ArrayList[T]) Delete(index int) (T, error) {
+	var zero T
+	flag, err := isIndexOutOfBound(len(a.vals), index)
+	if flag {
+		return zero, err
+	}
+	res := a.vals[index]
+	tmp := append(make([]T, 0), a.vals[index+1:]...)
+	a.vals = append(a.vals[:index], tmp...)
+	return res, nil
 	// TODO implement me
-	panic("implement me")
+	// panic("implement me")
 }
 
 func (a *ArrayList[T]) Len() int {
+	return len(a.vals)
 	// TODO implement me
-	panic("implement me")
+	// panic("implement me")
 }
 
 func (a *ArrayList[T]) Cap() int {
@@ -63,11 +96,24 @@ func (a *ArrayList[T]) Cap() int {
 }
 
 func (a *ArrayList[T]) Range(fn func(index int, t T) error) error {
+	for k, v := range a.vals {
+		err := fn(k, v)
+		return err
+	}
+	return nil
 	// TODO implement me
-	panic("implement me")
+	// panic("implement me")
 }
 
 func (a *ArrayList[T]) AsSlice() []T {
+	return append(make([]T, 0), a.vals...)
 	// TODO implement me
-	panic("implement me")
+	// panic("implement me") 
+}
+
+func isIndexOutOfBound(len, index int) (bool, error) {
+	if index < 0 || len <= index {
+		return true, newErrIndexOutOfRange(len, index)
+	}
+	return false, nil
 }
