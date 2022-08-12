@@ -146,39 +146,78 @@ func BenchmarkArrayList_Cap(b *testing.B) {
 //			})
 //		}
 //	}
-//
-//	func TestArrayList_Get(t *testing.T) {
-//		testCases := []struct {
-//			name    string
-//			list    *ArrayList[int]
-//			index   int
-//			wantVal int
-//			wantErr error
-//		}{
-//			// 仿照这个例子，继续添加测试
-//			// 你需要综合考虑下标的各种可能取值
-//			// 往两边增加，往中间加
-//			// 下标可能是负数，也可能超出你的长度
-//			{
-//				name:    "index 0",
-//				list:    NewArrayListOf[int]([]int{123, 100}),
-//				index:   0,
-//				wantVal: 123,
-//			},
-//		}
-//
-//		for _, tc := range testCases {
-//			t.Run(tc.name, func(t *testing.T) {
-//				val, err := tc.list.Get(tc.index)
-//				assert.Equal(t, tc.wantErr, err)
-//				// 因为返回了 error，所以我们不用继续往下比较了
-//				if err != nil {
-//					return
-//				}
-//				assert.Equal(t, tc.wantVal, val)
-//			})
-//		}
-//	}
+
+func TestArrayList_Len(t *testing.T) {
+	testCases := []struct {
+		name      string
+		expectLen int
+		list      *ArrayList[int]
+	}{
+		{
+			name:      "与实际元素数相等",
+			expectLen: 5,
+			list: &ArrayList[int]{
+				vals: make([]int, 5),
+			},
+		},
+		{
+			name:      "用户传入nil",
+			expectLen: 0,
+			list: &ArrayList[int]{
+				vals: nil,
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			actual := testCase.list.Cap()
+			assert.Equal(t, testCase.expectLen, actual)
+		})
+	}
+}
+
+func TestArrayList_Get(t *testing.T) {
+	testCases := []struct {
+		name    string
+		list    *ArrayList[int]
+		index   int
+		wantVal int
+		wantErr error
+	}{
+		{
+			name:    "index 0",
+			list:    NewArrayListOf[int]([]int{123, 100}),
+			index:   0,
+			wantVal: 123,
+		},
+		{
+			name:    "index 2",
+			list:    NewArrayListOf[int]([]int{123, 100}),
+			index:   2,
+			wantVal: 0,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 2, 2),
+		},
+		{
+			name:    "index -1",
+			list:    NewArrayListOf[int]([]int{123, 100}),
+			index:   -1,
+			wantVal: 0,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 2, -1),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			val, err := tc.list.Get(tc.index)
+			assert.Equal(t, tc.wantErr, err)
+			// 因为返回了 error，所以我们不用继续往下比较了
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantVal, val)
+		})
+	}
+}
 func TestArrayList_Range(t *testing.T) {
 	// 设计两个测试用例，用求和来作为场景
 	// 一个测试用例是计算全部元素的和
