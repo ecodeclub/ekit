@@ -64,13 +64,17 @@ func (a *ArrayList[T]) Len() int {
 }
 
 func (a *ArrayList[T]) Cap() int {
-	// TODO implement me
-	panic("implement me")
+	return cap(a.vals)
 }
 
 func (a *ArrayList[T]) Range(fn func(index int, t T) error) error {
-	// TODO implement me
-	panic("implement me")
+	for key, value := range a.vals {
+		e := fn(key, value)
+		if e != nil {
+			return e
+		}
+	}
+	return nil
 }
 
 func (a *ArrayList[T]) AsSlice() []T {
