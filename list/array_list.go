@@ -79,11 +79,10 @@ func (a *ArrayList[T]) Cap() int {
 }
 
 func (a *ArrayList[T]) Range(fn func(index int, t T) error) error {
-
-	for i, v := range a.vals {
-		err := fn(i, v)
-		if err != nil {
-			return err
+	for key, value := range a.vals {
+		e := fn(key, value)
+		if e != nil {
+			return e
 		}
 	}
 	return nil
