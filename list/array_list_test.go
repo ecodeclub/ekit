@@ -44,6 +44,13 @@ func TestArrayList_Add(t *testing.T) {
 			wantSlice: []int{123, 100},
 		},
 		{
+			name:      "insert 1",
+			list:      NewArrayListOf[int]([]int{123, 200}),
+			newVal:    150,
+			index:     1,
+			wantSlice: []int{123, 150, 200},
+		},
+		{
 			name:      "index -1",
 			list:      NewArrayListOf[int]([]int{123}),
 			newVal:    100,
@@ -69,7 +76,7 @@ func TestArrayList_Add(t *testing.T) {
 			if err != nil {
 				return
 			}
-			assert.Equal(t, tc.wantSlice, tc.list.data)
+			assert.Equal(t, tc.wantSlice, tc.list.AsSlice())
 		})
 	}
 }

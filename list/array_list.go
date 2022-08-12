@@ -27,6 +27,8 @@ type ArrayList[T any] struct {
 
 const (
 	_defaultCap = 10
+	// _capacityReductionThreshold 数组缩容阈值，当size大于这个值才触发缩容
+	_capacityReductionThreshold = 8
 )
 
 func NewArrayList[T any](cap int) *ArrayList[T] {
@@ -108,7 +110,8 @@ func (a *ArrayList[T]) Delete(index int) (T, error) {
 	}
 	a.size--
 	a.data[a.size] = t
-	if a.size == len(a.data)/2 {
+	// 避免性能抖动
+	if a.size == a.Len()/4 && a.Len() > _capacityReductionThreshold && a.Len()/2 != 0 {
 		a.resize(a.size / 2)
 	}
 	return ret, nil
@@ -136,7 +139,7 @@ func (a *ArrayList[T]) Range(fn func(index int, t T) error) error {
 
 // AsSlice 将List转换成 Slice, 需要将内部的 data 拷贝一份，避免返回的 Slice被外部改动从而影响内部
 func (a *ArrayList[T]) AsSlice() []T {
-	s := make([]T, len(a.data))
+	s := make([]T, a.size)
 	copy(s, a.data)
 	return s
 }
