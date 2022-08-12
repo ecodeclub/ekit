@@ -28,6 +28,13 @@ func NewArrayListOf[T any](ts []T) *ArrayList[T] {
 	panic("implement me")
 }
 
+// NewArrayListOf2 fork of NewArrayListOf()
+func NewArrayListOf2[T any](ts []T) *ArrayList[T] {
+	obj := &ArrayList[T]{}
+	obj.vals = ts
+	return obj
+}
+
 func (a *ArrayList[T]) Get(index int) (T, error) {
 	// TODO implement me
 	panic("implement me")
@@ -73,6 +80,7 @@ func (a *ArrayList[T]) Range(fn func(index int, t T) error) error {
 }
 
 func (a *ArrayList[T]) AsSlice() []T {
-	// TODO implement me
-	panic("implement me")
+	slice := make([]T, len(a.vals), cap(a.vals))
+	copy(slice, a.vals)
+	return slice
 }
