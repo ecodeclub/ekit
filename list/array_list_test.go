@@ -22,39 +22,82 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//	func TestArrayList_Add(t *testing.T) {
-//		testCases := []struct {
-//			name      string
-//			list      *ArrayList[int]
-//			index     int
-//			newVal    int
-//			wantSlice []int
-//			wantErr   error
-//		}{
-//			// 仿照这个例子，继续添加测试
-//			// 你需要综合考虑下标的各种可能取值
-//			// 往两边增加，往中间加
-//			// 下标可能是负数，也可能超出你的长度
-//			{
-//				name:      "index 0",
-//				list:      NewArrayListOf[int]([]int{123}),
-//				newVal:    100,
-//				wantSlice: []int{100, 123},
-//			},
-//		}
-//
-//		for _, tc := range testCases {
-//			t.Run(tc.name, func(t *testing.T) {
-//				err := tc.list.Add(tc.index, tc.newVal)
-//				assert.Equal(t, tc.wantErr, err)
-//				// 因为返回了 error，所以我们不用继续往下比较了
-//				if err != nil {
-//					return
-//				}
-//				assert.Equal(t, tc.wantSlice, tc.list.vals)
-//			})
-//		}
-//	}
+func TestArrayList_Add(t *testing.T) {
+	testCases := []struct {
+		name      string
+		list      *ArrayList[int]
+		index     int
+		newVal    int
+		wantSlice []int
+		wantErr   error
+	}{
+		// 仿照这个例子，继续添加测试
+		// 你需要综合考虑下标的各种可能取值
+		// 往两边增加，往中间加
+		// 下标可能是负数，也可能超出你的长度
+		{
+			name:      "index 0",
+			list:      NewArrayListOf[int]([]int{123}),
+			newVal:    100,
+			index:     0,
+			wantSlice: []int{100, 123},
+		},
+		{
+			name:      "index -1",
+			list:      NewArrayListOf[int]([]int{123}),
+			newVal:    100,
+			index:     -1,
+			wantSlice: []int{123},
+			wantErr:   errors.New("ekit: 下标超出范围，长度 1, 下标 -1"),
+		},
+		{
+			name:      "index 1",
+			list:      NewArrayListOf[int]([]int{123}),
+			newVal:    100,
+			index:     1,
+			wantSlice: []int{123},
+			wantErr:   errors.New("ekit: 下标超出范围，长度 1, 下标 1"),
+		},
+		{
+			name:      "index 1",
+			list:      NewArrayListOf[int]([]int{123, 1, 2, 3}),
+			newVal:    100,
+			index:     1,
+			wantSlice: []int{123, 100, 1, 2, 3},
+			//wantErr: errors.New("ekit: 下标超出范围，长度 1, 下标 1"),
+		},
+		{
+			name:      "index 0",
+			list:      NewArrayListOf[int]([]int{}),
+			newVal:    100,
+			index:     0,
+			wantSlice: nil,
+			wantErr:   errors.New("ekit: 下标超出范围，长度 0, 下标 0"),
+		},
+		{
+			name:      "index 0",
+			list:      NewArrayListOf[int](nil),
+			newVal:    100,
+			index:     0,
+			wantSlice: nil,
+			wantErr:   errors.New("空对象"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.list.Add(tc.index, tc.newVal)
+			assert.Equal(t, tc.wantErr, err)
+			// 因为返回了 error，所以我们不用继续往下比较了
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			assert.Equal(t, tc.wantSlice, tc.list.vals)
+		})
+	}
+}
+
 //
 //	func TestArrayList_Append(t *testing.T) {
 //		// 这个比较简单，只需要增加元素，然后判断一下 Append 之后是否符合预期

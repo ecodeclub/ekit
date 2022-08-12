@@ -14,6 +14,8 @@
 
 package list
 
+import "errors"
+
 // ArrayList 基于切片的简单封装
 type ArrayList[T any] struct {
 	vals []T
@@ -40,7 +42,17 @@ func (a *ArrayList[T]) Append(t T) error {
 
 func (a *ArrayList[T]) Add(index int, t T) error {
 	// TODO implement me
-	panic("implement me")
+	//panic("implement me")
+	if a.vals == nil {
+		return errors.New("空对象")
+	}
+	if index < 0 || index > a.Len()-1 {
+		return newErrIndexOutOfRange(a.Len(), index)
+	}
+	a.vals = append(a.vals, t)
+	copy(a.vals[index+1:], a.vals[index:])
+	a.vals[index] = t
+	return nil
 }
 
 func (a *ArrayList[T]) Set(index int, t T) error {
