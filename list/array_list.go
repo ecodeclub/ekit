@@ -80,7 +80,7 @@ func (a *ArrayList[T]) Range(fn func(index int, t T) error) error {
 }
 
 func (a *ArrayList[T]) AsSlice() []T {
-	slice := make([]T, len(a.vals), cap(a.vals))
+	slice := make([]T, len(a.vals))
 	copy(slice, a.vals)
 	return slice
 }
