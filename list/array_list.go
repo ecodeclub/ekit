@@ -25,11 +25,6 @@ func NewArrayList[T any](cap int) *ArrayList[T] {
 
 // NewArrayListOf 直接使用 ts，而不会执行复制
 func NewArrayListOf[T any](ts []T) *ArrayList[T] {
-	panic("implement me")
-}
-
-// NewArrayListOf2 fork of NewArrayListOf()
-func NewArrayListOf2[T any](ts []T) *ArrayList[T] {
 	obj := &ArrayList[T]{}
 	obj.vals = ts
 	return obj
