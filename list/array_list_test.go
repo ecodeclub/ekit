@@ -274,17 +274,19 @@ func TestArrayList_Range(t *testing.T) {
 //
 // }
 //
-// func TestArrayList_AsSlice(t *testing.T) {
-// 	vals := []int{1, 2, 3}
-// 	a := NewArrayListOf[int](vals)
-// 	slice := a.AsSlice()
-// 	// 内容相同
-// 	assert.Equal(t, slice, vals)
-// 	aAddr := fmt.Sprintf("%p", vals)
-// 	sliceAddr := fmt.Sprintf("%p", slice)
-// 	// 但是地址不同，也就是意味着 slice 必须是一个新创建的
-// 	assert.NotEqual(t, aAddr, sliceAddr)
-// }
+
+func TestArrayList_AsSlice(t *testing.T) {
+	vals := []int{1, 2, 3}
+	a := NewArrayListOf[int](vals)
+	slice := a.AsSlice()
+	// 内容相同
+	assert.Equal(t, slice, vals)
+	aAddr := fmt.Sprintf("%p", vals)
+	sliceAddr := fmt.Sprintf("%p", slice)
+	// 但是地址不同，也就是意味着 slice 必须是一个新创建的
+	assert.NotEqual(t, aAddr, sliceAddr)
+}
+
 //
 // // 为其它所有的公开方法都加上例子
 // func ExampleArrayList_Add() {
