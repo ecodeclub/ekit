@@ -25,7 +25,9 @@ func NewArrayList[T any](cap int) *ArrayList[T] {
 
 // NewArrayListOf 直接使用 ts，而不会执行复制
 func NewArrayListOf[T any](ts []T) *ArrayList[T] {
-	panic("implement me")
+	return &ArrayList[T]{
+		vals: ts,
+	}
 }
 
 func (a *ArrayList[T]) Get(index int) (T, error) {
@@ -38,9 +40,16 @@ func (a *ArrayList[T]) Append(t T) error {
 	panic("implement me")
 }
 
+// Add 在ArrayList下标为index的位置插入一个元素
+// 当index等于ArrayList长度等同于append
 func (a *ArrayList[T]) Add(index int, t T) error {
-	// TODO implement me
-	panic("implement me")
+	if index < 0 || index > len(a.vals) {
+		return newErrIndexOutOfRange(len(a.vals), index)
+	}
+	a.vals = append(a.vals, t)
+	copy(a.vals[index+1:], a.vals[index:])
+	a.vals[index] = t
+	return nil
 }
 
 func (a *ArrayList[T]) Set(index int, t T) error {
