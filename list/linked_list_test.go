@@ -16,6 +16,7 @@ package list
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -25,6 +26,23 @@ func TestLinkedList_Add(t *testing.T) {
 
 func TestLinkedList_Append(t *testing.T) {
 	fmt.Println("仿照 ArrayList 的测试写代码")
+}
+
+func TestNewLinkedListOf(t *testing.T) {
+	ts := []int{1, 2, 3, 4, 5}
+	linkedList := NewLinkedListOf(ts)
+	head, tail := linkedList.head, linkedList.tail
+	fmt.Println("forward:")
+	for head != nil {
+		fmt.Printf("%d ", *head.value)
+		head = head.next
+	}
+
+	fmt.Printf("\nbackward\n")
+	for tail != nil {
+		fmt.Printf("%d ", *tail.value)
+		tail = tail.prev
+	}
 }
 
 func TestLinkedList_AsSlice(t *testing.T) {
@@ -52,5 +70,14 @@ func TestLinkedList_Range(t *testing.T) {
 }
 
 func TestLinkedList_Set(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
+	vals := []int{1, 2, 3}
+	a := NewLinkedListOf[int](vals)
+	slice := a.AsSlice()
+	fmt.Println(vals, slice)
+	// 内容相同
+	assert.Equal(t, slice, vals)
+	aAddr := fmt.Sprintf("%p", vals)
+	sliceAddr := fmt.Sprintf("%p", slice)
+	// 但是地址不同，也就是意味着 slice 必须是一个新创建的
+	assert.NotEqual(t, aAddr, sliceAddr)
 }

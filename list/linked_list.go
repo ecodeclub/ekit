@@ -62,12 +62,47 @@ func (l *LinkedList[T]) Range(fn func(index int, t T) error) error {
 	panic("implement me")
 }
 
+func NewLinkedListOf[T any](ts []T) *LinkedList[T] {
+	if ts == nil || len(ts) < 1 {
+		return nil
+	}
+
+	cur := &node[T]{
+		value: &ts[0],
+	}
+
+	dummyHead := &node[T]{
+		next: cur,
+	}
+
+	prev := cur
+	for i := 1; i < len(ts); i++ {
+		cur := &node[T]{
+			prev:  prev,
+			value: &ts[i],
+		}
+		prev.next = cur
+		prev = cur
+	}
+
+	return &LinkedList[T]{
+		head: dummyHead.next,
+		tail: prev,
+	}
+}
+
 func (l *LinkedList[T]) AsSlice() []T {
-	// TODO implement me
-	panic("implement me")
+	slice := make([]T, l.length)
+	head := l.head
+	for head != nil {
+		slice = append(slice, *head.value)
+		head = head.next
+	}
+	return slice
 }
 
 type node[T any] struct {
-	next *node[T]
-	prev *node[T]
+	next  *node[T]
+	prev  *node[T]
+	value *T
 }
