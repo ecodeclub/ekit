@@ -57,8 +57,10 @@ func (a *ArrayList[T]) Delete(index int) (T, error) {
 }
 
 func (a *ArrayList[T]) Len() int {
-	// TODO implement me
-	panic("implement me")
+	if a == nil {
+		return 0
+	}
+	return len(a.vals)
 }
 
 func (a *ArrayList[T]) Cap() int {

@@ -146,6 +146,36 @@ func BenchmarkArrayList_Cap(b *testing.B) {
 //			})
 //		}
 //	}
+
+func TestArrayList_Len(t *testing.T) {
+	testCases := []struct {
+		name      string
+		expectLen int
+		list      *ArrayList[int]
+	}{
+		{
+			name:      "与实际元素数相等",
+			expectLen: 5,
+			list: &ArrayList[int]{
+				vals: make([]int, 5),
+			},
+		},
+		{
+			name:      "用户传入nil",
+			expectLen: 0,
+			list: &ArrayList[int]{
+				vals: nil,
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			actual := testCase.list.Cap()
+			assert.Equal(t, testCase.expectLen, actual)
+		})
+	}
+}
+
 func TestArrayList_Get(t *testing.T) {
 	testCases := []struct {
 		name    string
