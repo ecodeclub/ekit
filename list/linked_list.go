@@ -83,16 +83,23 @@ func NewLinkedListOf[T any](ts []T) *LinkedList[T] {
 	}
 
 	return &LinkedList[T]{
-		head: dummyHead.next,
-		tail: prev,
+		head:   dummyHead.next,
+		tail:   prev,
+		length: len(ts),
 	}
 }
 
 func (l *LinkedList[T]) AsSlice() []T {
+	//slice := make([]T, 0)
+	//head := l.head
+	//for head != nil {
+	//	slice = append(slice, *head.value)
+	//	head = head.next
+	//}
 	slice := make([]T, l.length)
 	head := l.head
-	for head != nil {
-		slice = append(slice, *head.value)
+	for i := 0; i < l.length; i++ {
+		slice[i] = *head.value
 		head = head.next
 	}
 	return slice
