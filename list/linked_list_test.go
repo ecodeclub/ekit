@@ -39,7 +39,7 @@ func TestNewLinkedListOf(t *testing.T) {
 	}
 
 	fmt.Printf("\nbackward\n")
-	for tail != nil {
+	for tail != nil && tail.value != nil {
 		fmt.Printf("%d ", *tail.value)
 		tail = tail.prev
 	}

@@ -67,19 +67,16 @@ func NewLinkedListOf[T any](ts []T) *LinkedList[T] {
 		return nil
 	}
 
-	cur := &node[T]{
-		value: &ts[0],
-	}
+	dummyHead := &node[T]{}
+	prev := dummyHead
 
-	dummyHead := &node[T]{
-		next: cur,
-	}
-
-	prev := cur
-	for i := 1; i < len(ts); i++ {
+	for i := 0; i < len(ts); i++ {
 		cur := &node[T]{
 			prev:  prev,
 			value: &ts[i],
+		}
+		if dummyHead.next == nil {
+			dummyHead.next = cur
 		}
 		prev.next = cur
 		prev = cur
