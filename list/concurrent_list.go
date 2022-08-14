@@ -22,3 +22,57 @@ type ConcurrentList[T any] struct {
 	List[T]
 	lock sync.RWMutex
 }
+
+func (c *ConcurrentList[T]) Get(index int) (T, error) {
+	c.lock.RLock()
+	defer c.lock.Unlock()
+	return c.Get(index)
+}
+
+func (c *ConcurrentList[T]) Append(t T) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.Append(t)
+}
+
+func (c *ConcurrentList[T]) Add(index int, t T) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.Add(index, t)
+}
+
+func (c *ConcurrentList[T]) Set(index int, t T) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.Set(index, t)
+}
+
+func (c *ConcurrentList[T]) Delete(index int) (T, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.Delete(index)
+}
+
+func (c *ConcurrentList[T]) Len() int {
+	c.lock.RLock()
+	defer c.lock.Unlock()
+	return c.Len()
+}
+
+func (c *ConcurrentList[T]) Cap() int {
+	c.lock.RLock()
+	defer c.lock.Unlock()
+	return c.Cap()
+}
+
+func (c *ConcurrentList[T]) Range(fn func(index int, t T) error) error {
+	c.lock.RLock()
+	defer c.lock.Unlock()
+	return c.Range(fn)
+}
+
+func (c *ConcurrentList[T]) AsSlice() []T {
+	c.lock.RLock()
+	defer c.lock.Unlock()
+	return c.AsSlice()
+}
