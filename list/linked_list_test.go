@@ -32,17 +32,18 @@ func TestNewLinkedListOf(t *testing.T) {
 	ts := []int{1, 2, 3, 4, 5}
 	linkedList := NewLinkedListOf(ts)
 	head, tail := linkedList.head, linkedList.tail
-	fmt.Println("forward:")
+	t.Log(head.value, tail.value)
+	fmt.Println("forward")
 	for head != nil {
 		fmt.Printf("%d ", *head.value)
 		head = head.next
 	}
-
-	fmt.Printf("\nbackward\n")
+	fmt.Println("\nbackward")
 	for tail != nil && tail.value != nil {
 		fmt.Printf("%d ", *tail.value)
 		tail = tail.prev
 	}
+	t.Log("Ok")
 }
 
 func TestLinkedList_AsSlice(t *testing.T) {
