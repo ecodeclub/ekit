@@ -121,9 +121,6 @@ type node[T any] struct {
 }
 
 func (n *node[T]) insertAfter(newNode *node[T]) {
-	if n == nil {
-		return
-	}
 	n.next = newNode
 	newNode.prev = n
 }

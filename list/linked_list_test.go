@@ -17,6 +17,7 @@ package list
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"math/rand"
 	"testing"
 )
 
@@ -152,4 +153,16 @@ func linkedListEqual[T comparable](l1 *LinkedList[T], l2 *LinkedList[T]) bool {
 		l2Pos = l2Pos.next
 	}
 	return l1Pos == l2Pos
+}
+
+func BenchmarkLinkedList_Add(b *testing.B) {
+	l := NewLinkedListOf[int]([]int{1, 2, 3})
+	testCase := make([]int, 0, b.N)
+	for i := 1; i <= b.N; i++ {
+		testCase = append(testCase, rand.Intn(i))
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		l.Add(testCase[i], testCase[i])
+	}
 }
