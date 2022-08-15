@@ -22,9 +22,37 @@ type LinkedList[T any] struct {
 	length int
 }
 
-func (l *LinkedList[T]) Get(index int) (T, error) {
-	// TODO implement me
-	panic("implement me")
+func (l *LinkedList[T]) get(index int) (n *node[T], err error) {
+	if index < 0 || index >= l.length {
+		err = newErrIndexOutOfRange(l.length, index)
+		return
+	}
+	if l.length == 0 {
+		return
+	}
+	cur := l.head
+	headToLeft := true
+	if l.fromTailToHead(index) {
+		cur = l.tail
+		headToLeft = false
+		index = l.length - index - 1
+	}
+	curIndex := 0
+	for curIndex < index {
+		curIndex += 1
+		cur = cur.move(headToLeft)
+	}
+	n = cur
+	return
+}
+
+func (l *LinkedList[T]) Get(index int) (t T, err error) {
+	var node *node[T]
+	node, err = l.get(index)
+	if err != nil {
+		return
+	}
+	return node.val, nil
 }
 
 func (l *LinkedList[T]) Append(t T) error {
@@ -62,17 +90,9 @@ func (l *LinkedList[T]) Add(index int, t T) error {
 		return nil
 	}
 
-	cur := l.head
-	headToLeft := true
-	if l.fromTailToHead(index) {
-		cur = l.tail
-		headToLeft = false
-		index = l.length - index - 1
-	}
-	curIndex := 0
-	for curIndex < index {
-		curIndex += 1
-		cur = cur.move(headToLeft)
+	cur, err := l.get(index)
+	if err != nil {
+		return err
 	}
 	prev := cur.prev
 	prev.insertAfter(newNode)

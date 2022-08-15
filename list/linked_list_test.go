@@ -117,7 +117,59 @@ func TestLinkedList_Delete(t *testing.T) {
 }
 
 func TestLinkedList_Get(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
+
+	tests := []struct {
+		name    string
+		list    *LinkedList[int]
+		index   int
+		wantVal int
+		wantErr error
+	}{
+		{
+			"get left",
+			NewLinkedListOf([]int{1, 2, 3, 4, 5}),
+			0,
+			1,
+			nil,
+		},
+		{
+			"get right",
+			NewLinkedListOf([]int{1, 2, 3, 4, 5}),
+			4,
+			5,
+			nil,
+		},
+		{
+			"get middle",
+			NewLinkedListOf([]int{1, 2, 3, 4, 5}),
+			2,
+			3,
+			nil,
+		},
+		{
+			"over left",
+			NewLinkedListOf([]int{1, 2, 3, 4, 5}),
+			-1,
+			0,
+			fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 5, -1),
+		},
+		{
+			"over right",
+			NewLinkedListOf([]int{1, 2, 3, 4, 5}),
+			5,
+			0,
+			fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 5, 5),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			get, err := tc.list.Get(tc.index)
+			assert.Equal(t, tc.wantErr, err)
+			if err == nil {
+				assert.Equal(t, tc.wantVal, get)
+			}
+		})
+	}
 }
 
 func TestLinkedList_Len(t *testing.T) {
@@ -163,6 +215,20 @@ func BenchmarkLinkedList_Add(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		l.Add(testCase[i], testCase[i])
+		_ = l.Add(testCase[i], testCase[i])
+	}
+}
+
+func BenchmarkLinkedList_Get(b *testing.B) {
+	l := NewLinkedListOf[int]([]int{1, 2, 3})
+	for i := 1; i <= b.N; i++ {
+		err := l.Add(i, i)
+		if err != nil {
+			panic(err)
+		}
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = l.Get(i)
 	}
 }
