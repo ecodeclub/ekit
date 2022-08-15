@@ -25,7 +25,7 @@ type ConcurrentList[T any] struct {
 
 func (c *ConcurrentList[T]) Get(index int) (T, error) {
 	c.lock.RLock()
-	defer c.lock.Unlock()
+	defer c.lock.RUnlock()
 	return c.Get(index)
 }
 
@@ -55,24 +55,24 @@ func (c *ConcurrentList[T]) Delete(index int) (T, error) {
 
 func (c *ConcurrentList[T]) Len() int {
 	c.lock.RLock()
-	defer c.lock.Unlock()
+	defer c.lock.RUnlock()
 	return c.Len()
 }
 
 func (c *ConcurrentList[T]) Cap() int {
 	c.lock.RLock()
-	defer c.lock.Unlock()
+	defer c.lock.RUnlock()
 	return c.Cap()
 }
 
 func (c *ConcurrentList[T]) Range(fn func(index int, t T) error) error {
 	c.lock.RLock()
-	defer c.lock.Unlock()
+	defer c.lock.RUnlock()
 	return c.Range(fn)
 }
 
 func (c *ConcurrentList[T]) AsSlice() []T {
 	c.lock.RLock()
-	defer c.lock.Unlock()
+	defer c.lock.RUnlock()
 	return c.AsSlice()
 }
