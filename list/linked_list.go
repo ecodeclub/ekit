@@ -22,7 +22,7 @@ type LinkedList[T any] struct {
 	length int
 }
 
-func (l *LinkedList[T]) get(index int) (n *node[T], err error) {
+func (l *LinkedList[T]) getNode(index int) (n *node[T], err error) {
 	if index < 0 || index >= l.length {
 		err = newErrIndexOutOfRange(l.length, index)
 		return
@@ -48,7 +48,7 @@ func (l *LinkedList[T]) get(index int) (n *node[T], err error) {
 
 func (l *LinkedList[T]) Get(index int) (t T, err error) {
 	var node *node[T]
-	node, err = l.get(index)
+	node, err = l.getNode(index)
 	if err != nil {
 		return
 	}
@@ -90,7 +90,7 @@ func (l *LinkedList[T]) Add(index int, t T) error {
 		return nil
 	}
 
-	cur, err := l.get(index)
+	cur, err := l.getNode(index)
 	if err != nil {
 		return err
 	}
