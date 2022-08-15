@@ -136,9 +136,35 @@ func BenchmarkArrayList_Cap(b *testing.B) {
 	})
 }
 
-//	func TestArrayList_Append(t *testing.T) {
-//		// 这个比较简单，只需要增加元素，然后判断一下 Append 之后是否符合预期
-//	}
+func TestArrayList_Append(t *testing.T) {
+	testCases := []struct {
+		name      string
+		list      *ArrayList[int]
+		newVal    int
+		wantSlice []int
+		size      int
+	}{
+		{
+			name:      "newVal 234",
+			list:      NewArrayListOf[int]([]int{123}),
+			newVal:    234,
+			wantSlice: []int{123, 234},
+			size:      2,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.list.Append(tc.newVal)
+			if err != nil {
+				return
+			}
+
+			assert.Equal(t, tc.wantSlice, tc.list.vals)
+			assert.Equal(t, tc.size, len(tc.list.vals))
+		})
+	}
+}
 
 //	func TestArrayList_Delete(t *testing.T) {
 //		testCases := []struct {
