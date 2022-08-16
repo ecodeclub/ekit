@@ -17,6 +17,7 @@ package list
 import (
 	"errors"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -335,3 +336,18 @@ func TestArrayList_AsSlice(t *testing.T) {
 // 	// Output:
 // 	// [9 1 2 3]
 // }
+
+func TestNewArrayList(t *testing.T) {
+	n := NewArrayList[int](5)
+	n.Append(0)
+	n.Append(1)
+	n.Append(2)
+	n.Append(3)
+	n.Append(4)
+
+	n.Set(2, 99)
+	n.Delete(3)
+
+	n.Set(2, 100)
+	spew.Dump(n)
+}

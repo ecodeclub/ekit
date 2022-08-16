@@ -19,8 +19,9 @@ type ArrayList[T any] struct {
 	vals []T
 }
 
+// NewArrayList 初始化一个len为0，cap为10的ArrayList
 func NewArrayList[T any](cap int) *ArrayList[T] {
-	panic("implement me")
+	return &ArrayList[T]{vals: make([]T, 0, cap)}
 }
 
 // NewArrayListOf 直接使用 ts，而不会执行复制
@@ -38,9 +39,10 @@ func (a *ArrayList[T]) Get(index int) (t T, e error) {
 	return a.vals[index], e
 }
 
+// Append 往ArrayList里追加数据
 func (a *ArrayList[T]) Append(t T) error {
-	// TODO implement me
-	panic("implement me")
+	a.vals = append(a.vals, t)
+	return nil
 }
 
 // Add 在ArrayList下标为index的位置插入一个元素
@@ -55,14 +57,23 @@ func (a *ArrayList[T]) Add(index int, t T) error {
 	return nil
 }
 
+// Set 设置ArrayList里index位置的值为t
 func (a *ArrayList[T]) Set(index int, t T) error {
-	// TODO implement me
-	panic("implement me")
+	if index >= len(a.vals) || index < 0 {
+		panic("index参数超出ArrayList的边界(by set func)")
+	}
+	a.vals[index] = t
+	return nil
 }
 
+// Delete 删除ArrayList中index索引的值
 func (a *ArrayList[T]) Delete(index int) (T, error) {
-	// TODO implement me
-	panic("implement me")
+	if index >= len(a.vals) || index < 0 {
+		panic("index参数超出ArrayList的边界(by delete func)")
+	}
+	delVal := a.vals[index]
+	a.vals = append(a.vals[:index], a.vals[index+1:]...)
+	return delVal, nil
 }
 
 func (a *ArrayList[T]) Len() int {
