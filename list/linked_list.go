@@ -53,8 +53,7 @@ func (l *LinkedList[T]) Get(index int) (t T, err error) {
 		err = newErrIndexOutOfRange(l.length, index)
 		return
 	}
-	var node *node[T]
-	node = l.getNode(index)
+	node := l.getNode(index)
 	return node.val, nil
 }
 
