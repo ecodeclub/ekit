@@ -17,7 +17,6 @@ package list
 import (
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -338,16 +337,81 @@ func TestArrayList_AsSlice(t *testing.T) {
 // }
 
 func TestNewArrayList(t *testing.T) {
-	n := NewArrayList[int](5)
-	n.Append(0)
-	n.Append(1)
-	n.Append(2)
-	n.Append(3)
-	n.Append(4)
+	dataCap := 5
 
-	n.Set(2, 99)
-	n.Delete(3)
+	// int
+	nArr := NewArrayList[int](dataCap)
+	wantData := make([]int, 0, dataCap)
+	assert.Equal(t, wantData, nArr.vals) // pass
 
-	n.Set(2, 100)
-	spew.Dump(n)
+	// string
+	//nArr := NewArrayList[string](dataCap)
+	//wantData := make([]string, 0, dataCap)
+	//assert.Equal(t, wantData, nArr.vals)	// pass
+
+	// any | []interface{}
+	//nArr := NewArrayList[any](dataCap)
+	//wantData := []interface{}([]interface{}{})
+	//assert.Equal(t, wantData, nArr.vals) // pass
+}
+
+func TestArrayList_Append_Set_Delete(t *testing.T) {
+	dataCap := 10
+
+	//nArr := NewArrayList[int](dataCap)
+	//nArr.Append(77)
+	//assert.Equal(t, []int([]int{77}), nArr.vals)
+	//nArr.Append(66)
+	//nArr.Append(55)
+	//nArr.Append(44)
+	//nArr.Delete(1)
+	//nArr.Delete(1)
+	//assert.Equal(t, []int([]int{77, 44}), nArr.vals)
+	//nArr.Set(1, 41)
+	//assert.Equal(t, []int([]int{77, 41}), nArr.vals)
+
+	nArr := NewArrayList[string](dataCap)
+	err := nArr.Append("mousse")
+	if err != nil {
+		panic(err)
+	}
+	err = nArr.Append("qin")
+	if err != nil {
+		panic(err)
+	}
+	assert.Equal(t, []string{"mousse", "qin"}, nArr.vals)
+	err = nArr.Append("student")
+	if err != nil {
+		panic(err)
+	}
+	err = nArr.Set(0, "deng")
+	if err != nil {
+		panic(err)
+	}
+	err = nArr.Set(1, "ming")
+	if err != nil {
+		panic(err)
+	}
+	err = nArr.Set(2, "teacher")
+	if err != nil {
+		panic(err)
+	}
+	assert.Equal(t, []string{"deng", "ming", "teacher"}, nArr.vals)
+
+	_, err = nArr.Delete(0)
+	if err != nil {
+		panic(err)
+	}
+	assert.Equal(t, []string{"ming", "teacher"}, nArr.vals)
+
+	_, err = nArr.Delete(0)
+	if err != nil {
+		panic(err)
+	}
+	_, err = nArr.Delete(0)
+	if err != nil {
+		panic(err)
+	}
+	n := NewArrayList[string](dataCap)
+	assert.Equal(t, n.vals, nArr.vals)
 }
