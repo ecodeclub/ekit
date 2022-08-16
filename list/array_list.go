@@ -39,7 +39,8 @@ func (a *ArrayList[T]) Get(index int) (t T, e error) {
 }
 
 func (a *ArrayList[T]) Append(t T) error {
-	return a.Add(len(a.vals), t)
+	a.vals = append(a.vals, t)
+	return nil
 }
 
 // Add 在ArrayList下标为index的位置插入一个元素

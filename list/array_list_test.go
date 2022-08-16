@@ -142,14 +142,18 @@ func TestArrayList_Append(t *testing.T) {
 		list      *ArrayList[int]
 		newVal    int
 		wantSlice []int
-		size      int
 	}{
 		{
-			name:      "newVal 234",
+			name:      "append 234",
 			list:      NewArrayListOf[int]([]int{123}),
 			newVal:    234,
 			wantSlice: []int{123, 234},
-			size:      2,
+		},
+		{
+			name:      "nil append 123",
+			list:      NewArrayListOf[int](nil),
+			newVal:    123,
+			wantSlice: []int{123},
 		},
 	}
 
@@ -161,7 +165,6 @@ func TestArrayList_Append(t *testing.T) {
 			}
 
 			assert.Equal(t, tc.wantSlice, tc.list.vals)
-			assert.Equal(t, tc.size, len(tc.list.vals))
 		})
 	}
 }
