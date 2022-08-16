@@ -61,8 +61,21 @@ func (a *ArrayList[T]) Set(index int, t T) error {
 }
 
 func (a *ArrayList[T]) Delete(index int) (T, error) {
-	// TODO implement me
-	panic("implement me")
+	length := len(a.vals)
+	if index < 0 || index >= length {
+		var zero T
+		return zero, newErrIndexOutOfRange(length, index)
+	}
+	j := 0
+	res := a.vals[index]
+	for i, v := range a.vals {
+		if i != index {
+			a.vals[j] = v
+			j++
+		}
+	}
+	a.vals = a.vals[:j]
+	return res, nil
 }
 
 func (a *ArrayList[T]) Len() int {
