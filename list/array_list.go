@@ -14,8 +14,6 @@
 
 package list
 
-import "errors"
-
 // ArrayList 基于切片的简单封装
 type ArrayList[T any] struct {
 	vals []T
@@ -61,21 +59,30 @@ func (a *ArrayList[T]) Add(index int, t T) error {
 
 // Set 设置ArrayList里index位置的值为t
 func (a *ArrayList[T]) Set(index int, t T) error {
-	if index >= len(a.vals) || index < 0 {
-		return errors.New("index参数超出ArrayList的边界(by set func)")
+	length := len(a.vals)
+	if index >= length || index < 0 {
+		return newErrIndexOutOfRange(length, index)
 	}
 	a.vals[index] = t
 	return nil
 }
 
-// Delete 删除ArrayList中index索引的值
-func (a *ArrayList[T]) Delete(index int) (any, error) {
-	if index >= len(a.vals) || index < 0 {
-		return nil, errors.New("index参数超出ArrayList的边界(by delete func)")
+func (a *ArrayList[T]) Delete(index int) (T, error) {
+	length := len(a.vals)
+	if index < 0 || index >= length {
+		var zero T
+		return zero, newErrIndexOutOfRange(length, index)
 	}
-	delVal := a.vals[index]
-	a.vals = append(a.vals[:index], a.vals[index+1:]...)
-	return delVal, nil
+	j := 0
+	res := a.vals[index]
+	for i, v := range a.vals {
+		if i != index {
+			a.vals[j] = v
+			j++
+		}
+	}
+	a.vals = a.vals[:j]
+	return res, nil
 }
 
 func (a *ArrayList[T]) Len() int {

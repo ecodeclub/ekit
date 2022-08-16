@@ -17,8 +17,9 @@ package list
 import (
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestArrayList_Add(t *testing.T) {
@@ -136,45 +137,111 @@ func BenchmarkArrayList_Cap(b *testing.B) {
 	})
 }
 
-//	func TestArrayList_Append(t *testing.T) {
-//		// 这个比较简单，只需要增加元素，然后判断一下 Append 之后是否符合预期
-//	}
+func TestArrayList_Append(t *testing.T) {
+	testCases := []struct {
+		name      string
+		list      *ArrayList[int]
+		newVal    int
+		wantSlice []int
+	}{
+		{
+			name:      "append 234",
+			list:      NewArrayListOf[int]([]int{123}),
+			newVal:    234,
+			wantSlice: []int{123, 234},
+		},
+		{
+			name:      "nil append 123",
+			list:      NewArrayListOf[int](nil),
+			newVal:    123,
+			wantSlice: []int{123},
+		},
+	}
 
-//	func TestArrayList_Delete(t *testing.T) {
-//		testCases := []struct {
-//			name      string
-//			list      *ArrayList[int]
-//			index     int
-//			wantSlice []int
-//			wantVal   int
-//			wantErr   error
-//		}{
-//			// 仿照这个例子，继续添加测试
-//			// 你需要综合考虑下标的各种可能取值
-//			// 往两边增加，往中间加
-//			// 下标可能是负数，也可能超出你的长度
-//			{
-//				name:      "index 0",
-//				list:      NewArrayListOf[int]([]int{123, 100}),
-//				index:     0,
-//				wantSlice: []int{100},
-//				wantVal:   123,
-//			},
-//		}
-//
-//		for _, tc := range testCases {
-//			t.Run(tc.name, func(t *testing.T) {
-//				val, err := tc.list.Delete(tc.index)
-//				assert.Equal(t, tc.wantErr, err)
-//				// 因为返回了 error，所以我们不用继续往下比较了
-//				if err != nil {
-//					return
-//				}
-//				assert.Equal(t, tc.wantSlice, tc.list.vals)
-//				assert.Equal(t, tc.wantVal, val)
-//			})
-//		}
-//	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.list.Append(tc.newVal)
+			if err != nil {
+				return
+			}
+
+			assert.Equal(t, tc.wantSlice, tc.list.vals)
+		})
+	}
+}
+
+func TestArrayList_Delete(t *testing.T) {
+	testCases := []struct {
+		name      string
+		list      *ArrayList[int]
+		index     int
+		wantSlice []int
+		wantVal   int
+		wantErr   error
+	}{
+		// 仿照这个例子，继续添加测试
+		// 你需要综合考虑下标的各种可能取值
+		// 往两边增加，往中间加
+		// 下标可能是负数，也可能超出你的长度
+
+		{
+			name: "index 0",
+			list: &ArrayList[int]{
+				vals: []int{123, 100},
+			},
+			index:     0,
+			wantSlice: []int{100},
+			wantVal:   123,
+		},
+		{
+			name: "index middle",
+			list: &ArrayList[int]{
+				vals: []int{123, 124, 125},
+			},
+			index:     1,
+			wantSlice: []int{123, 125},
+			wantVal:   124,
+		},
+		{
+			name: "index out of range",
+			list: &ArrayList[int]{
+				vals: []int{123, 100},
+			},
+			index:   12,
+			wantErr: newErrIndexOutOfRange(2, 12),
+		},
+		{
+			name: "index less than 0",
+			list: &ArrayList[int]{
+				vals: []int{123, 100},
+			},
+			index:   -1,
+			wantErr: newErrIndexOutOfRange(2, -1),
+		},
+		{
+			name: "index last",
+			list: &ArrayList[int]{
+				vals: []int{123, 100, 101, 102, 102, 102},
+			},
+			index:     5,
+			wantSlice: []int{123, 100, 101, 102, 102},
+			wantVal:   102,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			val, err := tc.list.Delete(tc.index)
+			assert.Equal(t, tc.wantErr, err)
+			// 因为返回了 error，所以我们不用继续往下比较了
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantSlice, tc.list.vals)
+			assert.Equal(t, tc.wantVal, val)
+		})
+	}
+}
 
 func TestArrayList_Len(t *testing.T) {
 	testCases := []struct {
@@ -355,7 +422,7 @@ func TestNewArrayList(t *testing.T) {
 	//assert.Equal(t, wantData, nArr.vals) // pass
 }
 
-func TestArrayList_Append_Set_Delete(t *testing.T) {
+func TestArrayList_Append_Set(t *testing.T) {
 	dataCap := 10
 
 	//nArr := NewArrayList[int](dataCap)
@@ -364,8 +431,6 @@ func TestArrayList_Append_Set_Delete(t *testing.T) {
 	//nArr.Append(66)
 	//nArr.Append(55)
 	//nArr.Append(44)
-	//nArr.Delete(1)
-	//nArr.Delete(1)
 	//assert.Equal(t, []int([]int{77, 44}), nArr.vals)
 	//nArr.Set(1, 41)
 	//assert.Equal(t, []int([]int{77, 41}), nArr.vals)
@@ -397,21 +462,4 @@ func TestArrayList_Append_Set_Delete(t *testing.T) {
 		panic(err)
 	}
 	assert.Equal(t, []string{"deng", "ming", "teacher"}, nArr.vals)
-
-	_, err = nArr.Delete(0)
-	if err != nil {
-		panic(err)
-	}
-	assert.Equal(t, []string{"ming", "teacher"}, nArr.vals)
-
-	_, err = nArr.Delete(0)
-	if err != nil {
-		panic(err)
-	}
-	_, err = nArr.Delete(0)
-	if err != nil {
-		panic(err)
-	}
-	n := NewArrayList[string](dataCap)
-	assert.Equal(t, n.vals, nArr.vals)
 }
