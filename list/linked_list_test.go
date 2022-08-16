@@ -84,6 +84,14 @@ func TestLinkedList_Add(t *testing.T) {
 			index:   4,
 			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, 4),
 		},
+		{
+			name:           "add num to index 0",
+			list:           NewLinkedListOf[int]([]int{}),
+			newVal:         100,
+			index:          0,
+			wantErr:        nil,
+			wantLinkedList: NewLinkedListOf([]int{100}),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -159,6 +167,13 @@ func TestLinkedList_Get(t *testing.T) {
 			5,
 			0,
 			fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 5, 5),
+		},
+		{
+			"empty list",
+			NewLinkedListOf([]int{}),
+			0,
+			0,
+			fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 0, 0),
 		},
 	}
 	for _, tc := range tests {
