@@ -19,8 +19,9 @@ type ArrayList[T any] struct {
 	vals []T
 }
 
+// NewArrayList 初始化一个len为0，cap为cap的ArrayList
 func NewArrayList[T any](cap int) *ArrayList[T] {
-	panic("implement me")
+	return &ArrayList[T]{vals: make([]T, 0, cap)}
 }
 
 // NewArrayListOf 直接使用 ts，而不会执行复制
@@ -38,6 +39,7 @@ func (a *ArrayList[T]) Get(index int) (t T, e error) {
 	return a.vals[index], e
 }
 
+// Append 往ArrayList里追加数据
 func (a *ArrayList[T]) Append(t T) error {
 	a.vals = append(a.vals, t)
 	return nil
@@ -55,9 +57,14 @@ func (a *ArrayList[T]) Add(index int, t T) error {
 	return nil
 }
 
+// Set 设置ArrayList里index位置的值为t
 func (a *ArrayList[T]) Set(index int, t T) error {
-	// TODO implement me
-	panic("implement me")
+	length := len(a.vals)
+	if index >= length || index < 0 {
+		return newErrIndexOutOfRange(length, index)
+	}
+	a.vals[index] = t
+	return nil
 }
 
 func (a *ArrayList[T]) Delete(index int) (T, error) {
