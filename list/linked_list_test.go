@@ -17,6 +17,7 @@ package list
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+
 	"math/rand"
 	"testing"
 )
@@ -104,8 +105,51 @@ func TestLinkedList_Append(t *testing.T) {
 	fmt.Println("仿照 ArrayList 的测试写代码")
 }
 
+func TestNewLinkedListOf(t *testing.T) {
+	testCases := []struct {
+		name        string
+		slice       []int
+		wantedSlice []int
+	}{
+		{
+			name:        "nil",
+			slice:       nil,
+			wantedSlice: []int{},
+		},
+		{
+			name:        "vacant",
+			slice:       []int{},
+			wantedSlice: []int{},
+		},
+		{
+			name:        "single",
+			slice:       []int{1},
+			wantedSlice: []int{1},
+		},
+		{
+			name:        "normal",
+			slice:       []int{1, 2, 3},
+			wantedSlice: []int{1, 2, 3},
+		},
+	}
+
+	for _, tc := range testCases {
+		list := NewLinkedListOf(tc.slice)
+		// 在这里断言你的元素，可以利用 Get 方法，也可以直接用 AsSlice 来断言
+		assert.Equal(t, tc.wantedSlice, list.AsSlice())
+	}
+}
+
 func TestLinkedList_AsSlice(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
+	vals := []int{1, 2, 3}
+	a := NewLinkedListOf[int](vals)
+	slice := a.AsSlice()
+	// 内容相同
+	assert.Equal(t, slice, vals)
+	aAddr := fmt.Sprintf("%p", vals)
+	sliceAddr := fmt.Sprintf("%p", slice)
+	// 但是地址不同，也就是意味着 slice 必须是一个新创建的
+	assert.NotEqual(t, aAddr, sliceAddr)
 }
 
 func TestLinkedList_Cap(t *testing.T) {
