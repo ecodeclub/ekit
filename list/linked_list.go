@@ -22,9 +22,9 @@ type LinkedList[T any] struct {
 	length int
 }
 
-func (l *LinkedList[T]) getNode(index int) (n *node[T]) {
+func (l *LinkedList[T]) getNode(index int) *node[T] {
 	if l.length == 0 {
-		return
+		return nil
 	}
 	cur := l.head
 	curIndex := 0
@@ -42,10 +42,7 @@ func (l *LinkedList[T]) getNode(index int) (n *node[T]) {
 			cur = cur.next
 		}
 	}
-
-	n = cur
-	return
-
+	return cur
 }
 
 func (l *LinkedList[T]) Get(index int) (t T, err error) {

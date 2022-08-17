@@ -134,46 +134,40 @@ func TestLinkedList_Get(t *testing.T) {
 		wantErr error
 	}{
 		{
-			"get left",
-			NewLinkedListOf([]int{1, 2, 3, 4, 5}),
-			0,
-			1,
-			nil,
+			name:    "get left",
+			list:    NewLinkedListOf([]int{1, 2, 3, 4, 5}),
+			index:   0,
+			wantVal: 1,
 		},
 		{
-			"get right",
-			NewLinkedListOf([]int{1, 2, 3, 4, 5}),
-			4,
-			5,
-			nil,
+			name:    "get right",
+			list:    NewLinkedListOf([]int{1, 2, 3, 4, 5}),
+			index:   4,
+			wantVal: 5,
 		},
 		{
-			"get middle",
-			NewLinkedListOf([]int{1, 2, 3, 4, 5}),
-			2,
-			3,
-			nil,
+			name:    "get middle",
+			list:    NewLinkedListOf([]int{1, 2, 3, 4, 5}),
+			index:   2,
+			wantVal: 3,
 		},
 		{
-			"over left",
-			NewLinkedListOf([]int{1, 2, 3, 4, 5}),
-			-1,
-			0,
-			fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 5, -1),
+			name:    "over left",
+			list:    NewLinkedListOf([]int{1, 2, 3, 4, 5}),
+			index:   -1,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 5, -1),
 		},
 		{
-			"over right",
-			NewLinkedListOf([]int{1, 2, 3, 4, 5}),
-			5,
-			0,
-			fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 5, 5),
+			name:    "over right",
+			list:    NewLinkedListOf([]int{1, 2, 3, 4, 5}),
+			index:   5,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 5, 5),
 		},
 		{
-			"empty list",
-			NewLinkedListOf([]int{}),
-			0,
-			0,
-			fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 0, 0),
+			name:    "empty list",
+			list:    NewLinkedListOf([]int{}),
+			index:   0,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 0, 0),
 		},
 	}
 	for _, tc := range tests {
@@ -239,7 +233,7 @@ func BenchmarkLinkedList_Get(b *testing.B) {
 	for i := 1; i <= b.N; i++ {
 		err := l.Add(i, i)
 		if err != nil {
-			panic(err)
+			b.Fatal(err)
 		}
 	}
 	b.ResetTimer()
