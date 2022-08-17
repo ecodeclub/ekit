@@ -30,14 +30,17 @@ func NewArrayListOf[T any](ts []T) *ArrayList[T] {
 	}
 }
 
-func (a *ArrayList[T]) Get(index int) (T, error) {
-	// TODO implement me
-	panic("implement me")
+func (a *ArrayList[T]) Get(index int) (t T, e error) {
+	l := a.Len()
+	if index < 0 || index >= l {
+		return t, newErrIndexOutOfRange(l, index)
+	}
+	return a.vals[index], e
 }
 
 func (a *ArrayList[T]) Append(t T) error {
-	// TODO implement me
-	panic("implement me")
+	a.vals = append(a.vals, t)
+	return nil
 }
 
 // Add 在ArrayList下标为index的位置插入一个元素
@@ -58,13 +61,28 @@ func (a *ArrayList[T]) Set(index int, t T) error {
 }
 
 func (a *ArrayList[T]) Delete(index int) (T, error) {
-	// TODO implement me
-	panic("implement me")
+	length := len(a.vals)
+	if index < 0 || index >= length {
+		var zero T
+		return zero, newErrIndexOutOfRange(length, index)
+	}
+	j := 0
+	res := a.vals[index]
+	for i, v := range a.vals {
+		if i != index {
+			a.vals[j] = v
+			j++
+		}
+	}
+	a.vals = a.vals[:j]
+	return res, nil
 }
 
 func (a *ArrayList[T]) Len() int {
-	// TODO implement me
-	panic("implement me")
+	if a == nil {
+		return 0
+	}
+	return len(a.vals)
 }
 
 func (a *ArrayList[T]) Cap() int {
