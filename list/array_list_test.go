@@ -403,63 +403,39 @@ func TestArrayList_AsSlice(t *testing.T) {
 // 	// [9 1 2 3]
 // }
 
-func TestNewArrayList(t *testing.T) {
-	dataCap := 5
-
-	// int
-	nArr := NewArrayList[int](dataCap)
-	wantData := make([]int, 0, dataCap)
-	assert.Equal(t, wantData, nArr.vals) // pass
-
-	// string
-	//nArr := NewArrayList[string](dataCap)
-	//wantData := make([]string, 0, dataCap)
-	//assert.Equal(t, wantData, nArr.vals)	// pass
-
-	// any | []interface{}
-	//nArr := NewArrayList[any](dataCap)
-	//wantData := []interface{}([]interface{}{})
-	//assert.Equal(t, wantData, nArr.vals) // pass
-}
-
-func TestArrayList_Append_Set(t *testing.T) {
-	dataCap := 10
-
-	//nArr := NewArrayList[int](dataCap)
-	//nArr.Append(77)
-	//assert.Equal(t, []int([]int{77}), nArr.vals)
-	//nArr.Append(66)
-	//nArr.Append(55)
-	//nArr.Append(44)
-	//assert.Equal(t, []int([]int{77, 44}), nArr.vals)
-	//nArr.Set(1, 41)
-	//assert.Equal(t, []int([]int{77, 41}), nArr.vals)
-
-	nArr := NewArrayList[string](dataCap)
-	err := nArr.Append("mousse")
-	if err != nil {
-		panic(err)
+func TestNewArrayList_Append(t *testing.T) {
+	testCase := []struct {
+		name      string
+		list      *ArrayList[int]
+		appendVal int
+		wantList  *ArrayList[int]
+		wantErr   error
+	}{
+		{
+			name:      "append uint num",
+			list:      &ArrayList[int]{vals: []int{0, 1, 2}},
+			appendVal: 100,
+			wantList:  &ArrayList[int]{vals: []int{0, 1, 2, 100}},
+			wantErr:   nil,
+		},
+		{
+			name:      "append int num",
+			list:      &ArrayList[int]{vals: []int{0, 1, 2}},
+			appendVal: -200,
+			wantList:  &ArrayList[int]{vals: []int{0, 1, 2, -200}},
+			wantErr:   nil,
+		},
 	}
-	err = nArr.Append("qin")
-	if err != nil {
-		panic(err)
+
+	for _, tc := range testCase {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.list.Append(tc.appendVal)
+			if err != tc.wantErr {
+				fmt.Errorf("error is : %+v", err)
+			} else {
+				assert.Equal(t, tc.wantList, tc.list)
+			}
+		})
 	}
-	assert.Equal(t, []string{"mousse", "qin"}, nArr.vals)
-	err = nArr.Append("student")
-	if err != nil {
-		panic(err)
-	}
-	err = nArr.Set(0, "deng")
-	if err != nil {
-		panic(err)
-	}
-	err = nArr.Set(1, "ming")
-	if err != nil {
-		panic(err)
-	}
-	err = nArr.Set(2, "teacher")
-	if err != nil {
-		panic(err)
-	}
-	assert.Equal(t, []string{"deng", "ming", "teacher"}, nArr.vals)
+
 }
