@@ -110,8 +110,13 @@ func (l *LinkedList[T]) Range(fn func(index int, t T) error) error {
 }
 
 func (l *LinkedList[T]) AsSlice() []T {
-	// TODO implement me
-	panic("implement me")
+	slice := make([]T, l.length)
+	head := l.head
+	for i := 0; i < l.length; i++ {
+		slice[i] = head.val
+		head = head.next
+	}
+	return slice
 }
 
 type node[T any] struct {
