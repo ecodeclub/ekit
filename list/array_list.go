@@ -19,7 +19,7 @@ type ArrayList[T any] struct {
 	vals []T
 }
 
-// NewArrayList 初始化一个len为0，cap为10的ArrayList
+// NewArrayList 初始化一个len为0，cap为cap的ArrayList
 func NewArrayList[T any](cap int) *ArrayList[T] {
 	return &ArrayList[T]{vals: make([]T, 0, cap)}
 }
