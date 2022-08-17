@@ -106,28 +106,44 @@ func TestLinkedList_Append(t *testing.T) {
 }
 
 func TestNewLinkedListOf(t *testing.T) {
-	ts := []int{1, 2, 3, 4, 5}
-	linkedList := NewLinkedListOf(ts)
-	head, tail := linkedList.head, linkedList.tail
-	t.Log(head.val, tail.val)
-	fmt.Println("forward")
-	for head != nil {
-		fmt.Printf("%d ", head.val)
-		head = head.next
+	testCases := []struct {
+		name        string
+		slice       []int
+		wantedSlice []int
+	}{
+		{
+			name:        "nil",
+			slice:       nil,
+			wantedSlice: []int{},
+		},
+		{
+			name:        "vacant",
+			slice:       []int{},
+			wantedSlice: []int{},
+		},
+		{
+			name:        "single",
+			slice:       []int{1},
+			wantedSlice: []int{1},
+		},
+		{
+			name:        "normal",
+			slice:       []int{1, 2, 3},
+			wantedSlice: []int{1, 2, 3},
+		},
 	}
-	fmt.Println("\nbackward")
-	for tail != nil && &tail.val != nil {
-		fmt.Printf("%d ", tail.val)
-		tail = tail.prev
+
+	for _, tc := range testCases {
+		list := NewLinkedListOf(tc.slice)
+		// 在这里断言你的元素，可以利用 Get 方法，也可以直接用 AsSlice 来断言
+		assert.Equal(t, tc.wantedSlice, list.AsSlice())
 	}
-	t.Log("Ok")
 }
 
 func TestLinkedList_AsSlice(t *testing.T) {
 	vals := []int{1, 2, 3}
 	a := NewLinkedListOf[int](vals)
 	slice := a.AsSlice()
-	fmt.Println(vals, slice)
 	// 内容相同
 	assert.Equal(t, slice, vals)
 	aAddr := fmt.Sprintf("%p", vals)
