@@ -403,38 +403,49 @@ func TestArrayList_AsSlice(t *testing.T) {
 // 	// [9 1 2 3]
 // }
 
-func TestNewArrayList_Append(t *testing.T) {
-	testCase := []struct {
+func TestArrayList_Set(t *testing.T) {
+	testCases := []struct {
 		name      string
 		list      *ArrayList[int]
-		appendVal int
-		wantList  *ArrayList[int]
+		index     int
+		newVal    int
+		wantSlice []int
 		wantErr   error
 	}{
 		{
-			name:      "append uint num",
-			list:      &ArrayList[int]{vals: []int{0, 1, 2}},
-			appendVal: 100,
-			wantList:  &ArrayList[int]{vals: []int{0, 1, 2, 100}},
+			name:      "set 5 by index  1",
+			list:      NewArrayListOf[int]([]int{0, 1, 2, 3, 4}),
+			index:     1,
+			newVal:    5,
+			wantSlice: []int{0, 5, 2, 3, 4},
 			wantErr:   nil,
 		},
 		{
-			name:      "append int num",
-			list:      &ArrayList[int]{vals: []int{0, 1, 2}},
-			appendVal: -200,
-			wantList:  &ArrayList[int]{vals: []int{0, 1, 2, -200}},
-			wantErr:   nil,
+			name:      "index  -1",
+			list:      NewArrayListOf[int]([]int{0, 1, 2, 3, 4}),
+			index:     -1,
+			newVal:    5,
+			wantSlice: []int{},
+			wantErr:   fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 5, -1),
+		},
+		{
+			name:      "index  100",
+			list:      NewArrayListOf[int]([]int{0, 1, 2, 3, 4}),
+			index:     100,
+			newVal:    5,
+			wantSlice: []int{},
+			wantErr:   fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 5, 100),
 		},
 	}
 
-	for _, tc := range testCase {
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.list.Append(tc.appendVal)
-			if err != tc.wantErr {
-				fmt.Errorf("error is : %+v", err)
-			} else {
-				assert.Equal(t, tc.wantList, tc.list)
+			err := tc.list.Set(tc.index, tc.newVal)
+			if err != nil {
+				assert.Equal(t, tc.wantErr, err)
+				return
 			}
+			assert.Equal(t, tc.wantSlice, tc.list.vals)
 		})
 	}
 
