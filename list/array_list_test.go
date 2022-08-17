@@ -375,11 +375,72 @@ func TestArrayList_Range(t *testing.T) {
 // func TestArrayList_Len(t *testing.T) {
 //
 // }
-//
-// func TestArrayList_Set(t *testing.T) {
-//
-// }
-//
+
+func TestArrayList_Set(t *testing.T) {
+	testCases := []struct {
+		name    string
+		list    *ArrayList[int]
+		index   int
+		setVal  int
+		wantVal int
+		wantErr error
+	}{
+		{
+			name:    "index 2",
+			list:    NewArrayListOf[int]([]int{1, 2, 3}),
+			index:   2,
+			setVal:  4,
+			wantVal: 4,
+			wantErr: nil,
+		},
+		{
+			name:    "index 3",
+			list:    NewArrayListOf[int]([]int{1, 2, 3}),
+			index:   3,
+			setVal:  4,
+			wantVal: 0,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, 3),
+		},
+		{
+			name:    "index -1",
+			list:    NewArrayListOf[int]([]int{1, 2, 3}),
+			index:   -1,
+			setVal:  4,
+			wantVal: 0,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, -1),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := 0
+			err := tc.list.Set(tc.index, tc.setVal)
+			assert.Equal(t, tc.wantErr, err)
+			if tc.wantErr != nil {
+				return
+			}
+			result, _ = tc.list.Get(tc.index)
+			assert.Equal(t, tc.wantVal, result)
+		})
+	}
+}
+
+func BenchmarkArrayList_Set(b *testing.B) {
+	list := &ArrayList[int]{
+		vals: make([]int, 100, 101),
+	}
+
+	b.Run("Set", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			list.Set(1, 9999)
+		}
+	})
+
+	b.Run("Runtime set", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			list.vals[1] = 999
+		}
+	})
+}
 
 func TestArrayList_AsSlice(t *testing.T) {
 	vals := []int{1, 2, 3}

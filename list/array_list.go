@@ -55,9 +55,15 @@ func (a *ArrayList[T]) Add(index int, t T) error {
 	return nil
 }
 
+// Set 在ArrayList下标为index的位置替换该元素的值
+// 当index小于ArrayList长度或0返回newErrIndexOutOfRange错误
 func (a *ArrayList[T]) Set(index int, t T) error {
-	// TODO implement me
-	panic("implement me")
+	l := a.Len()
+	if index < 0 || index >= l {
+		return newErrIndexOutOfRange(l, index)
+	}
+	a.vals[index] = t
+	return nil
 }
 
 func (a *ArrayList[T]) Delete(index int) (T, error) {
