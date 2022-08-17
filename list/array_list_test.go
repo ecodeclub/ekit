@@ -402,3 +402,51 @@ func TestArrayList_AsSlice(t *testing.T) {
 // 	// Output:
 // 	// [9 1 2 3]
 // }
+
+func TestArrayList_Set(t *testing.T) {
+	testCases := []struct {
+		name      string
+		list      *ArrayList[int]
+		index     int
+		newVal    int
+		wantSlice []int
+		wantErr   error
+	}{
+		{
+			name:      "set 5 by index  1",
+			list:      NewArrayListOf[int]([]int{0, 1, 2, 3, 4}),
+			index:     1,
+			newVal:    5,
+			wantSlice: []int{0, 5, 2, 3, 4},
+			wantErr:   nil,
+		},
+		{
+			name:      "index  -1",
+			list:      NewArrayListOf[int]([]int{0, 1, 2, 3, 4}),
+			index:     -1,
+			newVal:    5,
+			wantSlice: []int{},
+			wantErr:   fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 5, -1),
+		},
+		{
+			name:      "index  100",
+			list:      NewArrayListOf[int]([]int{0, 1, 2, 3, 4}),
+			index:     100,
+			newVal:    5,
+			wantSlice: []int{},
+			wantErr:   fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 5, 100),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.list.Set(tc.index, tc.newVal)
+			if err != nil {
+				assert.Equal(t, tc.wantErr, err)
+				return
+			}
+			assert.Equal(t, tc.wantSlice, tc.list.vals)
+		})
+	}
+
+}
