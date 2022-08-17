@@ -22,9 +22,36 @@ type LinkedList[T any] struct {
 	length int
 }
 
-func (l *LinkedList[T]) Get(index int) (T, error) {
-	// TODO implement me
-	panic("implement me")
+func (l *LinkedList[T]) getNode(index int) *node[T] {
+	if l.length == 0 {
+		return nil
+	}
+	cur := l.head
+	curIndex := 0
+
+	if l.fromTailToHead(index) {
+		cur = l.tail
+		index = l.length - index - 1
+		for curIndex < index {
+			curIndex += 1
+			cur = cur.prev
+		}
+	} else {
+		for curIndex < index {
+			curIndex += 1
+			cur = cur.next
+		}
+	}
+	return cur
+}
+
+func (l *LinkedList[T]) Get(index int) (t T, err error) {
+	if index < 0 || index >= l.length {
+		err = newErrIndexOutOfRange(l.length, index)
+		return
+	}
+	node := l.getNode(index)
+	return node.val, nil
 }
 
 func (l *LinkedList[T]) Append(t T) error {
@@ -62,18 +89,7 @@ func (l *LinkedList[T]) Add(index int, t T) error {
 		return nil
 	}
 
-	cur := l.head
-	headToLeft := true
-	if l.fromTailToHead(index) {
-		cur = l.tail
-		headToLeft = false
-		index = l.length - index - 1
-	}
-	curIndex := 0
-	for curIndex < index {
-		curIndex += 1
-		cur = cur.move(headToLeft)
-	}
+	cur := l.getNode(index)
 	prev := cur.prev
 	prev.insertAfter(newNode)
 	newNode.insertAfter(cur)
@@ -128,13 +144,6 @@ type node[T any] struct {
 func (n *node[T]) insertAfter(newNode *node[T]) {
 	n.next = newNode
 	newNode.prev = n
-}
-
-func (n *node[T]) move(toNext bool) *node[T] {
-	if toNext {
-		return n.next
-	}
-	return n.prev
 }
 
 // NewLinkedListOf 将切片转换为链表, 数组的值是浅拷贝.
