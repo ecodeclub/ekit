@@ -22,10 +22,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestArrayList_Add(t *testing.T) {
+func TestConcurrentList_Add(t *testing.T) {
 	testCases := []struct {
 		name      string
-		list      *ArrayList[int]
+		list      *ConcurrentList[int]
 		index     int
 		newVal    int
 		wantSlice []int
@@ -33,35 +33,35 @@ func TestArrayList_Add(t *testing.T) {
 	}{
 		{
 			name:      "add num to index left",
-			list:      NewArrayListOf[int]([]int{1, 2, 3}),
+			list:      newConcurrentListOfSlice[int]([]int{1, 2, 3}),
 			newVal:    100,
 			index:     0,
 			wantSlice: []int{100, 1, 2, 3},
 		},
 		{
 			name:      "add num to index right",
-			list:      NewArrayListOf[int]([]int{1, 2, 3}),
+			list:      newConcurrentListOfSlice[int]([]int{1, 2, 3}),
 			newVal:    100,
 			index:     3,
 			wantSlice: []int{1, 2, 3, 100},
 		},
 		{
 			name:      "add num to index mid",
-			list:      NewArrayListOf[int]([]int{1, 2, 3}),
+			list:      newConcurrentListOfSlice[int]([]int{1, 2, 3}),
 			newVal:    100,
 			index:     1,
 			wantSlice: []int{1, 100, 2, 3},
 		},
 		{
 			name:    "add num to index -1",
-			list:    NewArrayListOf[int]([]int{1, 2, 3}),
+			list:    newConcurrentListOfSlice[int]([]int{1, 2, 3}),
 			newVal:  100,
 			index:   -1,
 			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, -1),
 		},
 		{
 			name:    "add num to index OutOfRange",
-			list:    NewArrayListOf[int]([]int{1, 2, 3}),
+			list:    newConcurrentListOfSlice[int]([]int{1, 2, 3}),
 			newVal:  100,
 			index:   4,
 			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, 4),
@@ -76,30 +76,26 @@ func TestArrayList_Add(t *testing.T) {
 			if err != nil {
 				return
 			}
-			assert.Equal(t, tc.wantSlice, tc.list.vals)
+			assert.Equal(t, tc.wantSlice, tc.list.AsSlice())
 		})
 	}
 }
 
-func TestArrayList_Cap(t *testing.T) {
+func TestConcurrentList_Cap(t *testing.T) {
 	testCases := []struct {
 		name      string
 		expectCap int
-		list      *ArrayList[int]
+		list      *ConcurrentList[int]
 	}{
 		{
 			name:      "与实际容量相等",
-			expectCap: 5,
-			list: &ArrayList[int]{
-				vals: make([]int, 5),
-			},
+			expectCap: 3,
+			list:      newConcurrentListOfSlice[int]([]int{1, 2, 3}),
 		},
 		{
 			name:      "用户传入nil",
 			expectCap: 0,
-			list: &ArrayList[int]{
-				vals: nil,
-			},
+			list:      newConcurrentListOfSlice[int]([]int{}),
 		},
 	}
 	for _, testCase := range testCases {
@@ -110,40 +106,22 @@ func TestArrayList_Cap(t *testing.T) {
 	}
 }
 
-func BenchmarkArrayList_Cap(b *testing.B) {
-	list := &ArrayList[int]{
-		vals: make([]int, 0),
-	}
-
-	b.Run("Cap", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			list.Cap()
-		}
-	})
-
-	b.Run("Runtime cap", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_ = cap(list.vals)
-		}
-	})
-}
-
-func TestArrayList_Append(t *testing.T) {
+func TestConcurrentList_Append(t *testing.T) {
 	testCases := []struct {
 		name      string
-		list      *ArrayList[int]
+		list      *ConcurrentList[int]
 		newVal    int
 		wantSlice []int
 	}{
 		{
 			name:      "append 234",
-			list:      NewArrayListOf[int]([]int{123}),
+			list:      newConcurrentListOfSlice[int]([]int{123}),
 			newVal:    234,
 			wantSlice: []int{123, 234},
 		},
 		{
 			name:      "nil append 123",
-			list:      NewArrayListOf[int](nil),
+			list:      newConcurrentListOfSlice[int](nil),
 			newVal:    123,
 			wantSlice: []int{123},
 		},
@@ -156,59 +134,49 @@ func TestArrayList_Append(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, tc.wantSlice, tc.list.vals)
+			assert.Equal(t, tc.wantSlice, tc.list.AsSlice())
 		})
 	}
 }
 
-func TestArrayList_Delete(t *testing.T) {
+func TestConcurrentList_Delete(t *testing.T) {
 	testCases := []struct {
 		name      string
-		list      *ArrayList[int]
+		list      *ConcurrentList[int]
 		index     int
 		wantSlice []int
 		wantVal   int
 		wantErr   error
 	}{
 		{
-			name: "index 0",
-			list: &ArrayList[int]{
-				vals: []int{123, 100},
-			},
+			name:      "index 0",
+			list:      newConcurrentListOfSlice([]int{123, 100}),
 			index:     0,
 			wantSlice: []int{100},
 			wantVal:   123,
 		},
 		{
-			name: "index middle",
-			list: &ArrayList[int]{
-				vals: []int{123, 124, 125},
-			},
+			name:      "index middle",
+			list:      newConcurrentListOfSlice([]int{123, 124, 125}),
 			index:     1,
 			wantSlice: []int{123, 125},
 			wantVal:   124,
 		},
 		{
-			name: "index out of range",
-			list: &ArrayList[int]{
-				vals: []int{123, 100},
-			},
+			name:    "index out of range",
+			list:    newConcurrentListOfSlice([]int{123, 100}),
 			index:   12,
 			wantErr: newErrIndexOutOfRange(2, 12),
 		},
 		{
-			name: "index less than 0",
-			list: &ArrayList[int]{
-				vals: []int{123, 100},
-			},
+			name:    "index less than 0",
+			list:    newConcurrentListOfSlice([]int{123, 100}),
 			index:   -1,
 			wantErr: newErrIndexOutOfRange(2, -1),
 		},
 		{
-			name: "index last",
-			list: &ArrayList[int]{
-				vals: []int{123, 100, 101, 102, 102, 102},
-			},
+			name:      "index last",
+			list:      newConcurrentListOfSlice([]int{123, 100, 101, 102, 102, 102}),
 			index:     5,
 			wantSlice: []int{123, 100, 101, 102, 102},
 			wantVal:   102,
@@ -223,31 +191,27 @@ func TestArrayList_Delete(t *testing.T) {
 			if err != nil {
 				return
 			}
-			assert.Equal(t, tc.wantSlice, tc.list.vals)
+			assert.Equal(t, tc.wantSlice, tc.list.AsSlice())
 			assert.Equal(t, tc.wantVal, val)
 		})
 	}
 }
 
-func TestArrayList_Len(t *testing.T) {
+func TestConcurrentList_Len(t *testing.T) {
 	testCases := []struct {
 		name      string
 		expectLen int
-		list      *ArrayList[int]
+		list      *ConcurrentList[int]
 	}{
 		{
 			name:      "与实际元素数相等",
 			expectLen: 5,
-			list: &ArrayList[int]{
-				vals: make([]int, 5),
-			},
+			list:      newConcurrentListOfSlice([]int{1, 2, 3, 4, 5}),
 		},
 		{
 			name:      "用户传入nil",
 			expectLen: 0,
-			list: &ArrayList[int]{
-				vals: nil,
-			},
+			list:      newConcurrentListOfSlice([]int{}),
 		},
 	}
 	for _, testCase := range testCases {
@@ -258,30 +222,30 @@ func TestArrayList_Len(t *testing.T) {
 	}
 }
 
-func TestArrayList_Get(t *testing.T) {
+func TestConcurrentList_Get(t *testing.T) {
 	testCases := []struct {
 		name    string
-		list    *ArrayList[int]
+		list    *ConcurrentList[int]
 		index   int
 		wantVal int
 		wantErr error
 	}{
 		{
 			name:    "index 0",
-			list:    NewArrayListOf[int]([]int{123, 100}),
+			list:    newConcurrentListOfSlice[int]([]int{123, 100}),
 			index:   0,
 			wantVal: 123,
 		},
 		{
 			name:    "index 2",
-			list:    NewArrayListOf[int]([]int{123, 100}),
+			list:    newConcurrentListOfSlice[int]([]int{123, 100}),
 			index:   2,
 			wantVal: 0,
 			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 2, 2),
 		},
 		{
 			name:    "index -1",
-			list:    NewArrayListOf[int]([]int{123, 100}),
+			list:    newConcurrentListOfSlice[int]([]int{123, 100}),
 			index:   -1,
 			wantVal: 0,
 			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 2, -1),
@@ -300,35 +264,30 @@ func TestArrayList_Get(t *testing.T) {
 		})
 	}
 }
-func TestArrayList_Range(t *testing.T) {
+
+func TestConcurrentList_Range(t *testing.T) {
 	testCases := []struct {
 		name    string
-		list    *ArrayList[int]
+		list    *ConcurrentList[int]
 		index   int
 		wantVal int
 		wantErr error
 	}{
 		{
-			name: "计算全部元素的和",
-			list: &ArrayList[int]{
-				vals: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
-			},
+			name:    "计算全部元素的和",
+			list:    newConcurrentListOfSlice([]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
 			wantVal: 55,
 			wantErr: nil,
 		},
 		{
-			name: "测试中断",
-			list: &ArrayList[int]{
-				vals: []int{1, 2, 3, 4, -5, 6, 7, 8, -9, 10},
-			},
+			name:    "测试中断",
+			list:    newConcurrentListOfSlice([]int{1, 2, 3, 4, -5, 6, 7, 8, -9, 10}),
 			wantVal: 41,
 			wantErr: errors.New("index 4 is error"),
 		},
 		{
-			name: "测试数组为nil",
-			list: &ArrayList[int]{
-				vals: nil,
-			},
+			name:    "测试数组为nil",
+			list:    newConcurrentListOfSlice([]int{}),
 			wantVal: 0,
 			wantErr: nil,
 		},
@@ -353,9 +312,9 @@ func TestArrayList_Range(t *testing.T) {
 	}
 }
 
-func TestArrayList_AsSlice(t *testing.T) {
+func TestConcurrentList_AsSlice(t *testing.T) {
 	vals := []int{1, 2, 3}
-	a := NewArrayListOf[int](vals)
+	a := newConcurrentListOfSlice[int](vals)
 	slice := a.AsSlice()
 	// 内容相同
 	assert.Equal(t, slice, vals)
@@ -365,10 +324,10 @@ func TestArrayList_AsSlice(t *testing.T) {
 	assert.NotEqual(t, aAddr, sliceAddr)
 }
 
-func TestArrayList_Set(t *testing.T) {
+func TestConcurrentList_Set(t *testing.T) {
 	testCases := []struct {
 		name      string
-		list      *ArrayList[int]
+		list      *ConcurrentList[int]
 		index     int
 		newVal    int
 		wantSlice []int
@@ -376,7 +335,7 @@ func TestArrayList_Set(t *testing.T) {
 	}{
 		{
 			name:      "set 5 by index  1",
-			list:      NewArrayListOf[int]([]int{0, 1, 2, 3, 4}),
+			list:      newConcurrentListOfSlice([]int{0, 1, 2, 3, 4}),
 			index:     1,
 			newVal:    5,
 			wantSlice: []int{0, 5, 2, 3, 4},
@@ -384,7 +343,7 @@ func TestArrayList_Set(t *testing.T) {
 		},
 		{
 			name:      "index  -1",
-			list:      NewArrayListOf[int]([]int{0, 1, 2, 3, 4}),
+			list:      newConcurrentListOfSlice([]int{0, 1, 2, 3, 4}),
 			index:     -1,
 			newVal:    5,
 			wantSlice: []int{},
@@ -392,7 +351,7 @@ func TestArrayList_Set(t *testing.T) {
 		},
 		{
 			name:      "index  100",
-			list:      NewArrayListOf[int]([]int{0, 1, 2, 3, 4}),
+			list:      newConcurrentListOfSlice([]int{0, 1, 2, 3, 4}),
 			index:     100,
 			newVal:    5,
 			wantSlice: []int{},
@@ -407,7 +366,12 @@ func TestArrayList_Set(t *testing.T) {
 				assert.Equal(t, tc.wantErr, err)
 				return
 			}
-			assert.Equal(t, tc.wantSlice, tc.list.vals)
+			assert.Equal(t, tc.wantSlice, tc.list.AsSlice())
 		})
 	}
+}
+
+func newConcurrentListOfSlice[T any](ts []T) *ConcurrentList[T] {
+	var list List[T] = NewArrayListOf(ts)
+	return &ConcurrentList[T]{List: list}
 }
