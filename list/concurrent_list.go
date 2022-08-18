@@ -26,53 +26,63 @@ type ConcurrentList[T any] struct {
 func (c *ConcurrentList[T]) Get(index int) (T, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	return c.Get(index)
+	return c.List.Get(index)
 }
 
 func (c *ConcurrentList[T]) Append(t T) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return c.Append(t)
+	return c.List.Append(t)
 }
 
 func (c *ConcurrentList[T]) Add(index int, t T) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return c.Add(index, t)
+	return c.List.Add(index, t)
 }
 
 func (c *ConcurrentList[T]) Set(index int, t T) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return c.Set(index, t)
+	return c.List.Set(index, t)
 }
 
 func (c *ConcurrentList[T]) Delete(index int) (T, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return c.Delete(index)
+	return c.List.Delete(index)
 }
 
 func (c *ConcurrentList[T]) Len() int {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	return c.Len()
+	return c.List.Len()
 }
 
 func (c *ConcurrentList[T]) Cap() int {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	return c.Cap()
+	return c.List.Cap()
 }
 
 func (c *ConcurrentList[T]) Range(fn func(index int, t T) error) error {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	return c.Range(fn)
+	return c.List.Range(fn)
 }
 
 func (c *ConcurrentList[T]) AsSlice() []T {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	return c.AsSlice()
+	return c.List.AsSlice()
+}
+
+func NewConcurrentListOf[T any](list List[T]) *ConcurrentList[T] {
+	return &ConcurrentList[T]{List: list}
+}
+
+func NewConcurrentListOfArrayList[T any](ts []T) *ConcurrentList[T] {
+	var list List[T]
+	list = NewArrayListOf(ts)
+	return NewConcurrentListOf(list)
 }
