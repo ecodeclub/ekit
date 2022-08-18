@@ -45,13 +45,13 @@ func (l *LinkedList[T]) getNode(index int) *node[T] {
 	return cur
 }
 
-func (l *LinkedList[T]) Get(index int) (t T, err error) {
+func (l *LinkedList[T]) Get(index int) (T, error) {
 	if index < 0 || index >= l.length {
-		err = newErrIndexOutOfRange(l.length, index)
-		return
+		var t T
+		return t, newErrIndexOutOfRange(l.length, index)
 	}
-	node := l.getNode(index)
-	return node.val, nil
+	n := l.getNode(index)
+	return n.val, nil
 }
 
 // Append 往链表最后添加元素

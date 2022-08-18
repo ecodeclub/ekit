@@ -76,13 +76,3 @@ func (c *ConcurrentList[T]) AsSlice() []T {
 	defer c.lock.RUnlock()
 	return c.List.AsSlice()
 }
-
-func NewConcurrentListOf[T any](list List[T]) *ConcurrentList[T] {
-	return &ConcurrentList[T]{List: list}
-}
-
-func NewConcurrentListOfArrayList[T any](ts []T) *ConcurrentList[T] {
-	var list List[T]
-	list = NewArrayListOf(ts)
-	return NewConcurrentListOf(list)
-}

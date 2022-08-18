@@ -31,41 +31,37 @@ func TestConcurrentList_Add(t *testing.T) {
 		wantSlice []int
 		wantErr   error
 	}{
-		// 仿照这个例子，继续添加测试
-		// 你需要综合考虑下标的各种可能取值
-		// 往两边增加，往中间加
-		// 下标可能是负数，也可能超出你的长度
 		{
 			name:      "add num to index left",
-			list:      NewConcurrentListOfArrayList[int]([]int{1, 2, 3}),
+			list:      newConcurrentListOfSlice[int]([]int{1, 2, 3}),
 			newVal:    100,
 			index:     0,
 			wantSlice: []int{100, 1, 2, 3},
 		},
 		{
 			name:      "add num to index right",
-			list:      NewConcurrentListOfArrayList[int]([]int{1, 2, 3}),
+			list:      newConcurrentListOfSlice[int]([]int{1, 2, 3}),
 			newVal:    100,
 			index:     3,
 			wantSlice: []int{1, 2, 3, 100},
 		},
 		{
 			name:      "add num to index mid",
-			list:      NewConcurrentListOfArrayList[int]([]int{1, 2, 3}),
+			list:      newConcurrentListOfSlice[int]([]int{1, 2, 3}),
 			newVal:    100,
 			index:     1,
 			wantSlice: []int{1, 100, 2, 3},
 		},
 		{
 			name:    "add num to index -1",
-			list:    NewConcurrentListOfArrayList[int]([]int{1, 2, 3}),
+			list:    newConcurrentListOfSlice[int]([]int{1, 2, 3}),
 			newVal:  100,
 			index:   -1,
 			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, -1),
 		},
 		{
 			name:    "add num to index OutOfRange",
-			list:    NewConcurrentListOfArrayList[int]([]int{1, 2, 3}),
+			list:    newConcurrentListOfSlice[int]([]int{1, 2, 3}),
 			newVal:  100,
 			index:   4,
 			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, 4),
@@ -85,11 +81,6 @@ func TestConcurrentList_Add(t *testing.T) {
 	}
 }
 
-//
-//	func TestConcurrentList_Append(t *testing.T) {
-//		// 这个比较简单，只需要增加元素，然后判断一下 Append 之后是否符合预期
-//	}
-
 func TestConcurrentList_Cap(t *testing.T) {
 	testCases := []struct {
 		name      string
@@ -99,12 +90,12 @@ func TestConcurrentList_Cap(t *testing.T) {
 		{
 			name:      "与实际容量相等",
 			expectCap: 3,
-			list:      NewConcurrentListOfArrayList[int]([]int{1, 2, 3}),
+			list:      newConcurrentListOfSlice[int]([]int{1, 2, 3}),
 		},
 		{
 			name:      "用户传入nil",
 			expectCap: 0,
-			list:      NewConcurrentListOfArrayList[int]([]int{}),
+			list:      newConcurrentListOfSlice[int]([]int{}),
 		},
 	}
 	for _, testCase := range testCases {
@@ -124,13 +115,13 @@ func TestConcurrentList_Append(t *testing.T) {
 	}{
 		{
 			name:      "append 234",
-			list:      NewConcurrentListOfArrayList[int]([]int{123}),
+			list:      newConcurrentListOfSlice[int]([]int{123}),
 			newVal:    234,
 			wantSlice: []int{123, 234},
 		},
 		{
 			name:      "nil append 123",
-			list:      NewConcurrentListOfArrayList[int](nil),
+			list:      newConcurrentListOfSlice[int](nil),
 			newVal:    123,
 			wantSlice: []int{123},
 		},
@@ -157,40 +148,35 @@ func TestConcurrentList_Delete(t *testing.T) {
 		wantVal   int
 		wantErr   error
 	}{
-		// 仿照这个例子，继续添加测试
-		// 你需要综合考虑下标的各种可能取值
-		// 往两边增加，往中间加
-		// 下标可能是负数，也可能超出你的长度
-
 		{
 			name:      "index 0",
-			list:      NewConcurrentListOfArrayList([]int{123, 100}),
+			list:      newConcurrentListOfSlice([]int{123, 100}),
 			index:     0,
 			wantSlice: []int{100},
 			wantVal:   123,
 		},
 		{
 			name:      "index middle",
-			list:      NewConcurrentListOfArrayList([]int{123, 124, 125}),
+			list:      newConcurrentListOfSlice([]int{123, 124, 125}),
 			index:     1,
 			wantSlice: []int{123, 125},
 			wantVal:   124,
 		},
 		{
 			name:    "index out of range",
-			list:    NewConcurrentListOfArrayList([]int{123, 100}),
+			list:    newConcurrentListOfSlice([]int{123, 100}),
 			index:   12,
 			wantErr: newErrIndexOutOfRange(2, 12),
 		},
 		{
 			name:    "index less than 0",
-			list:    NewConcurrentListOfArrayList([]int{123, 100}),
+			list:    newConcurrentListOfSlice([]int{123, 100}),
 			index:   -1,
 			wantErr: newErrIndexOutOfRange(2, -1),
 		},
 		{
 			name:      "index last",
-			list:      NewConcurrentListOfArrayList([]int{123, 100, 101, 102, 102, 102}),
+			list:      newConcurrentListOfSlice([]int{123, 100, 101, 102, 102, 102}),
 			index:     5,
 			wantSlice: []int{123, 100, 101, 102, 102},
 			wantVal:   102,
@@ -220,12 +206,12 @@ func TestConcurrentList_Len(t *testing.T) {
 		{
 			name:      "与实际元素数相等",
 			expectLen: 5,
-			list:      NewConcurrentListOfArrayList([]int{1, 2, 3, 4, 5}),
+			list:      newConcurrentListOfSlice([]int{1, 2, 3, 4, 5}),
 		},
 		{
 			name:      "用户传入nil",
 			expectLen: 0,
-			list:      NewConcurrentListOfArrayList([]int{}),
+			list:      newConcurrentListOfSlice([]int{}),
 		},
 	}
 	for _, testCase := range testCases {
@@ -246,20 +232,20 @@ func TestConcurrentList_Get(t *testing.T) {
 	}{
 		{
 			name:    "index 0",
-			list:    NewConcurrentListOfArrayList[int]([]int{123, 100}),
+			list:    newConcurrentListOfSlice[int]([]int{123, 100}),
 			index:   0,
 			wantVal: 123,
 		},
 		{
 			name:    "index 2",
-			list:    NewConcurrentListOfArrayList[int]([]int{123, 100}),
+			list:    newConcurrentListOfSlice[int]([]int{123, 100}),
 			index:   2,
 			wantVal: 0,
 			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 2, 2),
 		},
 		{
 			name:    "index -1",
-			list:    NewConcurrentListOfArrayList[int]([]int{123, 100}),
+			list:    newConcurrentListOfSlice[int]([]int{123, 100}),
 			index:   -1,
 			wantVal: 0,
 			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 2, -1),
@@ -278,11 +264,8 @@ func TestConcurrentList_Get(t *testing.T) {
 		})
 	}
 }
+
 func TestConcurrentList_Range(t *testing.T) {
-	// 设计两个测试用例，用求和来作为场景
-	// 一个测试用例是计算全部元素的和
-	// 一个测试用例是计算元素的和，如果遇到了第一个负数，那么就中断返回
-	// 测试最终断言求的和是否符合预期
 	testCases := []struct {
 		name    string
 		list    *ConcurrentList[int]
@@ -292,19 +275,19 @@ func TestConcurrentList_Range(t *testing.T) {
 	}{
 		{
 			name:    "计算全部元素的和",
-			list:    NewConcurrentListOfArrayList([]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+			list:    newConcurrentListOfSlice([]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
 			wantVal: 55,
 			wantErr: nil,
 		},
 		{
 			name:    "测试中断",
-			list:    NewConcurrentListOfArrayList([]int{1, 2, 3, 4, -5, 6, 7, 8, -9, 10}),
+			list:    newConcurrentListOfSlice([]int{1, 2, 3, 4, -5, 6, 7, 8, -9, 10}),
 			wantVal: 41,
 			wantErr: errors.New("index 4 is error"),
 		},
 		{
 			name:    "测试数组为nil",
-			list:    NewConcurrentListOfArrayList([]int{}),
+			list:    newConcurrentListOfSlice([]int{}),
 			wantVal: 0,
 			wantErr: nil,
 		},
@@ -331,7 +314,7 @@ func TestConcurrentList_Range(t *testing.T) {
 
 func TestConcurrentList_AsSlice(t *testing.T) {
 	vals := []int{1, 2, 3}
-	a := NewConcurrentListOfArrayList[int](vals)
+	a := newConcurrentListOfSlice[int](vals)
 	slice := a.AsSlice()
 	// 内容相同
 	assert.Equal(t, slice, vals)
@@ -352,7 +335,7 @@ func TestConcurrentList_Set(t *testing.T) {
 	}{
 		{
 			name:      "set 5 by index  1",
-			list:      NewConcurrentListOfArrayList([]int{0, 1, 2, 3, 4}),
+			list:      newConcurrentListOfSlice([]int{0, 1, 2, 3, 4}),
 			index:     1,
 			newVal:    5,
 			wantSlice: []int{0, 5, 2, 3, 4},
@@ -360,7 +343,7 @@ func TestConcurrentList_Set(t *testing.T) {
 		},
 		{
 			name:      "index  -1",
-			list:      NewConcurrentListOfArrayList([]int{0, 1, 2, 3, 4}),
+			list:      newConcurrentListOfSlice([]int{0, 1, 2, 3, 4}),
 			index:     -1,
 			newVal:    5,
 			wantSlice: []int{},
@@ -368,7 +351,7 @@ func TestConcurrentList_Set(t *testing.T) {
 		},
 		{
 			name:      "index  100",
-			list:      NewConcurrentListOfArrayList([]int{0, 1, 2, 3, 4}),
+			list:      newConcurrentListOfSlice([]int{0, 1, 2, 3, 4}),
 			index:     100,
 			newVal:    5,
 			wantSlice: []int{},
@@ -386,5 +369,9 @@ func TestConcurrentList_Set(t *testing.T) {
 			assert.Equal(t, tc.wantSlice, tc.list.AsSlice())
 		})
 	}
+}
 
+func newConcurrentListOfSlice[T any](ts []T) *ConcurrentList[T] {
+	var list List[T] = NewArrayListOf(ts)
+	return &ConcurrentList[T]{List: list}
 }
