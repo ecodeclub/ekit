@@ -55,8 +55,17 @@ func (l *LinkedList[T]) Get(index int) (t T, err error) {
 }
 
 func (l *LinkedList[T]) Append(t T) error {
-	// TODO implement me
-	panic("implement me")
+	newLastNode := &node[T]{val: t}
+	if l.length == 0 {
+		l.head = newLastNode
+		l.tail = newLastNode
+	} else {
+		l.tail.next = newLastNode
+		newLastNode.prev = l.tail
+		l.tail = newLastNode
+	}
+	l.length += 1
+	return nil
 }
 
 // Add 在 LinkedList 下标为 index 的位置插入一个元素
