@@ -54,9 +54,26 @@ func (l *LinkedList[T]) Get(index int) (t T, err error) {
 	return node.val, nil
 }
 
+// Append 往链表最后添加元素
 func (l *LinkedList[T]) Append(t T) error {
-	// TODO implement me
-	panic("implement me")
+	// 创建一个新元素，通过传入参数进行数据域的赋值
+	newNode := &node[T]{
+		val: t,
+	}
+	nLen := l.length
+	defer func() {
+		l.length += 1
+	}()
+	if nLen == 0 {
+		// 如果链表为空，则直接将新元素作为头尾节点
+		l.head = newNode
+		l.tail = newNode
+	} else {
+		// 调用insertAfter
+		l.tail.insertAfter(newNode)
+		l.tail = newNode
+	}
+	return nil
 }
 
 // Add 在 LinkedList 下标为 index 的位置插入一个元素

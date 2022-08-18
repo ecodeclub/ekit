@@ -110,7 +110,40 @@ func TestLinkedList_Add(t *testing.T) {
 }
 
 func TestLinkedList_Append(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
+	testCases := []struct {
+		name           string
+		list           *LinkedList[int]
+		newVal         int
+		wantLinkedList *LinkedList[int]
+	}{
+		{
+			name:           "append uint to empty node",
+			list:           NewLinkedListOf[int]([]int{}),
+			newVal:         77,
+			wantLinkedList: NewLinkedListOf[int]([]int{77}),
+		},
+		{
+			name:           "append uint to node",
+			list:           NewLinkedListOf[int]([]int{0}),
+			newVal:         999,
+			wantLinkedList: NewLinkedListOf[int]([]int{0, 999}),
+		},
+		{
+			name:           "append int to node",
+			list:           NewLinkedListOf[int]([]int{845, 123, 7898}),
+			newVal:         -788,
+			wantLinkedList: NewLinkedListOf[int]([]int{845, 123, 7898, -788}),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.list.Append(tc.newVal)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantLinkedList, tc.list)
+		})
+	}
 }
 
 func TestNewLinkedListOf(t *testing.T) {
