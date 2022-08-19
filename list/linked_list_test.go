@@ -109,6 +109,82 @@ func TestLinkedList_Add(t *testing.T) {
 	}
 }
 
+func TestLinkedList_Delete(t *testing.T) {
+	testCases := []struct {
+		name           string
+		list           *LinkedList[int]
+		wantLinkedList *LinkedList[int]
+		delVal         int
+		index          int
+		wantErr        error
+	}{
+		{
+			name:    "delete num to index -1",
+			list:    NewLinkedListOf[int]([]int{1, 2, 3}),
+			index:   -1,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, -1),
+		},
+		{
+			name:    "delete beyond length index 99",
+			list:    NewLinkedListOf[int]([]int{1, 2, 3}),
+			index:   99,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, 99),
+		},
+		{
+			name:    "delete empty node",
+			list:    NewLinkedListOf[int]([]int{}),
+			index:   3,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 0, 3),
+		},
+		{
+			name:           "delete num to index 0",
+			list:           NewLinkedListOf[int]([]int{1, 2, 3}),
+			index:          0,
+			delVal:         1,
+			wantLinkedList: NewLinkedListOf([]int{2, 3}),
+		},
+		{
+			name:           "delete num to index by tail",
+			list:           NewLinkedListOf[int]([]int{1, 2, 3, 4, 5}),
+			index:          4,
+			delVal:         5,
+			wantLinkedList: NewLinkedListOf([]int{1, 2, 3, 4}),
+		},
+		{
+			name:           "delete num to index 1",
+			list:           NewLinkedListOf[int]([]int{11, 22, 33, 44, 55}),
+			index:          1,
+			delVal:         22,
+			wantLinkedList: NewLinkedListOf([]int{11, 33, 44, 55}),
+		},
+		{
+			name:           "delete num to index 2",
+			list:           NewLinkedListOf[int]([]int{11, 22, 33, 44, 55}),
+			index:          2,
+			delVal:         33,
+			wantLinkedList: NewLinkedListOf([]int{11, 22, 44, 55}),
+		},
+		{
+			name:           "delete num to index 3",
+			list:           NewLinkedListOf[int]([]int{11, 22, 33, 44, 55}),
+			index:          3,
+			delVal:         44,
+			wantLinkedList: NewLinkedListOf([]int{11, 22, 33, 55}),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			delVal, err := tc.list.Delete(tc.index)
+			if err != nil {
+				assert.Equal(t, tc.wantErr, err)
+			} else {
+				assert.Equal(t, tc.delVal, delVal)
+				assert.Equal(t, tc.wantLinkedList, tc.list)
+			}
+		})
+	}
+}
+
 func TestLinkedList_Append(t *testing.T) {
 	testCases := []struct {
 		name           string
@@ -194,10 +270,6 @@ func TestLinkedList_AsSlice(t *testing.T) {
 }
 
 func TestLinkedList_Cap(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
-}
-
-func TestLinkedList_Delete(t *testing.T) {
 	fmt.Println("仿照 ArrayList 的测试写代码")
 }
 
