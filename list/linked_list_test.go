@@ -32,10 +32,6 @@ func TestLinkedList_Add(t *testing.T) {
 		wantLinkedList *LinkedList[int]
 		wantErr        error
 	}{
-		// 仿照这个例子，继续添加测试
-		// 你需要综合考虑下标的各种可能取值
-		// 往两边增加，往中间加
-		// 下标可能是负数，也可能超出你的长度
 		{
 			name:           "add num to index left",
 			list:           NewLinkedListOf[int]([]int{1, 2, 3}),
