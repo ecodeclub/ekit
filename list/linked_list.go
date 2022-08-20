@@ -136,15 +136,19 @@ func (l *LinkedList[T]) Delete(index int) (T, error) {
 	// 删除head
 	if index == 0 {
 		delVal = l.head.val
-		l.head.next.prev = nil
-		l.head = l.head.next
+		if nLen > 1 {
+			l.head.next.prev = nil
+			l.head = l.head.next
+		} else {
+			l.head = nil
+			l.tail = nil
+		}
 		return delVal, nil
 	}
 	// 删除tail
 	if index == nLen-1 {
 		delVal = l.tail.val
-		tmp := l.tail.prev
-		l.tail = tmp
+		l.tail = l.tail.prev
 		l.tail.next = nil
 		return delVal, nil
 	}

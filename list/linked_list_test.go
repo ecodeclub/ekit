@@ -154,18 +154,11 @@ func TestLinkedList_Delete(t *testing.T) {
 			wantLinkedList: NewLinkedListOf([]int{11, 33, 44, 55}),
 		},
 		{
-			name:           "delete num to index 2",
-			list:           NewLinkedListOf[int]([]int{11, 22, 33, 44, 55}),
-			index:          2,
-			delVal:         33,
-			wantLinkedList: NewLinkedListOf([]int{11, 22, 44, 55}),
-		},
-		{
-			name:           "delete num to index 3",
-			list:           NewLinkedListOf[int]([]int{11, 22, 33, 44, 55}),
-			index:          3,
-			delVal:         44,
-			wantLinkedList: NewLinkedListOf([]int{11, 22, 33, 55}),
+			name:           "deleting an element with only one",
+			list:           NewLinkedListOf[int]([]int{888}),
+			index:          0,
+			delVal:         888,
+			wantLinkedList: NewLinkedListOf([]int{}),
 		},
 	}
 	for _, tc := range testCases {
