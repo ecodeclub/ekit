@@ -117,9 +117,33 @@ func (l *LinkedList[T]) fromTailToHead(index int) bool {
 	return index > (l.length / 2)
 }
 
+// Set 设置链表中index索引处的值为t
 func (l *LinkedList[T]) Set(index int, t T) error {
-	// TODO implement me
-	panic("implement me")
+	nLen := l.length
+	if index < 0 || index > nLen || nLen == 0 {
+		return newErrIndexOutOfRange(nLen, index)
+	}
+
+	if index == 0 {
+		l.head.val = t
+		return nil
+	}
+	if index == nLen-1 {
+		l.tail.val = t
+		return nil
+	}
+
+	tmp := l.head
+	count := 0
+	for count < (index - 1) {
+		// 用于控制位移的链表数目
+		tmp = tmp.next
+		count++
+	}
+	// 循环退出后，tmp指向index-1的位置
+	tmp.next.val = t
+
+	return nil
 }
 
 // Delete 删除指定位置的元素

@@ -105,6 +105,68 @@ func TestLinkedList_Add(t *testing.T) {
 	}
 }
 
+func TestLinkedList_Set(t *testing.T) {
+	testCases := []struct {
+		name           string
+		list           *LinkedList[int]
+		wantLinkedList *LinkedList[int]
+		index          int
+		setVal         int
+		wantErr        error
+	}{
+		{
+			name:    "set num to index -1",
+			list:    NewLinkedListOf[int]([]int{1, 2, 3}),
+			index:   -1,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, -1),
+		},
+		{
+			name:    "set beyond length index 99",
+			list:    NewLinkedListOf[int]([]int{1, 2, 3}),
+			index:   99,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, 99),
+		},
+		{
+			name:    "set empty node",
+			list:    NewLinkedListOf[int]([]int{}),
+			index:   3,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 0, 3),
+		},
+		{
+			name:           "set num to index 3",
+			list:           NewLinkedListOf[int]([]int{11, 22, 33, 44, 55}),
+			index:          2,
+			setVal:         999,
+			wantLinkedList: NewLinkedListOf([]int{11, 22, 999, 44, 55}),
+		},
+		{
+			name:           "set num to head",
+			list:           NewLinkedListOf[int]([]int{11, 22, 33, 44, 55}),
+			index:          0,
+			setVal:         -200,
+			wantLinkedList: NewLinkedListOf([]int{-200, 22, 33, 44, 55}),
+		},
+		{
+			name:           "set num to tail",
+			list:           NewLinkedListOf[int]([]int{-11, 22, -33, 44, -55, 999, -888}),
+			index:          6,
+			setVal:         888,
+			wantLinkedList: NewLinkedListOf([]int{-11, 22, -33, 44, -55, 999, 888}),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.list.Set(tc.index, tc.setVal)
+			if err != nil {
+				assert.Equal(t, tc.wantErr, err)
+			} else {
+				assert.Equal(t, tc.wantLinkedList, tc.list)
+			}
+		})
+	}
+}
+
 func TestLinkedList_Delete(t *testing.T) {
 	testCases := []struct {
 		name           string
@@ -324,10 +386,6 @@ func TestLinkedList_Len(t *testing.T) {
 }
 
 func TestLinkedList_Range(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
-}
-
-func TestLinkedList_Set(t *testing.T) {
 	fmt.Println("仿照 ArrayList 的测试写代码")
 }
 
