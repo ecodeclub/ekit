@@ -178,35 +178,40 @@ func TestLinkedList_Append(t *testing.T) {
 	testCases := []struct {
 		name           string
 		list           *LinkedList[int]
+		index          int
 		newVal         int
 		wantLinkedList *LinkedList[int]
+		wantErr        error
 	}{
 		{
-			name:           "append uint to empty node",
+			name:           "append val",
+			list:           NewLinkedListOf[int]([]int{1, 2, 3}),
+			newVal:         100,
+			wantLinkedList: NewLinkedListOf[int]([]int{1, 2, 3, 100}),
+		},
+		{
+			name:           "append val in list length of 1",
+			list:           NewLinkedListOf[int]([]int{1}),
+			newVal:         100,
+			wantLinkedList: NewLinkedListOf[int]([]int{1, 100}),
+		},
+		{
+			name:           "append val to nil list",
 			list:           NewLinkedListOf[int]([]int{}),
-			newVal:         77,
-			wantLinkedList: NewLinkedListOf[int]([]int{77}),
-		},
-		{
-			name:           "append uint to node",
-			list:           NewLinkedListOf[int]([]int{0}),
-			newVal:         999,
-			wantLinkedList: NewLinkedListOf[int]([]int{0, 999}),
-		},
-		{
-			name:           "append int to node",
-			list:           NewLinkedListOf[int]([]int{845, 123, 7898}),
-			newVal:         -788,
-			wantLinkedList: NewLinkedListOf[int]([]int{845, 123, 7898, -788}),
+			newVal:         100,
+			wantLinkedList: NewLinkedListOf[int]([]int{100}),
 		},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.list.Append(tc.newVal)
+			assert.Equal(t, tc.wantErr, err)
+			// 因为返回了 error，所以我们不用继续往下比较了
 			if err != nil {
 				return
 			}
-			assert.Equal(t, tc.wantLinkedList, tc.list)
+			assert.True(t, linkedListEqual(tc.list, tc.wantLinkedList))
 		})
 	}
 }
