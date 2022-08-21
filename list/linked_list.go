@@ -14,6 +14,8 @@
 
 package list
 
+import "fmt"
+
 // LinkedList 双向链表
 type LinkedList[T any] struct {
 	head *node[T]
@@ -115,27 +117,11 @@ func (l *LinkedList[T]) Set(index int, t T) error {
 	if index < 0 || index > l.length || l.length == 0 {
 		return newErrIndexOutOfRange(l.length, index)
 	}
-	// 设置头元素
-	if index == 0 {
-		l.head.val = t
-		return nil
+	rv := l.getNode(index)
+	if rv == nil {
+		return fmt.Errorf("ekit: 没有找到次节点的数据 ， 下标 %d", index)
 	}
-	// 设置尾元素
-	if index == l.length-1 {
-		l.tail.val = t
-		return nil
-	}
-
-	tmp := l.head
-	count := 0
-	for count < (index - 1) {
-		// 用于控制位移的链表数目
-		tmp = tmp.next
-		count++
-	}
-	// 循环退出后，tmp指向index-1的位置
-	tmp.next.val = t
-
+	rv.val = t
 	return nil
 }
 
