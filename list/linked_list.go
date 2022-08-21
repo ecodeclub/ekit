@@ -14,8 +14,6 @@
 
 package list
 
-import "fmt"
-
 // LinkedList 双向链表
 type LinkedList[T any] struct {
 	head *node[T]
@@ -118,9 +116,6 @@ func (l *LinkedList[T]) Set(index int, t T) error {
 		return newErrIndexOutOfRange(l.length, index)
 	}
 	rv := l.getNode(index)
-	if rv == nil {
-		return fmt.Errorf("ekit: 没有找到此节点数据 ， 下标 %d", index)
-	}
 	rv.val = t
 	return nil
 }
