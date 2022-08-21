@@ -119,7 +119,7 @@ func (l *LinkedList[T]) Set(index int, t T) error {
 	}
 	rv := l.getNode(index)
 	if rv == nil {
-		return fmt.Errorf("ekit: 没有找到次节点的数据 ， 下标 %d", index)
+		return fmt.Errorf("ekit: 没有找到此节点数据 ， 下标 %d", index)
 	}
 	rv.val = t
 	return nil
