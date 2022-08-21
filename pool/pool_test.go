@@ -22,7 +22,9 @@ import (
 )
 
 func TestPool(t *testing.T) {
+	cnt := 0
 	p := New[[]byte](func() []byte {
+		cnt += 1
 		res := make([]byte, 1, 12)
 		res[0] = 'A'
 		return res
@@ -33,7 +35,12 @@ func TestPool(t *testing.T) {
 	res = append(res, 'B')
 	p.Put(res)
 	res = p.Get()
-	assert.Equal(t, "AB", string(res))
+	if cnt == 1 {
+		assert.Equal(t, "AB", string(res))
+	} else {
+		assert.Equal(t, "A", string(res))
+	}
+
 }
 
 func ExampleNew() {
