@@ -114,7 +114,7 @@ func (l *LinkedList[T]) fromTailToHead(index int) bool {
 
 // Set 设置链表中index索引处的值为t
 func (l *LinkedList[T]) Set(index int, t T) error {
-	if index < 0 || index > l.length || l.length == 0 {
+	if index < 0 || index >= l.length {
 		return newErrIndexOutOfRange(l.length, index)
 	}
 	rv := l.getNode(index)
