@@ -153,6 +153,20 @@ func TestLinkedList_Set(t *testing.T) {
 			setVal:         888,
 			wantLinkedList: NewLinkedListOf([]int{-11, 22, -33, 44, -55, 999, 888}),
 		},
+		{
+			name:    "index == len(*node)",
+			list:    NewLinkedListOf[int]([]int{-11, 22, -33, 44, -55, 999, -888}),
+			index:   7,
+			setVal:  888,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 7, 7),
+		},
+		{
+			name:    "len(*node) == 0",
+			list:    NewLinkedListOf[int]([]int{}),
+			index:   0,
+			setVal:  888,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 0, 0),
+		},
 	}
 
 	for _, tc := range testCases {
