@@ -177,6 +177,7 @@ func TestLinkedList_Set(t *testing.T) {
 			} else {
 				assert.Equal(t, tc.wantLinkedList, tc.list)
 			}
+			
 		})
 	}
 }
