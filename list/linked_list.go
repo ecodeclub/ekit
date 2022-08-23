@@ -110,9 +110,14 @@ func (l *LinkedList[T]) fromTailToHead(index int) bool {
 	return index > (l.length / 2)
 }
 
+// Set 设置链表中index索引处的值为t
 func (l *LinkedList[T]) Set(index int, t T) error {
-	// TODO implement me
-	panic("implement me")
+	if index < 0 || index >= l.length {
+		return newErrIndexOutOfRange(l.length, index)
+	}
+	rv := l.getNode(index)
+	rv.val = t
+	return nil
 }
 
 // Delete 删除指定位置的元素
