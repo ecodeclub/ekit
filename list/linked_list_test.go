@@ -32,10 +32,6 @@ func TestLinkedList_Add(t *testing.T) {
 		wantLinkedList *LinkedList[int]
 		wantErr        error
 	}{
-		// 仿照这个例子，继续添加测试
-		// 你需要综合考虑下标的各种可能取值
-		// 往两边增加，往中间加
-		// 下标可能是负数，也可能超出你的长度
 		{
 			name:           "add num to index left",
 			list:           NewLinkedListOf[int]([]int{1, 2, 3}),
@@ -109,8 +105,115 @@ func TestLinkedList_Add(t *testing.T) {
 	}
 }
 
+func TestLinkedList_Delete(t *testing.T) {
+	testCases := []struct {
+		name           string
+		list           *LinkedList[int]
+		wantLinkedList *LinkedList[int]
+		delVal         int
+		index          int
+		wantErr        error
+	}{
+		{
+			name:    "delete num to index -1",
+			list:    NewLinkedListOf[int]([]int{1, 2, 3}),
+			index:   -1,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, -1),
+		},
+		{
+			name:    "delete beyond length index 99",
+			list:    NewLinkedListOf[int]([]int{1, 2, 3}),
+			index:   99,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, 99),
+		},
+		{
+			name:    "delete empty node",
+			list:    NewLinkedListOf[int]([]int{}),
+			index:   3,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 0, 3),
+		},
+		{
+			name:           "delete num to index 0",
+			list:           NewLinkedListOf[int]([]int{1, 2, 3}),
+			index:          0,
+			delVal:         1,
+			wantLinkedList: NewLinkedListOf([]int{2, 3}),
+		},
+		{
+			name:           "delete num to index by tail",
+			list:           NewLinkedListOf[int]([]int{1, 2, 3, 4, 5}),
+			index:          4,
+			delVal:         5,
+			wantLinkedList: NewLinkedListOf([]int{1, 2, 3, 4}),
+		},
+		{
+			name:           "delete num to index 1",
+			list:           NewLinkedListOf[int]([]int{11, 22, 33, 44, 55}),
+			index:          1,
+			delVal:         22,
+			wantLinkedList: NewLinkedListOf([]int{11, 33, 44, 55}),
+		},
+		{
+			name:           "deleting an element with only one",
+			list:           NewLinkedListOf[int]([]int{888}),
+			index:          0,
+			delVal:         888,
+			wantLinkedList: NewLinkedListOf([]int{}),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			delVal, err := tc.list.Delete(tc.index)
+			if err != nil {
+				assert.Equal(t, tc.wantErr, err)
+			} else {
+				assert.Equal(t, tc.delVal, delVal)
+				assert.Equal(t, tc.wantLinkedList, tc.list)
+			}
+		})
+	}
+}
+
 func TestLinkedList_Append(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
+	testCases := []struct {
+		name           string
+		list           *LinkedList[int]
+		index          int
+		newVal         int
+		wantLinkedList *LinkedList[int]
+		wantErr        error
+	}{
+		{
+			name:           "append val",
+			list:           NewLinkedListOf[int]([]int{1, 2, 3}),
+			newVal:         100,
+			wantLinkedList: NewLinkedListOf[int]([]int{1, 2, 3, 100}),
+		},
+		{
+			name:           "append val in list length of 1",
+			list:           NewLinkedListOf[int]([]int{1}),
+			newVal:         100,
+			wantLinkedList: NewLinkedListOf[int]([]int{1, 100}),
+		},
+		{
+			name:           "append val to nil list",
+			list:           NewLinkedListOf[int]([]int{}),
+			newVal:         100,
+			wantLinkedList: NewLinkedListOf[int]([]int{100}),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.list.Append(tc.newVal)
+			assert.Equal(t, tc.wantErr, err)
+			// 因为返回了 error，所以我们不用继续往下比较了
+			if err != nil {
+				return
+			}
+			assert.True(t, linkedListEqual(tc.list, tc.wantLinkedList))
+		})
+	}
 }
 
 func TestNewLinkedListOf(t *testing.T) {
@@ -161,10 +264,6 @@ func TestLinkedList_AsSlice(t *testing.T) {
 }
 
 func TestLinkedList_Cap(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
-}
-
-func TestLinkedList_Delete(t *testing.T) {
 	fmt.Println("仿照 ArrayList 的测试写代码")
 }
 
