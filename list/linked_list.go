@@ -168,8 +168,15 @@ func (l *LinkedList[T]) Cap() int {
 }
 
 func (l *LinkedList[T]) Range(fn func(index int, t T) error) error {
-	// TODO implement me
-	panic("implement me")
+	head := l.head
+	for i := 0; i < l.length; i++ {
+		err := fn(i, head.val)
+		if err != nil {
+			return err
+		}
+		head = head.next
+	}
+	return nil
 }
 
 func (l *LinkedList[T]) AsSlice() []T {
