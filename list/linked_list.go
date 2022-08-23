@@ -23,9 +23,6 @@ type LinkedList[T any] struct {
 }
 
 func (l *LinkedList[T]) getNode(index int) *node[T] {
-	if l.length == 0 {
-		return nil
-	}
 	cur := l.head
 	curIndex := 0
 
@@ -124,7 +121,7 @@ func (l *LinkedList[T]) Set(index int, t T) error {
 func (l *LinkedList[T]) Delete(index int) (T, error) {
 	nLen := l.length
 	var delVal T // 需要删除的节点val
-	if index < 0 || index > nLen || nLen == 0 {
+	if index < 0 || index >= nLen {
 		return delVal, newErrIndexOutOfRange(nLen, index)
 	}
 	defer func() {

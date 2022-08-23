@@ -127,6 +127,12 @@ func TestLinkedList_Delete(t *testing.T) {
 			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, 99),
 		},
 		{
+			name:    "delete beyond length index 3",
+			list:    NewLinkedListOf[int]([]int{1, 2, 3}),
+			index:   3,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, 3),
+		},
+		{
 			name:    "delete empty node",
 			list:    NewLinkedListOf[int]([]int{}),
 			index:   3,
@@ -268,7 +274,6 @@ func TestLinkedList_Cap(t *testing.T) {
 }
 
 func TestLinkedList_Get(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		list    *LinkedList[int]
