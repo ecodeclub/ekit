@@ -15,6 +15,7 @@
 package list
 
 import (
+	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 
@@ -125,6 +126,12 @@ func TestLinkedList_Delete(t *testing.T) {
 			list:    NewLinkedListOf[int]([]int{1, 2, 3}),
 			index:   99,
 			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, 99),
+		},
+		{
+			name:    "delete beyond length index 3",
+			list:    NewLinkedListOf[int]([]int{1, 2, 3}),
+			index:   3,
+			wantErr: fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", 3, 3),
 		},
 		{
 			name:    "delete empty node",
@@ -268,7 +275,6 @@ func TestLinkedList_Cap(t *testing.T) {
 }
 
 func TestLinkedList_Get(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		list    *LinkedList[int]
@@ -329,7 +335,49 @@ func TestLinkedList_Len(t *testing.T) {
 }
 
 func TestLinkedList_Range(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
+	testCases := []struct {
+		name    string
+		list    *LinkedList[int]
+		wantVal int
+		wantErr error
+	}{
+		{
+			name:    "计算全部元素的和",
+			list:    NewLinkedListOf([]int{1, 2, 3, 4, 5}),
+			wantVal: 15,
+			wantErr: nil,
+		},
+		{
+			name:    "测试中断",
+			list:    NewLinkedListOf([]int{1, 2, 3, 4, -5, 6, 7, 8, -9, 10}),
+			wantErr: errors.New("index 4 is error"),
+		},
+		{
+			name:    "测试数组为nil",
+			list:    NewLinkedListOf([]int{}),
+			wantVal: 0,
+			wantErr: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := 0
+			err := tc.list.Range(func(index int, num int) error {
+				if num < 0 {
+					return fmt.Errorf("index %d is error", index)
+				}
+				result += num
+				return nil
+			})
+
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantVal, result)
+		})
+	}
 }
 
 func TestLinkedList_Set(t *testing.T) {
