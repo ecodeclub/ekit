@@ -316,7 +316,7 @@ func (b *BlockQueueTaskPool) ShutdownNow() ([]Task, error) {
 			b.cancelFunc()
 
 			// 清空队列并保存
-			var tasks []Task
+			tasks := make([]Task, 0, len(b.queue))
 			for task := range b.queue {
 				tasks = append(tasks, task)
 			}
