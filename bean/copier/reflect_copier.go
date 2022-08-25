@@ -217,7 +217,6 @@ func (r *ReflectCopier[Src, Dst]) copyWithRuntime(src *Src, dst *Dst) error {
 
 func (r *ReflectCopier[Src, Dst]) copyStruct(srcTyp reflect.Type, srcValue reflect.Value, dstTyp reflect.Type, dstValue reflect.Value) error {
 	srcFieldNameID := make(map[string]int, 0)
-	//dstFiledNameID := make(map[string]int32, 0)
 	for i := 0; i < srcTyp.NumField(); i += 1 {
 		fTyp := srcTyp.Field(i)
 		if !fTyp.IsExported() {
