@@ -21,11 +21,171 @@ import (
 // ReflectCopier 基于反射的实现
 // ReflectCopier 是浅拷贝
 type ReflectCopier[Src any, Dst any] struct {
+	rootFiled fieldNode
 }
 
-func NewReflectCopier[Src any, Dst any]() *ReflectCopier[Src, Dst] {
-	copier := &ReflectCopier[Src, Dst]{}
-	return copier
+// fieldNode 字段的前缀树
+type fieldNode struct {
+	// 当前节点的名字
+	name string
+
+	// 当前 Struct 的子节点, 如果为叶子节点, 则没有子节点
+	fields []fieldNode
+
+	// 在 source 的 index
+	srcIndex int
+
+	// 在 dst 的 index
+	dstIndex int
+
+	// 是否为叶子节点, 如果为叶子节点, 应该直接进行拷贝该字段
+	isLeaf bool
+
+	// 是否为根节点, 只有一个根节点
+	isRoot bool
+}
+
+// NewReflectCopier 如果类型不匹配, 创建时直接检查报错.
+func NewReflectCopier[Src any, Dst any]() (*ReflectCopier[Src, Dst], error) {
+	src := new(Src)
+	srcTyp := reflect.TypeOf(src).Elem()
+	dst := new(Dst)
+	dstTyp := reflect.TypeOf(dst).Elem()
+	root := fieldNode{
+		isRoot: true,
+		isLeaf: false,
+		fields: []fieldNode{},
+	}
+	if srcTyp.Kind() != reflect.Struct {
+		return nil, newErrTypeError(srcTyp.Kind())
+	}
+	if dstTyp.Kind() != reflect.Struct {
+		return nil, newErrTypeError(dstTyp.Kind())
+	}
+	if err := createFiledNodes(&root, srcTyp, dstTyp); err != nil {
+		return nil, err
+	}
+
+	copier := &ReflectCopier[Src, Dst]{
+		rootFiled: root,
+	}
+	return copier, nil
+}
+
+// createFiledNodes 递归创建 field 的前缀树, srcTyp 和 dstTyp 只能是结构体
+func createFiledNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
+
+	srcFieldNameID := make(map[string]int, 0)
+	for i := 0; i < srcTyp.NumField(); i += 1 {
+		fTyp := srcTyp.Field(i)
+		if !fTyp.IsExported() {
+			continue
+		}
+		srcFieldNameID[fTyp.Name] = i
+	}
+
+	// 构建当前节点的子节点
+	for i := 0; i < dstTyp.NumField(); i += 1 {
+		dstFieldTypStruct := dstTyp.Field(i)
+		if !dstFieldTypStruct.IsExported() {
+			continue
+		}
+		if srcIndex, ok := srcFieldNameID[dstFieldTypStruct.Name]; ok {
+			srcFieldTypStruct := srcTyp.Field(srcIndex)
+			dstFieldTypStruct := dstTyp.Field(i)
+
+			if srcFieldTypStruct.Type.Kind() != dstFieldTypStruct.Type.Kind() {
+				return newErrKindNotMatchError(srcFieldTypStruct.Type.Kind(), dstFieldTypStruct.Type.Kind(), dstFieldTypStruct.Name)
+			}
+
+			if srcFieldTypStruct.Type.Kind() == reflect.Pointer {
+				if srcFieldTypStruct.Type.Elem().Kind() != dstFieldTypStruct.Type.Elem().Kind() {
+					return newErrKindNotMatchError(srcFieldTypStruct.Type.Elem().Kind(), dstFieldTypStruct.Type.Elem().Kind(), dstFieldTypStruct.Name)
+				}
+				if srcFieldTypStruct.Type.Elem().Kind() == reflect.Pointer {
+					return newErrMultiPointer(dstFieldTypStruct.Name)
+				}
+			}
+
+			child := fieldNode{
+				fields:   []fieldNode{},
+				srcIndex: srcIndex,
+				dstIndex: i,
+				isRoot:   false,
+				isLeaf:   false,
+				name:     dstFieldTypStruct.Name,
+			}
+
+			fieldSrcTyp := srcFieldTypStruct.Type
+			fieldDstTyp := dstFieldTypStruct.Type
+			if fieldSrcTyp.Kind() == reflect.Pointer {
+				fieldSrcTyp = fieldSrcTyp.Elem()
+				fieldDstTyp = fieldDstTyp.Elem()
+			}
+
+			// 说明当前节点是叶子节点, 直接拷贝
+			if isShadowCopyType(fieldSrcTyp.Kind()) {
+				child.isLeaf = true
+			} else if fieldSrcTyp.Kind() == reflect.Struct {
+				if err := createFiledNodes(&child, fieldSrcTyp, fieldDstTyp); err != nil {
+					return err
+				}
+			} else {
+				// 不是我们能复制的类型, 直接跳过
+				continue
+			}
+
+			root.fields = append(root.fields, child)
+		}
+	}
+	return nil
+}
+
+func (r *ReflectCopier[Src, Dst]) copyToWithTree(src *Src, dst *Dst) error {
+	srcTyp := reflect.TypeOf(src).Elem()
+	dstTyp := reflect.TypeOf(dst).Elem()
+	srcValue := reflect.ValueOf(src).Elem()
+	dstValue := reflect.ValueOf(dst).Elem()
+
+	root := r.rootFiled
+
+	return r.copyTreeNode(srcTyp, srcValue, dstTyp, dstValue, &root)
+}
+
+func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue reflect.Value, dstType reflect.Type, dstValue reflect.Value, root *fieldNode) error {
+	if srcValue.Kind() == reflect.Pointer {
+		if srcValue.IsNil() {
+			return nil
+		}
+		if dstValue.IsNil() {
+			dstValue.Set(reflect.New(dstType.Elem()))
+		}
+		srcValue = srcValue.Elem()
+		srcTyp = srcTyp.Elem()
+
+		dstValue = dstValue.Elem()
+		dstType = dstType.Elem()
+	}
+	// 执行拷贝
+	if root.isLeaf {
+		if dstValue.CanSet() {
+			dstValue.Set(srcValue)
+		}
+		return nil
+	}
+
+	for i := range root.fields {
+		child := root.fields[i]
+		childSrcTyp := srcTyp.Field(child.srcIndex)
+		childSrcValue := srcValue.Field(child.srcIndex)
+
+		childDstTyp := dstType.Field(child.dstIndex)
+		childDstValue := dstValue.Field(child.dstIndex)
+		if err := r.copyTreeNode(childSrcTyp.Type, childSrcValue, childDstTyp.Type, childDstValue, &child); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // CopyTo 执行复制
@@ -35,6 +195,11 @@ func NewReflectCopier[Src any, Dst any]() *ReflectCopier[Src, Dst] {
 // 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，那么会深入复制
 // 4. 否则，返回类型不匹配的错误
 func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst) error {
+	return r.copyToWithTree(src, dst)
+}
+
+// copyWithRuntime 是不使用字典树的复制
+func (r *ReflectCopier[Src, Dst]) copyWithRuntime(src *Src, dst *Dst) error {
 	srcTyp := reflect.TypeOf(src).Elem()
 	if srcTyp.Kind() != reflect.Struct {
 		return newErrTypeError(srcTyp.Kind())

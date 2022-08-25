@@ -1,0 +1,18 @@
+// 纯递归实现 bench
+//goos: darwin
+//goarch: amd64
+//pkg: github.com/gotomicro/ekit/bean/copier
+//cpu: Intel(R) Core(TM) i5-1030NG7 CPU @ 1.10GHz
+//BenchmarkReflectCopier_Copy
+//BenchmarkReflectCopier_Copy-8   	 1353440	       875.8 ns/op
+//PASS
+
+
+// 字典树实现
+//goos: darwin
+//goarch: amd64
+//pkg: github.com/gotomicro/ekit/bean/copier
+//cpu: Intel(R) Core(TM) i5-1030NG7 CPU @ 1.10GHz
+//BenchmarkReflectCopier_Copy
+//BenchmarkReflectCopier_Copy-8   	 1811790	       701.3 ns/op
+//PASS
