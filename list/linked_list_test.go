@@ -17,6 +17,7 @@ package list
 import (
 	"errors"
 	"fmt"
+
 	"github.com/stretchr/testify/assert"
 
 	"math/rand"
