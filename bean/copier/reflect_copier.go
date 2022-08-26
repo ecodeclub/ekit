@@ -77,70 +77,59 @@ func NewReflectCopier[Src any, Dst any]() (*ReflectCopier[Src, Dst], error) {
 // createFiledNodes 递归创建 field 的前缀树, srcTyp 和 dstTyp 只能是结构体
 func createFiledNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 
-	srcFieldNameIndex := make(map[string]int, 0)
 	for i := 0; i < srcTyp.NumField(); i += 1 {
-		fTyp := srcTyp.Field(i)
-		if !fTyp.IsExported() {
+		srcFieldTypStruct := srcTyp.Field(i)
+		if !srcFieldTypStruct.IsExported() {
 			continue
 		}
-		srcFieldNameIndex[fTyp.Name] = i
-	}
-
-	// 构建当前节点的子节点
-	for i := 0; i < dstTyp.NumField(); i += 1 {
-		dstFieldTypStruct := dstTyp.Field(i)
-		if !dstFieldTypStruct.IsExported() {
+		dstFieldTypStruct, ok := dstTyp.FieldByName(srcFieldTypStruct.Name)
+		if !ok {
 			continue
 		}
-		if srcIndex, ok := srcFieldNameIndex[dstFieldTypStruct.Name]; ok {
-			srcFieldTypStruct := srcTyp.Field(srcIndex)
-			dstFieldTypStruct := dstTyp.Field(i)
 
-			if srcFieldTypStruct.Type.Kind() != dstFieldTypStruct.Type.Kind() {
-				return newErrKindNotMatchError(srcFieldTypStruct.Type.Kind(), dstFieldTypStruct.Type.Kind(), dstFieldTypStruct.Name)
-			}
-
-			if srcFieldTypStruct.Type.Kind() == reflect.Pointer {
-				if srcFieldTypStruct.Type.Elem().Kind() != dstFieldTypStruct.Type.Elem().Kind() {
-					return newErrKindNotMatchError(srcFieldTypStruct.Type.Elem().Kind(), dstFieldTypStruct.Type.Elem().Kind(), dstFieldTypStruct.Name)
-				}
-				if srcFieldTypStruct.Type.Elem().Kind() == reflect.Pointer {
-					return newErrMultiPointer(dstFieldTypStruct.Name)
-				}
-			}
-
-			child := fieldNode{
-				fields:   []fieldNode{},
-				srcIndex: srcIndex,
-				dstIndex: i,
-				isLeaf:   false,
-				name:     dstFieldTypStruct.Name,
-			}
-
-			fieldSrcTyp := srcFieldTypStruct.Type
-			fieldDstTyp := dstFieldTypStruct.Type
-			if fieldSrcTyp.Kind() == reflect.Pointer {
-				fieldSrcTyp = fieldSrcTyp.Elem()
-				fieldDstTyp = fieldDstTyp.Elem()
-			}
-
-			// 说明当前节点是叶子节点, 直接拷贝
-			if isShadowCopyType(fieldSrcTyp.Kind()) {
-				child.isLeaf = true
-			} else if fieldSrcTyp.Kind() == reflect.Struct {
-				if err := createFiledNodes(&child, fieldSrcTyp, fieldDstTyp); err != nil {
-					return err
-				}
-			} else {
-				// 不是我们能复制的类型, 直接跳过
-				continue
-			}
-
-			root.fields = append(root.fields, child)
+		if srcFieldTypStruct.Type.Kind() != dstFieldTypStruct.Type.Kind() {
+			return newErrKindNotMatchError(srcFieldTypStruct.Type.Kind(), dstFieldTypStruct.Type.Kind(), dstFieldTypStruct.Name)
 		}
+
+		if srcFieldTypStruct.Type.Kind() == reflect.Pointer {
+			if srcFieldTypStruct.Type.Elem().Kind() != dstFieldTypStruct.Type.Elem().Kind() {
+				return newErrKindNotMatchError(srcFieldTypStruct.Type.Elem().Kind(), dstFieldTypStruct.Type.Elem().Kind(), dstFieldTypStruct.Name)
+			}
+			if srcFieldTypStruct.Type.Elem().Kind() == reflect.Pointer {
+				return newErrMultiPointer(dstFieldTypStruct.Name)
+			}
+		}
+
+		child := fieldNode{
+			fields:   []fieldNode{},
+			srcIndex: i,
+			dstIndex: dstFieldTypStruct.Index[0],
+			isLeaf:   false,
+			name:     dstFieldTypStruct.Name,
+		}
+
+		fieldSrcTyp := srcFieldTypStruct.Type
+		fieldDstTyp := dstFieldTypStruct.Type
+		if fieldSrcTyp.Kind() == reflect.Pointer {
+			fieldSrcTyp = fieldSrcTyp.Elem()
+			fieldDstTyp = fieldDstTyp.Elem()
+		}
+
+		// 说明当前节点是叶子节点, 直接拷贝
+		if isShadowCopyType(fieldSrcTyp.Kind()) {
+			child.isLeaf = true
+		} else if fieldSrcTyp.Kind() == reflect.Struct {
+			if err := createFiledNodes(&child, fieldSrcTyp, fieldDstTyp); err != nil {
+				return err
+			}
+		} else {
+			// 不是我们能复制的类型, 直接跳过
+			continue
+		}
+
+		root.fields = append(root.fields, child)
 	}
 	return nil
-
 }
 
 func (r *ReflectCopier[Src, Dst]) copyToWithTree(src *Src, dst *Dst) error {
@@ -200,12 +189,12 @@ func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst) error {
 	return r.copyToWithTree(src, dst)
 }
 
-func (r *ReflectCopier[Src, Dst]) CopyToWithPureReflect(src *Src, dst *Dst) error {
-	return r.copyWithRuntime(src, dst)
+func CopyTo(src any, dst any) error {
+	return copyWithRuntime(src, dst)
 }
 
 // copyWithRuntime 是不使用字典树的复制
-func (r *ReflectCopier[Src, Dst]) copyWithRuntime(src *Src, dst *Dst) error {
+func copyWithRuntime(src any, dst any) error {
 	srcTyp := reflect.TypeOf(src).Elem()
 	if srcTyp.Kind() != reflect.Struct {
 		return newErrTypeError(srcTyp)
@@ -218,10 +207,10 @@ func (r *ReflectCopier[Src, Dst]) copyWithRuntime(src *Src, dst *Dst) error {
 	srcValue := reflect.ValueOf(src).Elem()
 	dstValue := reflect.ValueOf(dst).Elem()
 
-	return r.copyStruct(srcTyp, srcValue, dstTyp, dstValue)
+	return copyStruct(srcTyp, srcValue, dstTyp, dstValue)
 }
 
-func (r *ReflectCopier[Src, Dst]) copyStruct(srcTyp reflect.Type, srcValue reflect.Value, dstTyp reflect.Type, dstValue reflect.Value) error {
+func copyStruct(srcTyp reflect.Type, srcValue reflect.Value, dstTyp reflect.Type, dstValue reflect.Value) error {
 	srcFieldNameIndex := make(map[string]int, 0)
 	for i := 0; i < srcTyp.NumField(); i += 1 {
 		fTyp := srcTyp.Field(i)
@@ -237,7 +226,7 @@ func (r *ReflectCopier[Src, Dst]) copyStruct(srcTyp reflect.Type, srcValue refle
 			continue
 		}
 		if idx, ok := srcFieldNameIndex[fTyp.Name]; ok {
-			if err := r.copyStructField(srcTyp, srcValue, dstTyp, dstValue, idx, i); err != nil {
+			if err := copyStructField(srcTyp, srcValue, dstTyp, dstValue, idx, i); err != nil {
 				return err
 			}
 		}
@@ -245,7 +234,7 @@ func (r *ReflectCopier[Src, Dst]) copyStruct(srcTyp reflect.Type, srcValue refle
 	return nil
 }
 
-func (r *ReflectCopier[Src, Dst]) copyStructField(
+func copyStructField(
 	srcTyp reflect.Type,
 	srcValue reflect.Value,
 	dstTyp reflect.Type,
@@ -268,13 +257,13 @@ func (r *ReflectCopier[Src, Dst]) copyStructField(
 		if dstFiledValue.IsNil() {
 			dstFiledValue.Set(reflect.New(dstFieldType.Type.Elem()))
 		}
-		return r.copyData(srcFieldType.Type.Elem(), srcFiledValue.Elem(), dstFieldType.Type.Elem(), dstFiledValue.Elem(), srcFieldType.Name)
+		return copyData(srcFieldType.Type.Elem(), srcFiledValue.Elem(), dstFieldType.Type.Elem(), dstFiledValue.Elem(), srcFieldType.Name)
 	}
 
-	return r.copyData(srcFieldType.Type, srcFiledValue, dstFieldType.Type, dstFiledValue, srcFieldType.Name)
+	return copyData(srcFieldType.Type, srcFiledValue, dstFieldType.Type, dstFiledValue, srcFieldType.Name)
 }
 
-func (r *ReflectCopier[Src, Dst]) copyData(
+func copyData(
 	srcTyp reflect.Type,
 	srcValue reflect.Value,
 	dstTyp reflect.Type,
@@ -293,7 +282,7 @@ func (r *ReflectCopier[Src, Dst]) copyData(
 			dstValue.Set(srcValue)
 		}
 	} else if srcTyp.Kind() == reflect.Struct {
-		return r.copyStruct(srcTyp, srcValue, dstTyp, dstValue)
+		return copyStruct(srcTyp, srcValue, dstTyp, dstValue)
 	}
 	return nil
 }
@@ -301,12 +290,6 @@ func (r *ReflectCopier[Src, Dst]) copyData(
 func (r *ReflectCopier[Src, Dst]) Copy(src *Src) (*Dst, error) {
 	dst := new(Dst)
 	err := r.CopyTo(src, dst)
-	return dst, err
-}
-
-func (r *ReflectCopier[Src, Dst]) CopyWithPureRuntime(src *Src) (*Dst, error) {
-	dst := new(Dst)
-	err := r.CopyToWithPureReflect(src, dst)
 	return dst, err
 }
 
