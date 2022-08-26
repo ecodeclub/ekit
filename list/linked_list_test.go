@@ -336,10 +336,6 @@ func TestLinkedList_Get(t *testing.T) {
 	}
 }
 
-func TestLinkedList_Len(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
-}
-
 func TestLinkedList_Range(t *testing.T) {
 	testCases := []struct {
 		name    string
