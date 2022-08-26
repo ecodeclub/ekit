@@ -22,11 +22,7 @@ import (
 // ReflectCopier 是浅拷贝
 type ReflectCopier[Src any, Dst any] struct {
 
-	// fieldMap Src 中字段下标到 Dst 字段下标的映射
-	// 其中 key 是 Src 中字段下标使用连字符 - 连接起来
-	// 不在 fieldMap 中字段则意味着被忽略
-	//fieldMap map[string][]int
-
+	// rootFiled 字典树的根节点
 	rootFiled fieldNode
 }
 
@@ -132,15 +128,29 @@ func createFiledNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 	return nil
 }
 
+func (r *ReflectCopier[Src, Dst]) Copy(src *Src) (*Dst, error) {
+	dst := new(Dst)
+	err := r.CopyTo(src, dst)
+	return dst, err
+}
+
+// CopyTo 执行复制
+// 执行复制的逻辑是：
+// 1. 按照字段的映射关系进行匹配
+// 2. 如果 Src 和 Dst 中匹配的字段，其类型是基本类型（及其指针）或者内置类型（及其指针），并且类型一样，则直接用 Src 的值
+// 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，那么会深入复制
+// 4. 否则，返回类型不匹配的错误
+func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst) error {
+	return r.copyToWithTree(src, dst)
+}
+
 func (r *ReflectCopier[Src, Dst]) copyToWithTree(src *Src, dst *Dst) error {
 	srcTyp := reflect.TypeOf(src)
 	dstTyp := reflect.TypeOf(dst)
 	srcValue := reflect.ValueOf(src)
 	dstValue := reflect.ValueOf(dst)
 
-	root := r.rootFiled
-
-	return r.copyTreeNode(srcTyp, srcValue, dstTyp, dstValue, &root)
+	return r.copyTreeNode(srcTyp, srcValue, dstTyp, dstValue, &r.rootFiled)
 }
 
 func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue reflect.Value, dstType reflect.Type, dstValue reflect.Value, root *fieldNode) error {
@@ -179,27 +189,26 @@ func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue ref
 	return nil
 }
 
-// CopyTo 执行复制
-// 执行复制的逻辑是：
-// 1. 按照字段的映射关系进行匹配
-// 2. 如果 Src 和 Dst 中匹配的字段，其类型是基本类型（及其指针）或者内置类型（及其指针），并且类型一样，则直接用 Src 的值
-// 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，那么会深入复制
-// 4. 否则，返回类型不匹配的错误
-func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst) error {
-	return r.copyToWithTree(src, dst)
-}
-
+// CopyTo 复制结构体, 纯递归实现. src 和 dst 都必须是结构体的指针
 func CopyTo(src any, dst any) error {
 	return copyWithRuntime(src, dst)
 }
 
 // copyWithRuntime 是不使用字典树的复制
 func copyWithRuntime(src any, dst any) error {
-	srcTyp := reflect.TypeOf(src).Elem()
+	srcPtrTyp := reflect.TypeOf(src)
+	if srcPtrTyp.Kind() != reflect.Pointer {
+		return newErrTypeError(srcPtrTyp)
+	}
+	srcTyp := srcPtrTyp.Elem()
 	if srcTyp.Kind() != reflect.Struct {
 		return newErrTypeError(srcTyp)
 	}
-	dstTyp := reflect.TypeOf(dst).Elem()
+	dstPtrTyp := reflect.TypeOf(dst)
+	if dstPtrTyp.Kind() != reflect.Pointer {
+		return newErrTypeError(dstPtrTyp)
+	}
+	dstTyp := dstPtrTyp.Elem()
 	if dstTyp.Kind() != reflect.Struct {
 		return newErrTypeError(dstTyp)
 	}
@@ -285,12 +294,6 @@ func copyData(
 		return copyStruct(srcTyp, srcValue, dstTyp, dstValue)
 	}
 	return nil
-}
-
-func (r *ReflectCopier[Src, Dst]) Copy(src *Src) (*Dst, error) {
-	dst := new(Dst)
-	err := r.CopyTo(src, dst)
-	return dst, err
 }
 
 func isShadowCopyType(kind reflect.Kind) bool {
