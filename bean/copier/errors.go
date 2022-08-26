@@ -20,8 +20,8 @@ import (
 )
 
 // newErrTypeError copier 不支持的类型
-func newErrTypeError(kind reflect.Kind) error {
-	return fmt.Errorf("ekit: copier 入口只支持 Struct 不支持类型 %v", kind)
+func newErrTypeError(typ reflect.Type) error {
+	return fmt.Errorf("ekit: copier 入口只支持 Struct 不支持类型 %v, 种类 %v", typ, typ.Kind())
 }
 
 // newErrKindNotMatchError 字段类型不匹配

@@ -76,7 +76,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 				i := 10
 				return copier.Copy(&i)
 			},
-			wantErr: newErrTypeError(reflect.Int),
+			wantErr: newErrTypeError(reflect.TypeOf(10)),
 		},
 		{
 			name: "dst 是基础类型",
@@ -91,7 +91,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 					Friends: []string{"Tom", "Jerry"},
 				})
 			},
-			wantErr: newErrTypeError(reflect.String),
+			wantErr: newErrTypeError(reflect.TypeOf("")),
 		},
 		{
 			name: "接口类型",
@@ -103,7 +103,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 				i := InterfaceSrc(10)
 				return copier.Copy(&i)
 			},
-			wantErr: newErrTypeError(reflect.Interface),
+			wantErr: newErrTypeError(reflect.TypeOf(new(InterfaceSrc)).Elem()),
 		},
 		{
 			name: "simple struct 空切片, 空指针",
@@ -283,6 +283,83 @@ func TestReflectCopier_Copy(t *testing.T) {
 			},
 			wantErr: newErrMultiPointer("Age"),
 		},
+		{
+			name: "结构体有 diff 的情况",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[DiffSrc, DiffDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&DiffSrc{
+					A: "xiaowang",
+					B: 100,
+					c: SimpleSrc{
+						Name: "66",
+						Age:  ekit.ToPtr[int](100),
+					},
+					F: BasicSrc{
+						Name:    "good name",
+						Age:     200,
+						CNumber: complex(2, 2),
+					},
+				})
+			},
+			wantDst: &DiffDst{
+				A: "xiaowang",
+				B: 100,
+				d: SimpleSrc{},
+				G: BasicSrc{},
+			},
+		},
+		{
+			name: "Copy2 结构体有 diff 的情况",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[DiffSrc, DiffDst]()
+				if err != nil {
+					return nil, err
+				}
+				dst := &DiffDst{
+					A: "66",
+					B: 1,
+					d: SimpleSrc{
+						Name: "wodemingzi",
+						Age:  ekit.ToPtr(int(10)),
+					},
+					G: BasicSrc{
+						Name:    "nidemingzi",
+						Age:     23,
+						CNumber: complex(1, 2),
+					},
+				}
+				err = copier.CopyTo(&DiffSrc{
+					A: "xiaowang",
+					B: 100,
+					c: SimpleSrc{
+						Name: "66",
+						Age:  ekit.ToPtr[int](100),
+					},
+					F: BasicSrc{
+						Name:    "good name",
+						Age:     200,
+						CNumber: complex(2, 2),
+					},
+				}, dst)
+				return dst, err
+			},
+			wantDst: &DiffDst{
+				A: "xiaowang",
+				B: 100,
+				d: SimpleSrc{
+					Name: "wodemingzi",
+					Age:  ekit.ToPtr(int(10)),
+				},
+				G: BasicSrc{
+					Name:    "nidemingzi",
+					Age:     23,
+					CNumber: complex(1, 2),
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -389,6 +466,19 @@ type MultiPtrDst struct {
 	Friends []string
 }
 
+type DiffSrc struct {
+	A string
+	B int
+	c SimpleSrc
+	F BasicSrc
+}
+type DiffDst struct {
+	A string
+	B int
+	d SimpleSrc
+	G BasicSrc
+}
+
 func BenchmarkReflectCopier_Copy(b *testing.B) {
 	copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()
 	if err != nil {
@@ -399,6 +489,86 @@ func BenchmarkReflectCopier_Copy(b *testing.B) {
 			Name:    "大明",
 			Age:     ekit.ToPtr[int](18),
 			Friends: []string{"Tom", "Jerry"},
+		})
+	}
+}
+
+func BenchmarkReflectCopier_Copy_PureRunTime(b *testing.B) {
+	copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 1; i <= b.N; i++ {
+		_, _ = copier.CopyWithPureRuntime(&SimpleSrc{
+			Name:    "大明",
+			Age:     ekit.ToPtr[int](18),
+			Friends: []string{"Tom", "Jerry"},
+		})
+	}
+}
+
+func BenchmarkReflectCopier_CopyComplexStruct(b *testing.B) {
+	copier, err := NewReflectCopier[ComplexSrc, ComplexDst]()
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 1; i <= b.N; i++ {
+		_, _ = copier.Copy(&ComplexSrc{
+			Simple: SimpleSrc{
+				Name:    "xiaohong",
+				Age:     ekit.ToPtr[int](18),
+				Friends: []string{"ha", "ha", "le"},
+			},
+			Embed: &EmbedSrc{
+				SimpleSrc: SimpleSrc{
+					Name:    "xiaopeng",
+					Age:     ekit.ToPtr[int](88),
+					Friends: []string{"la", "ha", "le"},
+				},
+				BasicSrc: &BasicSrc{
+					Name:    "wang",
+					Age:     22,
+					CNumber: complex(2, 1),
+				},
+			},
+			BasicSrc: BasicSrc{
+				Name:    "wang11",
+				Age:     22,
+				CNumber: complex(2, 1),
+			},
+		})
+	}
+}
+
+func BenchmarkReflectCopier_CopyComplexStruct_WithPureRuntime(b *testing.B) {
+	copier, err := NewReflectCopier[ComplexSrc, ComplexDst]()
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 1; i <= b.N; i++ {
+		_, _ = copier.CopyWithPureRuntime(&ComplexSrc{
+			Simple: SimpleSrc{
+				Name:    "xiaohong",
+				Age:     ekit.ToPtr[int](18),
+				Friends: []string{"ha", "ha", "le"},
+			},
+			Embed: &EmbedSrc{
+				SimpleSrc: SimpleSrc{
+					Name:    "xiaopeng",
+					Age:     ekit.ToPtr[int](88),
+					Friends: []string{"la", "ha", "le"},
+				},
+				BasicSrc: &BasicSrc{
+					Name:    "wang",
+					Age:     22,
+					CNumber: complex(2, 1),
+				},
+			},
+			BasicSrc: BasicSrc{
+				Name:    "wang11",
+				Age:     22,
+				CNumber: complex(2, 1),
+			},
 		})
 	}
 }
