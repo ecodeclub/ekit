@@ -15,6 +15,7 @@
 package copier
 
 import (
+
 	"github.com/gotomicro/ekit"
 	"github.com/stretchr/testify/assert"
 	"reflect"
