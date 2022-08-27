@@ -181,7 +181,7 @@ func (b *BlockQueueTaskPool) chanByTask(task Task) chan<- Task {
 	}
 }
 
-func (_ *BlockQueueTaskPool) submitTask(ctx context.Context, task Task, channel func() chan<- Task) (ok bool, err error) {
+func (*BlockQueueTaskPool) submitTask(ctx context.Context, task Task, channel func() chan<- Task) (ok bool, err error) {
 	// 此处channel() <- task不会出现panic——因为channel被关闭而panic
 	// 代码执行到submit时TaskPool处于lock状态
 	// 要关闭channel需要TaskPool处于RUNNING状态，Shutdown/ShutdownNow才能成功
