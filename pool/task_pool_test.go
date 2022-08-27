@@ -17,10 +17,11 @@ package pool
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 /*
@@ -72,7 +73,7 @@ func TestTaskPool_Start(t *testing.T) {
 }
 
 func TestTaskPool_Submit(t *testing.T) {
-
+	t.Parallel()
 	//todo: Submit
 	//   TaskPoolRunning Shutdown/ShutdownNow前
 	//     在TaskPool所有状态中都可以提交，有的成功/阻塞，有的立即失败。
@@ -83,6 +84,7 @@ func TestTaskPool_Submit(t *testing.T) {
 	//   [x] ShutdownNow后状态变迁，需要检查出并报错,ErrTaskPoolIsStopped
 
 	t.Run("提交Task阻塞", func(t *testing.T) {
+		t.Parallel()
 
 		t.Run("TaskPool状态由Created变为Running", func(t *testing.T) {
 			t.Parallel()
@@ -141,13 +143,11 @@ func TestTaskPool_Submit(t *testing.T) {
 
 			// Shutdown调用成功
 			assert.NoError(t, r.err)
-			select {
-			case <-r.done:
-				// 等待状态迁移完成，并最终进入StateStopped状态
-				<-time.After(10 * time.Millisecond)
-				assert.Equal(t, StateStopped, pool.State())
-				return
-			}
+
+			<-r.done
+			// 等待状态迁移完成，并最终进入StateStopped状态
+			<-time.After(100 * time.Millisecond)
+			assert.Equal(t, StateStopped, pool.State())
 		})
 
 		t.Run("TaskPool状态由Running变为Stopped", func(t *testing.T) {
@@ -251,8 +251,8 @@ func TestTestPool_ShutdownNow(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func() {
 
-			tasks, err := pool.ShutdownNow()
-			c <- result{tasks: tasks, err: err}
+			tasks, er := pool.ShutdownNow()
+			c <- result{tasks: tasks, err: er}
 		}()
 	}
 
@@ -377,15 +377,16 @@ func TestTaskPool__Closing_(t *testing.T) {
 	assert.NoError(t, err)
 
 	// 提交任务
-	num := 10
-	for i := 0; i < num; i++ {
-		go func() {
-			pool.Submit(context.Background(), &SlowTask{task: TaskFunc(func(ctx context.Context) error {
-				<-time.After(10 * time.Millisecond)
-				return nil
-			})})
-		}()
-	}
+	//num := 10
+	//for i := 0; i < num; i++ {
+	//	go func() {
+	//		err := pool.Submit(context.Background(), &SlowTask{task: TaskFunc(func(ctx context.Context) error {
+	//			<-time.After(10 * time.Millisecond)
+	//			return nil
+	//		})})
+	//		t.Log(err)
+	//	}()
+	//}
 
 	t.Run("Start", func(t *testing.T) {
 		t.Parallel()
@@ -400,22 +401,20 @@ func TestTaskPool__Closing_(t *testing.T) {
 		num := 10
 		for i := 0; i < num; i++ {
 			go func() {
-				pool.Submit(context.Background(), &SlowTask{task: TaskFunc(func(ctx context.Context) error {
+				err := pool.Submit(context.Background(), &SlowTask{task: TaskFunc(func(ctx context.Context) error {
 					<-time.After(10 * time.Millisecond)
 					return nil
 				})})
+				t.Log(err)
 			}()
 		}
 
 		done, err := pool.Shutdown()
 		assert.NoError(t, err)
 		assert.ErrorIs(t, pool.Start(), ErrTaskPoolIsClosing)
-		select {
-		case <-done:
-			<-time.After(5 * time.Millisecond)
-			assert.Equal(t, StateStopped, pool.State())
-			return
-		}
+		<-done
+		<-time.After(10 * time.Millisecond)
+		assert.Equal(t, StateStopped, pool.State())
 	})
 
 	t.Run("ShutdownNow", func(t *testing.T) {
@@ -431,10 +430,11 @@ func TestTaskPool__Closing_(t *testing.T) {
 		num := 10
 		for i := 0; i < num; i++ {
 			go func() {
-				pool.Submit(context.Background(), &SlowTask{task: TaskFunc(func(ctx context.Context) error {
+				err := pool.Submit(context.Background(), &SlowTask{task: TaskFunc(func(ctx context.Context) error {
 					<-time.After(10 * time.Millisecond)
 					return nil
 				})})
+				t.Log(err)
 			}()
 		}
 
@@ -445,18 +445,15 @@ func TestTaskPool__Closing_(t *testing.T) {
 		assert.ErrorIs(t, err, ErrTaskPoolIsClosing)
 		assert.Nil(t, tasks)
 
-		select {
-		case <-done:
-			<-time.After(50 * time.Millisecond)
-			assert.Equal(t, StateStopped, pool.State())
-			return
-		}
+		<-done
+		<-time.After(50 * time.Millisecond)
+		assert.Equal(t, StateStopped, pool.State())
 	})
 
 }
 
 func TestTestPool__Stopped_(t *testing.T) {
-
+	t.Parallel()
 	n := 2
 	pool, _ := NewBlockQueueTaskPool(1, n)
 	assert.Equal(t, StateCreated, pool.State())
@@ -467,14 +464,16 @@ func TestTestPool__Stopped_(t *testing.T) {
 	// 模拟阻塞提交
 	for i := 0; i < 3*n; i++ {
 		go func() {
-			pool.Submit(context.Background(), &FastTask{task: TaskFunc(func(ctx context.Context) error {
+			err := pool.Submit(context.Background(), &FastTask{task: TaskFunc(func(ctx context.Context) error {
 				<-time.After(2 * time.Millisecond)
 				return nil
 			})})
-			pool.Submit(context.Background(), &SlowTask{task: TaskFunc(func(ctx context.Context) error {
+			t.Log(err)
+			err = pool.Submit(context.Background(), &SlowTask{task: TaskFunc(func(ctx context.Context) error {
 				<-time.After(10 * time.Millisecond)
 				return nil
 			})})
+			t.Log(err)
 		}()
 	}
 
@@ -609,7 +608,6 @@ func TestTaskExecutor(t *testing.T) {
 				ex.SlowQueue() <- &SlowTask{task: TaskFunc(func(ctx context.Context) error {
 					resultChan <- struct{}{}
 					panic("slow task ")
-					return nil
 				})}
 			}
 		}()
@@ -633,7 +631,6 @@ func TestTaskExecutor(t *testing.T) {
 				ex.FastQueue() <- &FastTask{task: TaskFunc(func(ctx context.Context) error {
 					resultChan <- struct{}{}
 					panic("fast task")
-					return nil
 				})}
 			}
 		}()
@@ -641,21 +638,18 @@ func TestTaskExecutor(t *testing.T) {
 		// 等待任务开始执行
 		<-time.After(100 * time.Millisecond)
 
-		select {
-		case <-ex.Close():
-			assert.Equal(t, n, 4*numTasks)
-			assert.Equal(t, int32(0), ex.NumRunningSlow())
-			assert.Equal(t, int32(0), ex.NumRunningFast())
-			close(resultChan)
-			num := 0
-			for r := range resultChan {
-				if r == struct{}{} {
-					num++
-				}
+		<-ex.Close()
+		assert.Equal(t, n, 4*numTasks)
+		assert.Equal(t, int32(0), ex.NumRunningSlow())
+		assert.Equal(t, int32(0), ex.NumRunningFast())
+		close(resultChan)
+		num := 0
+		for r := range resultChan {
+			if r == struct{}{} {
+				num++
 			}
-			assert.Equal(t, n, num)
-			return
 		}
+		assert.Equal(t, n, num)
 	})
 
 	t.Run("强制关闭", func(t *testing.T) {
@@ -679,7 +673,6 @@ func TestTaskExecutor(t *testing.T) {
 			&SlowTask{task: TaskFunc(func(ctx context.Context) error {
 				resultChan <- struct{}{}
 				panic("slow task ")
-				return nil
 			})},
 			&SlowTask{task: TaskFunc(func(ctx context.Context) error {
 				resultChan <- struct{}{}
@@ -690,7 +683,6 @@ func TestTaskExecutor(t *testing.T) {
 			&SlowTask{task: TaskFunc(func(ctx context.Context) error {
 				resultChan <- struct{}{}
 				panic("slow task ")
-				return nil
 			})},
 		}
 
@@ -703,7 +695,6 @@ func TestTaskExecutor(t *testing.T) {
 			&FastTask{task: TaskFunc(func(ctx context.Context) error {
 				resultChan <- struct{}{}
 				panic("fast task")
-				return nil
 			})},
 			&FastTask{task: TaskFunc(func(ctx context.Context) error {
 				resultChan <- struct{}{}
@@ -713,7 +704,6 @@ func TestTaskExecutor(t *testing.T) {
 			&FastTask{task: TaskFunc(func(ctx context.Context) error {
 				resultChan <- struct{}{}
 				panic("fast task")
-				return nil
 			})},
 		}
 		go func() {

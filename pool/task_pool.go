@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -98,9 +99,9 @@ type BlockQueueTaskPool struct {
 	slowTaskQueue chan<- Task
 
 	// 缓存taskExecutor结果
-	done  <-chan struct{}
-	tasks []Task
-
+	done   <-chan struct{}
+	tasks  []Task
+	mux    sync.RWMutex
 	locked int32
 }
 
@@ -251,15 +252,13 @@ func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
 			b.done = b.taskExecutor.Close() // 需要注释掉close(b.done)
 			//close(b.done)
 			go func() {
-				select {
-				case <-b.done:
-					b.state.CompareAndSwap(StateClosing, StateStopped)
-					//ok := b.state.CompareAndSwap(StateClosing, StateStopped)
-					//for !ok {
-					//	ok = b.state.CompareAndSwap(StateClosing, StateStopped)
-					//}
-					//return
-				}
+				<-b.done
+				b.state.CompareAndSwap(StateClosing, StateStopped)
+				//ok := b.state.CompareAndSwap(StateClosing, StateStopped)
+				//for !ok {
+				//	ok = b.state.CompareAndSwap(StateClosing, StateStopped)
+				//}
+				//return
 			}()
 			return b.done, nil
 		}
@@ -283,11 +282,17 @@ func (b *BlockQueueTaskPool) ShutdownNow() ([]Task, error) {
 
 		if b.state.Load() == StateStopped {
 			// 重复调用，返回缓存结果
-			return b.tasks, nil
+			b.mux.RLock()
+			tasks := append([]Task(nil), b.tasks...)
+			b.mux.RUnlock()
+			return tasks, nil
 		}
 		if b.state.CompareAndSwap(StateRunning, StateStopped) {
+			b.mux.Lock()
 			b.tasks = b.taskExecutor.Stop()
-			return b.tasks, nil
+			tasks := append([]Task(nil), b.tasks...)
+			b.mux.Unlock()
+			return tasks, nil
 		}
 	}
 }
@@ -341,11 +346,11 @@ func (t *TaskExecutor) startFastTasks() {
 					if r := recover(); r != nil {
 						buf := make([]byte, panicBuffLen)
 						buf = buf[:runtime.Stack(buf, false)]
-						//fmt.Printf("[PANIC]:\t%+v\n%s\n", r, buf)
+						fmt.Printf("[PANIC]:\t%+v\n%s\n", r, buf)
 					}
 				}()
 				// todo: handle err
-				task.Run(t.ctx)
+				fmt.Println(task.Run(t.ctx))
 			}()
 		}
 	}
@@ -380,11 +385,11 @@ func (t *TaskExecutor) startSlowTasks() {
 					if r := recover(); r != nil {
 						buf := make([]byte, panicBuffLen)
 						buf = buf[:runtime.Stack(buf, false)]
-						//fmt.Printf("[PANIC]:\t%+v\n%s\n", r, buf)
+						fmt.Printf("[PANIC]:\t%+v\n%s\n", r, buf)
 					}
 				}()
 				// todo: handle err
-				task.Run(t.ctx)
+				fmt.Println(task.Run(t.ctx))
 			}()
 		}
 	}
