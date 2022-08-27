@@ -152,7 +152,7 @@ func (b *BlockQueueTaskPool) Submit(ctx context.Context, task Task) error {
 		}
 
 		if b.state.CompareAndSwap(StateCreated, b.locked) {
-			ok, err := b.submit(ctx, task, func() chan<- Task { return b.chanByTask(task) })
+			ok, err := b.submitTask(ctx, task, func() chan<- Task { return b.chanByTask(task) })
 			if ok || err != nil {
 				b.state.Swap(StateCreated)
 				return err
@@ -161,7 +161,7 @@ func (b *BlockQueueTaskPool) Submit(ctx context.Context, task Task) error {
 		}
 
 		if b.state.CompareAndSwap(StateRunning, b.locked) {
-			ok, err := b.submit(ctx, task, func() chan<- Task { return b.chanByTask(task) })
+			ok, err := b.submitTask(ctx, task, func() chan<- Task { return b.chanByTask(task) })
 			if ok || err != nil {
 				b.state.Swap(StateRunning)
 				return err
@@ -181,7 +181,7 @@ func (b *BlockQueueTaskPool) chanByTask(task Task) chan<- Task {
 	}
 }
 
-func (b *BlockQueueTaskPool) submit(ctx context.Context, task Task, channel func() chan<- Task) (ok bool, err error) {
+func (_ *BlockQueueTaskPool) submitTask(ctx context.Context, task Task, channel func() chan<- Task) (ok bool, err error) {
 	// 此处channel() <- task不会出现panic——因为channel被关闭而panic
 	// 代码执行到submit时TaskPool处于lock状态
 	// 要关闭channel需要TaskPool处于RUNNING状态，Shutdown/ShutdownNow才能成功
@@ -220,7 +220,6 @@ func (b *BlockQueueTaskPool) Start() error {
 			return nil
 		}
 	}
-	//return nil
 }
 
 // Shutdown 将会拒绝提交新的任务，但是会继续执行已提交任务
@@ -249,22 +248,15 @@ func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
 		if b.state.CompareAndSwap(StateRunning, StateClosing) {
 			// todo: 等待task完成，关闭b.done
 			// 监听done信号，然后完成状态迁移StateClosing -> StateStopped
-			b.done = b.taskExecutor.Close() // 需要注释掉close(b.done)
-			//close(b.done)
+			b.done = b.taskExecutor.Close()
 			go func() {
 				<-b.done
 				b.state.CompareAndSwap(StateClosing, StateStopped)
-				//ok := b.state.CompareAndSwap(StateClosing, StateStopped)
-				//for !ok {
-				//	ok = b.state.CompareAndSwap(StateClosing, StateStopped)
-				//}
-				//return
 			}()
 			return b.done, nil
 		}
 
 	}
-	//return nil, nil
 }
 
 // ShutdownNow 立刻关闭任务池，并且返回所有剩余未执行的任务（不包含正在执行的任务）
@@ -337,7 +329,7 @@ func (t *TaskExecutor) startFastTasks() {
 			}
 			go func() {
 				t.numFast.Add(1)
-				//log.Println("fast N", t.numFast.Add(1))
+				// log.Println("fast N", t.numFast.Add(1))
 				defer func() {
 					// 恢复统计
 					t.numFast.Add(-1)
@@ -364,7 +356,7 @@ func (t *TaskExecutor) startSlowTasks() {
 			atomic.AddInt32(&t.maxGo, 1)
 			continue
 		}
-		//log.Println("maxGo=", n)
+		// log.Println("maxGo=", n)
 		select {
 		case <-t.ctx.Done():
 			return
@@ -375,7 +367,7 @@ func (t *TaskExecutor) startSlowTasks() {
 			}
 			go func() {
 				t.numSlow.Add(1)
-				//log.Println("slow N=", t.numSlow.Add(1))
+				// log.Println("slow N=", t.numSlow.Add(1))
 				defer func() {
 					// 恢复
 					atomic.AddInt32(&t.maxGo, 1)

@@ -376,18 +376,6 @@ func TestTaskPool__Closing_(t *testing.T) {
 	assert.Equal(t, StateRunning, pool.State())
 	assert.NoError(t, err)
 
-	// 提交任务
-	//num := 10
-	//for i := 0; i < num; i++ {
-	//	go func() {
-	//		err := pool.Submit(context.Background(), &SlowTask{task: TaskFunc(func(ctx context.Context) error {
-	//			<-time.After(10 * time.Millisecond)
-	//			return nil
-	//		})})
-	//		t.Log(err)
-	//	}()
-	//}
-
 	t.Run("Start", func(t *testing.T) {
 		t.Parallel()
 
@@ -478,7 +466,6 @@ func TestTestPool__Stopped_(t *testing.T) {
 	}
 
 	tasks, err := pool.ShutdownNow()
-	//assert.NotNil(t, tasks)
 	assert.NoError(t, err)
 	assert.Equal(t, StateStopped, pool.State())
 
@@ -724,7 +711,7 @@ func TestTaskExecutor(t *testing.T) {
 				if r := recover(); r != nil {
 					// 发送任务时，chan被关闭，也算作执行中
 					resultChan <- struct{}{}
-					//t.Log(fmt.Errorf("%w：%#v", ErrTaskPoolIsStopped, r))
+					// t.Log(fmt.Errorf("%w：%#v", ErrTaskPoolIsStopped, r))
 				}
 			}()
 			for _, task := range fastTasks {
