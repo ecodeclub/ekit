@@ -687,6 +687,17 @@ func TestReflectCopier_Copy(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "跨层级别匹配",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[SimpleSrc, SimpleEmbedDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&SimpleSrc{})
+			},
+			wantDst: &SimpleEmbedDst{},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -804,6 +815,10 @@ type DiffDst struct {
 	B int
 	d SimpleSrc
 	G BasicSrc
+}
+
+type SimpleEmbedDst struct {
+	SimpleSrc
 }
 
 func BenchmarkReflectCopier_Copy(b *testing.B) {

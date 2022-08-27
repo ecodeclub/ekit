@@ -73,16 +73,26 @@ func NewReflectCopier[Src any, Dst any]() (*ReflectCopier[Src, Dst], error) {
 // createFiledNodes 递归创建 field 的前缀树, srcTyp 和 dstTyp 只能是结构体
 func createFiledNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 
+	filedMap := map[string]int{}
 	for i := 0; i < srcTyp.NumField(); i += 1 {
 		srcFieldTypStruct := srcTyp.Field(i)
 		if !srcFieldTypStruct.IsExported() {
 			continue
 		}
-		dstFieldTypStruct, ok := dstTyp.FieldByName(srcFieldTypStruct.Name)
+		filedMap[srcFieldTypStruct.Name] = i
+	}
+
+	for dstIndex := 0; dstIndex < dstTyp.NumField(); dstIndex += 1 {
+
+		dstFieldTypStruct := dstTyp.Field(dstIndex)
+		if !dstFieldTypStruct.IsExported() {
+			continue
+		}
+		srcIndex, ok := filedMap[dstFieldTypStruct.Name]
 		if !ok {
 			continue
 		}
-
+		srcFieldTypStruct := srcTyp.Field(srcIndex)
 		if srcFieldTypStruct.Type.Kind() != dstFieldTypStruct.Type.Kind() {
 			return newErrKindNotMatchError(srcFieldTypStruct.Type.Kind(), dstFieldTypStruct.Type.Kind(), dstFieldTypStruct.Name)
 		}
@@ -98,8 +108,8 @@ func createFiledNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 
 		child := fieldNode{
 			fields:   []fieldNode{},
-			srcIndex: i,
-			dstIndex: dstFieldTypStruct.Index[0],
+			srcIndex: srcIndex,
+			dstIndex: dstIndex,
 			isLeaf:   false,
 			name:     dstFieldTypStruct.Name,
 		}
