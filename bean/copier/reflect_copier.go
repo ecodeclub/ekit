@@ -20,7 +20,7 @@ type ReflectCopier[Src any, Dst any] struct {
 	// fieldMap Src 中字段下标到 Dst 字段下标的映射
 	// 其中 key 是 Src 中字段下标使用连字符 - 连接起来
 	// 不在 fieldMap 中字段则意味着被忽略
-	fieldMap map[string][]int
+	//fieldMap map[string][]int
 }
 
 func NewReflectCopier[Src any, Dst any]() *ReflectCopier[Src, Dst] {
