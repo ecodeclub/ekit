@@ -191,11 +191,6 @@ func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue ref
 
 // CopyTo 复制结构体, 纯递归实现. src 和 dst 都必须是结构体的指针
 func CopyTo(src any, dst any) error {
-	return copyWithRuntime(src, dst)
-}
-
-// copyWithRuntime 是不使用字典树的复制
-func copyWithRuntime(src any, dst any) error {
 	srcPtrTyp := reflect.TypeOf(src)
 	if srcPtrTyp.Kind() != reflect.Pointer {
 		return newErrTypeError(srcPtrTyp)
