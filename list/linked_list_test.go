@@ -17,6 +17,7 @@ package list
 import (
 	"errors"
 	"fmt"
+
 	"github.com/stretchr/testify/assert"
 
 	"math/rand"
@@ -24,7 +25,6 @@ import (
 )
 
 func TestLinkedList_Add(t *testing.T) {
-
 	testCases := []struct {
 		name           string
 		list           *LinkedList[int]
@@ -271,7 +271,13 @@ func TestLinkedList_AsSlice(t *testing.T) {
 }
 
 func TestLinkedList_Cap(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
+	list := NewLinkedList[int]()
+	assert.Equal(t, 0, list.Cap())
+	err := list.Append(12)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, 1, list.Cap())
 }
 
 func TestLinkedList_Get(t *testing.T) {
@@ -328,10 +334,6 @@ func TestLinkedList_Get(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestLinkedList_Len(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
 }
 
 func TestLinkedList_Range(t *testing.T) {
@@ -458,7 +460,6 @@ func TestLinkedList_Set(t *testing.T) {
 
 func linkedListEqual[T comparable](l1 *LinkedList[T], l2 *LinkedList[T]) bool {
 	if l1.length != l2.length {
-		fmt.Println(l1.length, l2.length)
 		return false
 	}
 
@@ -470,7 +471,6 @@ func linkedListEqual[T comparable](l1 *LinkedList[T], l2 *LinkedList[T]) bool {
 	l2Pos := l2.head
 	for l1Pos != nil && l2Pos != nil {
 		if l1Pos.val != l2Pos.val {
-			fmt.Println(l1Pos.val, l2Pos.val)
 			return false
 		}
 		l1Pos = l1Pos.next
