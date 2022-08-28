@@ -57,9 +57,7 @@ func (l *LinkedList[T]) Get(index int) (T, error) {
 
 // Append 往链表最后添加元素
 func (l *LinkedList[T]) Append(ts ...T) error {
-
 	for _, t := range ts {
-
 		newLastNode := &node[T]{val: t}
 		if l.length == 0 {
 			l.head = newLastNode
