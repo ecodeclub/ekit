@@ -15,10 +15,11 @@
 package copier
 
 import (
-	"github.com/gotomicro/ekit"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+
+	"github.com/gotomicro/ekit"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestReflectCopier_Copy(t *testing.T) {
