@@ -14,6 +14,10 @@
 
 package list
 
+var (
+	_ List[any] = &LinkedList[any]{}
+)
+
 // LinkedList 双向链表
 type LinkedList[T any] struct {
 	head *node[T]
@@ -52,17 +56,19 @@ func (l *LinkedList[T]) Get(index int) (T, error) {
 }
 
 // Append 往链表最后添加元素
-func (l *LinkedList[T]) Append(t T) error {
-	newLastNode := &node[T]{val: t}
-	if l.length == 0 {
-		l.head = newLastNode
-		l.tail = newLastNode
-	} else {
-		l.tail.next = newLastNode
-		newLastNode.prev = l.tail
-		l.tail = newLastNode
+func (l *LinkedList[T]) Append(ts ...T) error {
+	for _, t := range ts {
+		newLastNode := &node[T]{val: t}
+		if l.length == 0 {
+			l.head = newLastNode
+			l.tail = newLastNode
+		} else {
+			l.tail.next = newLastNode
+			newLastNode.prev = l.tail
+			l.tail = newLastNode
+		}
+		l.length += 1
 	}
-	l.length += 1
 	return nil
 }
 
