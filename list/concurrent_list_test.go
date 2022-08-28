@@ -110,26 +110,68 @@ func TestConcurrentList_Append(t *testing.T) {
 	testCases := []struct {
 		name      string
 		list      *ConcurrentList[int]
-		newVal    int
+		newVal    []int
 		wantSlice []int
 	}{
 		{
-			name:      "append 234",
+			name:      "append non-empty values to non-empty list",
 			list:      newConcurrentListOfSlice[int]([]int{123}),
-			newVal:    234,
-			wantSlice: []int{123, 234},
+			newVal:    []int{234, 456},
+			wantSlice: []int{123, 234, 456},
 		},
 		{
-			name:      "nil append 123",
-			list:      newConcurrentListOfSlice[int](nil),
-			newVal:    123,
+			name:      "append empty values to non-empty list",
+			list:      newConcurrentListOfSlice[int]([]int{123}),
+			newVal:    []int{},
 			wantSlice: []int{123},
+		},
+		{
+			name:      "append nil to non-empty list",
+			list:      newConcurrentListOfSlice[int]([]int{123}),
+			newVal:    nil,
+			wantSlice: []int{123},
+		},
+		{
+			name:      "append non-empty values to empty list",
+			list:      newConcurrentListOfSlice[int]([]int{}),
+			newVal:    []int{234, 456},
+			wantSlice: []int{234, 456},
+		},
+		{
+			name:      "append empty values to empty list",
+			list:      newConcurrentListOfSlice[int]([]int{}),
+			newVal:    []int{},
+			wantSlice: []int{},
+		},
+		{
+			name:      "append nil to empty list",
+			list:      newConcurrentListOfSlice[int]([]int{}),
+			newVal:    nil,
+			wantSlice: []int{},
+		},
+		{
+			name:      "append non-empty values to nil list",
+			list:      newConcurrentListOfSlice[int](nil),
+			newVal:    []int{234, 456},
+			wantSlice: []int{234, 456},
+		},
+		{
+			name:      "append empty values to nil list",
+			list:      newConcurrentListOfSlice[int](nil),
+			newVal:    []int{},
+			wantSlice: []int{},
+		},
+		{
+			name:      "append nil to nil list",
+			list:      newConcurrentListOfSlice[int](nil),
+			newVal:    nil,
+			wantSlice: []int{},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.list.Append(tc.newVal)
+			err := tc.list.Append(tc.newVal...)
 			if err != nil {
 				return
 			}
