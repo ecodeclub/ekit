@@ -16,6 +16,10 @@ package list
 
 import "sync"
 
+var (
+	_ List[any] = &ConcurrentList[any]{}
+)
+
 // ConcurrentList 用读写锁封装了对 List 的操作
 // 达到线程安全的目标
 type ConcurrentList[T any] struct {
@@ -29,10 +33,10 @@ func (c *ConcurrentList[T]) Get(index int) (T, error) {
 	return c.List.Get(index)
 }
 
-func (c *ConcurrentList[T]) Append(t T) error {
+func (c *ConcurrentList[T]) Append(ts ...T) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return c.List.Append(t)
+	return c.List.Append(ts...)
 }
 
 func (c *ConcurrentList[T]) Add(index int, t T) error {
