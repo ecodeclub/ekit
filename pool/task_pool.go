@@ -26,15 +26,18 @@ import (
 )
 
 var (
-	StateCreated int32 = 1
-	StateRunning int32 = 2
-	StateClosing int32 = 3
-	StateStopped int32 = 4
+	stateCreated int32 = 1
+	stateRunning int32 = 2
+	stateClosing int32 = 3
+	stateStopped int32 = 4
+	stateLocked  int32 = 5
 
-	ErrTaskPoolIsNotRunning = errors.New("pool: TaskPool未运行")
-	ErrTaskPoolIsClosing    = errors.New("pool：TaskPool关闭中")
-	ErrTaskPoolIsStopped    = errors.New("pool: TaskPool已停止")
-	ErrTaskIsInvalid        = errors.New("pool: Task非法")
+	errTaskPoolIsNotRunning = errors.New("ekit: TaskPool未运行")
+	errTaskPoolIsClosing    = errors.New("ekit：TaskPool关闭中")
+	errTaskPoolIsStopped    = errors.New("ekit: TaskPool已停止")
+	errTaskIsInvalid        = errors.New("ekit: Task非法")
+
+	errInvalidArgument = errors.New("ekit: 参数非法")
 
 	_            TaskPool = &BlockQueueTaskPool{}
 	panicBuffLen          = 2048
@@ -78,58 +81,60 @@ type TaskFunc func(ctx context.Context) error
 // 超时控制取决于衍生出 TaskFunc 的方法
 func (t TaskFunc) Run(ctx context.Context) error { return t(ctx) }
 
-// FastTask 快任务，耗时较短，每个任务一个Goroutine
-type FastTask struct{ task Task }
+// taskWrapper 是Task的装饰器
+type taskWrapper struct {
+	t Task
+}
 
-func (f *FastTask) Run(ctx context.Context) error { return f.task.Run(ctx) }
-
-// SlowTask 慢任务，耗时较长，运行在固定个数Goroutine上
-type SlowTask struct{ task Task }
-
-func (s *SlowTask) Run(ctx context.Context) error { return s.task.Run(ctx) }
+func (tw *taskWrapper) Run(ctx context.Context) error {
+	defer func() {
+		// 处理 panic
+		if r := recover(); r != nil {
+			buf := make([]byte, panicBuffLen)
+			buf = buf[:runtime.Stack(buf, false)]
+			fmt.Printf("[PANIC]:\t%+v\n%s\n", r, buf)
+		}
+	}()
+	return tw.t.Run(ctx)
+}
 
 // BlockQueueTaskPool 并发阻塞的任务池
 type BlockQueueTaskPool struct {
+	// TaskPool内部状态
 	state int32
-	numGo int
-	lenQu int
 
-	taskExecutor  *TaskExecutor
-	fastTaskQueue chan<- Task
-	slowTaskQueue chan<- Task
+	queue chan Task
+	token chan struct{}
+	num   int32
 
-	// 缓存taskExecutor结果
-	done   <-chan struct{}
-	tasks  []Task
-	mux    sync.RWMutex
-	locked int32
+	// 外部信号
+	done chan struct{}
+	// 内部中断信号
+	ctx        context.Context
+	cancelFunc context.CancelFunc
+	// 缓存
+	mux            sync.RWMutex
+	submittedTasks []Task
 }
 
 // NewBlockQueueTaskPool 创建一个新的 BlockQueueTaskPool
 // concurrency 是并发数，即最多允许多少个 goroutine 执行任务
 // queueSize 是队列大小，即最多有多少个任务在等待调度
 func NewBlockQueueTaskPool(concurrency int, queueSize int) (*BlockQueueTaskPool, error) {
-	taskExecutor := NewTaskExecutor(concurrency, queueSize)
+	if concurrency < 1 {
+		return nil, fmt.Errorf("%w：concurrency应该大于0", errInvalidArgument)
+	}
+	if queueSize < 0 {
+		return nil, fmt.Errorf("%w：queueSize应该大于等于0", errInvalidArgument)
+	}
 	b := &BlockQueueTaskPool{
-		numGo:         concurrency,
-		lenQu:         queueSize,
-		done:          make(chan struct{}),
-		taskExecutor:  taskExecutor,
-		fastTaskQueue: taskExecutor.FastQueue(),
-		slowTaskQueue: taskExecutor.SlowQueue(),
-		locked:        int32(101),
+		queue: make(chan Task, queueSize),
+		token: make(chan struct{}, concurrency),
+		done:  make(chan struct{}),
 	}
-	atomic.StoreInt32(&b.state, StateCreated)
+	b.ctx, b.cancelFunc = context.WithCancel(context.Background())
+	atomic.StoreInt32(&b.state, stateCreated)
 	return b, nil
-}
-
-func (b *BlockQueueTaskPool) State() int32 {
-	for {
-		state := atomic.LoadInt32(&b.state)
-		if state != b.locked {
-			return state
-		}
-	}
 }
 
 // Submit 提交一个任务
@@ -138,59 +143,50 @@ func (b *BlockQueueTaskPool) State() int32 {
 // 在调用 Start 前后都可以调用 Submit
 func (b *BlockQueueTaskPool) Submit(ctx context.Context, task Task) error {
 	if task == nil || reflect.ValueOf(task).IsNil() {
-		return fmt.Errorf("%w", ErrTaskIsInvalid)
+		return fmt.Errorf("%w", errTaskIsInvalid)
 	}
 	// todo: 用户未设置超时，可以考虑内部给个超时提交
 	for {
 
-		if atomic.LoadInt32(&b.state) == StateClosing {
-			return fmt.Errorf("%w", ErrTaskPoolIsClosing)
+		if atomic.LoadInt32(&b.state) == stateClosing {
+			return fmt.Errorf("%w", errTaskPoolIsClosing)
 		}
 
-		if atomic.LoadInt32(&b.state) == StateStopped {
-			return fmt.Errorf("%w", ErrTaskPoolIsStopped)
+		if atomic.LoadInt32(&b.state) == stateStopped {
+			return fmt.Errorf("%w", errTaskPoolIsStopped)
 		}
 
-		if atomic.CompareAndSwapInt32(&b.state, StateCreated, b.locked) {
-			ok, err := b.submitTask(ctx, task, func() chan<- Task { return b.chanByTask(task) })
-			if ok || err != nil {
-				atomic.SwapInt32(&b.state, StateCreated)
-				return err
-			}
-			atomic.SwapInt32(&b.state, StateCreated)
+		task = &taskWrapper{t: task}
+
+		ok, err := b.trySubmit(ctx, task, stateCreated)
+		if ok || err != nil {
+			return err
 		}
 
-		if atomic.CompareAndSwapInt32(&b.state, StateRunning, b.locked) {
-			ok, err := b.submitTask(ctx, task, func() chan<- Task { return b.chanByTask(task) })
-			if ok || err != nil {
-				atomic.SwapInt32(&b.state, StateRunning)
-				return err
-			}
-			atomic.SwapInt32(&b.state, StateRunning)
+		ok, err = b.trySubmit(ctx, task, stateRunning)
+		if ok || err != nil {
+			return err
 		}
 	}
 }
 
-func (b *BlockQueueTaskPool) chanByTask(task Task) chan<- Task {
-	switch task.(type) {
-	case *SlowTask:
-		return b.slowTaskQueue
-	default:
-		// FastTask, TaskFunc, 用户自定义类型实现Task接口
-		return b.fastTaskQueue
-	}
-}
+func (b *BlockQueueTaskPool) trySubmit(ctx context.Context, task Task, state int32) (bool, error) {
+	// 进入临界区
+	if atomic.CompareAndSwapInt32(&b.state, state, stateLocked) {
+		defer atomic.CompareAndSwapInt32(&b.state, stateLocked, state)
 
-func (*BlockQueueTaskPool) submitTask(ctx context.Context, task Task, channel func() chan<- Task) (ok bool, err error) {
-	// 此处channel() <- task不会出现panic——因为channel被关闭而panic
-	// 代码执行到submit时TaskPool处于lock状态
-	// 要关闭channel需要TaskPool处于RUNNING状态，Shutdown/ShutdownNow才能成功
-	select {
-	case <-ctx.Done():
-		return false, fmt.Errorf("%w", ctx.Err())
-	case channel() <- task:
-		return true, nil
-	default:
+		// 此处b.queue <- task不会因为b.queue被关闭而panic
+		// 代码执行到trySubmit时TaskPool处于lock状态
+		// 要关闭b.queue需要TaskPool处于RUNNING状态，Shutdown/ShutdownNow才能成功
+		select {
+		case <-ctx.Done():
+			return false, fmt.Errorf("%w", ctx.Err())
+		case b.queue <- task:
+			return true, nil
+		default:
+			// 不能阻塞在临界区
+		}
+		return false, nil
 	}
 	return false, nil
 }
@@ -201,23 +197,55 @@ func (b *BlockQueueTaskPool) Start() error {
 
 	for {
 
-		if atomic.LoadInt32(&b.state) == StateClosing {
-			return fmt.Errorf("%w", ErrTaskPoolIsClosing)
+		if atomic.LoadInt32(&b.state) == stateClosing {
+			return fmt.Errorf("%w", errTaskPoolIsClosing)
 		}
 
-		if atomic.LoadInt32(&b.state) == StateStopped {
-			return fmt.Errorf("%w", ErrTaskPoolIsStopped)
+		if atomic.LoadInt32(&b.state) == stateStopped {
+			return fmt.Errorf("%w", errTaskPoolIsStopped)
 		}
 
-		if atomic.LoadInt32(&b.state) == StateRunning {
-			// 重复调用，返回缓存结果
+		if atomic.LoadInt32(&b.state) == stateRunning {
+			// 重复调用，不予处理
 			return nil
 		}
 
-		if atomic.CompareAndSwapInt32(&b.state, StateCreated, StateRunning) {
-			// todo: 启动task调度器，开始执行task
-			b.taskExecutor.Start()
+		if atomic.CompareAndSwapInt32(&b.state, stateCreated, stateRunning) {
+			go b.startTasks()
 			return nil
+		}
+	}
+}
+
+func (b *BlockQueueTaskPool) startTasks() {
+	defer close(b.token)
+
+	for {
+		select {
+		case <-b.ctx.Done():
+			return
+		case b.token <- struct{}{}:
+
+			task := <-b.queue
+			// handle close(b.queue)
+			if task == nil {
+				return
+			}
+
+			go func() {
+
+				atomic.AddInt32(&b.num, 1)
+				defer func() {
+					atomic.AddInt32(&b.num, -1)
+					<-b.token
+				}()
+
+				// todo: handle err
+				err := task.Run(b.ctx)
+				if err != nil {
+					return
+				}
+			}()
 		}
 	}
 }
@@ -230,28 +258,38 @@ func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
 
 	for {
 
-		if atomic.LoadInt32(&b.state) == StateCreated {
-			return nil, fmt.Errorf("%w", ErrTaskPoolIsNotRunning)
+		if atomic.LoadInt32(&b.state) == stateCreated {
+			return nil, fmt.Errorf("%w", errTaskPoolIsNotRunning)
 		}
 
-		if atomic.LoadInt32(&b.state) == StateStopped {
+		if atomic.LoadInt32(&b.state) == stateStopped {
 			// 重复调用时，恰好前一个Shutdown调用将状态迁移为StateStopped
 			// 这种情况与先调用ShutdownNow状态迁移为StateStopped再调用Shutdown效果一样
-			return nil, fmt.Errorf("%w", ErrTaskPoolIsStopped)
+			return nil, fmt.Errorf("%w", errTaskPoolIsStopped)
 		}
 
-		if atomic.LoadInt32(&b.state) == StateClosing {
-			// 重复调用，返回缓存结果
+		if atomic.LoadInt32(&b.state) == stateClosing {
+			// 重复调用
 			return b.done, nil
 		}
 
-		if atomic.CompareAndSwapInt32(&b.state, StateRunning, StateClosing) {
-			// todo: 等待task完成，关闭b.done
-			// 监听done信号，然后完成状态迁移StateClosing -> StateStopped
-			b.done = b.taskExecutor.Close()
+		if atomic.CompareAndSwapInt32(&b.state, stateRunning, stateClosing) {
+			// 目标：不但希望正在运行中的任务自然退出，还希望队列中等待的任务也能启动执行并自然退出
+			// 策略：先将队列中的任务启动并执行（清空队列），再等待全部运行中的任务自然退出
+
+			// 先关闭等待队列不再允许提交
+			// 同时任务启动循环能够通过Task==nil来终止循环
+			close(b.queue)
+
 			go func() {
-				<-b.done
-				atomic.CompareAndSwapInt32(&b.state, StateClosing, StateStopped)
+				// 等待运行中的Task自然结束
+				for atomic.LoadInt32(&b.num) != 0 {
+					time.Sleep(time.Second)
+				}
+				// 通知外部调用者
+				close(b.done)
+				// 完成最终的状态迁移
+				atomic.CompareAndSwapInt32(&b.state, stateClosing, stateStopped)
 			}()
 			return b.done, nil
 		}
@@ -264,198 +302,54 @@ func (b *BlockQueueTaskPool) ShutdownNow() ([]Task, error) {
 
 	for {
 
-		if atomic.LoadInt32(&b.state) == StateCreated {
-			return nil, fmt.Errorf("%w", ErrTaskPoolIsNotRunning)
+		if atomic.LoadInt32(&b.state) == stateCreated {
+			return nil, fmt.Errorf("%w", errTaskPoolIsNotRunning)
 		}
 
-		if atomic.LoadInt32(&b.state) == StateClosing {
-			return nil, fmt.Errorf("%w", ErrTaskPoolIsClosing)
+		if atomic.LoadInt32(&b.state) == stateClosing {
+			return nil, fmt.Errorf("%w", errTaskPoolIsClosing)
 		}
 
-		if atomic.LoadInt32(&b.state) == StateStopped {
+		if atomic.LoadInt32(&b.state) == stateStopped {
 			// 重复调用，返回缓存结果
 			b.mux.RLock()
-			tasks := append([]Task(nil), b.tasks...)
+			tasks := append([]Task(nil), b.submittedTasks...)
 			b.mux.RUnlock()
 			return tasks, nil
 		}
-		if atomic.CompareAndSwapInt32(&b.state, StateRunning, StateStopped) {
+		if atomic.CompareAndSwapInt32(&b.state, stateRunning, stateStopped) {
+			// 目标：立刻关闭并且返回所有剩下未执行的任务
+			// 策略：关闭等待队列不再接受新任务，中断任务启动循环，清空等待队列并保存返回
+
+			close(b.queue)
+
+			// 发送中断信号，中断任务启动循环
+			b.cancelFunc()
+
 			b.mux.Lock()
-			b.tasks = b.taskExecutor.Stop()
-			tasks := append([]Task(nil), b.tasks...)
+			// 清空队列并保存
+			var tasks []Task
+			for task := range b.queue {
+				b.submittedTasks = append(b.submittedTasks, task)
+				tasks = append(tasks, task)
+			}
 			b.mux.Unlock()
+
 			return tasks, nil
 		}
 	}
 }
 
-type TaskExecutor struct {
-	slowTasks chan Task
-	fastTasks chan Task
-
-	maxGo int32
-	//
-	done chan struct{}
-	// 利用ctx充当内部信号
-	ctx        context.Context
-	cancelFunc context.CancelFunc
-	// 统计
-	numSlow int32
-	numFast int32
-}
-
-func NewTaskExecutor(maxGo int, queueSize int) *TaskExecutor {
-	t := &TaskExecutor{maxGo: int32(maxGo), done: make(chan struct{})}
-	t.ctx, t.cancelFunc = context.WithCancel(context.Background())
-	t.slowTasks = make(chan Task, queueSize)
-	t.fastTasks = make(chan Task, queueSize)
-	return t
-}
-
-func (t *TaskExecutor) Start() {
-	go t.startSlowTasks()
-	go t.startFastTasks()
-}
-
-func (t *TaskExecutor) startFastTasks() {
+// internalState 用于查看TaskPool状态
+func (b *BlockQueueTaskPool) internalState() int32 {
 	for {
-		select {
-		case <-t.ctx.Done():
-			return
-		case task := <-t.fastTasks:
-			// handle close(t.fastTasks)
-			if task == nil {
-				return
-			}
-			go func() {
-				atomic.AddInt32(&t.numFast, 1)
-				// log.Println("fast N", atomic.AddInt32(&t.numFast, 1))
-				defer func() {
-					// 恢复统计
-					atomic.AddInt32(&t.numFast, -1)
-
-					// handle panic
-					if r := recover(); r != nil {
-						buf := make([]byte, panicBuffLen)
-						buf = buf[:runtime.Stack(buf, false)]
-						fmt.Printf("[PANIC]:\t%+v\n%s\n", r, buf)
-					}
-				}()
-				// todo: handle err
-				err := task.Run(t.ctx)
-				if err != nil {
-					return
-				}
-			}()
+		state := atomic.LoadInt32(&b.state)
+		if state != stateLocked {
+			return state
 		}
 	}
 }
 
-func (t *TaskExecutor) startSlowTasks() {
-
-	for {
-		n := atomic.AddInt32(&t.maxGo, -1)
-		if n < 0 {
-			atomic.AddInt32(&t.maxGo, 1)
-			continue
-		}
-		// log.Println("maxGo=", n)
-		select {
-		case <-t.ctx.Done():
-			return
-		case task := <-t.slowTasks:
-			// handle close(t.slowTasks)
-			if task == nil {
-				return
-			}
-			go func() {
-				atomic.AddInt32(&t.numSlow, 1)
-				// log.Println("slow N=", t.numSlow.Add(1))
-				defer func() {
-					// 恢复
-					atomic.AddInt32(&t.maxGo, 1)
-					atomic.AddInt32(&t.numSlow, -1)
-
-					// handle panic
-					if r := recover(); r != nil {
-						buf := make([]byte, panicBuffLen)
-						buf = buf[:runtime.Stack(buf, false)]
-						fmt.Printf("[PANIC]:\t%+v\n%s\n", r, buf)
-					}
-				}()
-				// todo: handle err
-				err := task.Run(t.ctx)
-				if err != nil {
-					return
-				}
-			}()
-		}
-	}
-}
-
-func (t *TaskExecutor) FastQueue() chan<- Task {
-	return t.fastTasks
-}
-
-func (t *TaskExecutor) SlowQueue() chan<- Task {
-	return t.slowTasks
-}
-
-func (t *TaskExecutor) NumRunningSlow() int32 {
-	return atomic.LoadInt32(&t.numSlow)
-}
-
-func (t *TaskExecutor) NumRunningFast() int32 {
-	return atomic.LoadInt32(&t.numFast)
-}
-
-// Close 优雅关闭
-// 目标：不但希望正在运行中的任务自然退出，还希望队列中等待的任务也能启动执行并自然退出
-// 策略：先将所有队列中的任务启动并执行（清空队列），再等待全部运行中的任务自然退出。
-func (t *TaskExecutor) Close() <-chan struct{} {
-
-	// 先关闭等待队列不再允许提交
-	// 同时任务启动循环能够通过Task==nil来终止循环
-	close(t.slowTasks)
-	close(t.fastTasks)
-
-	go func() {
-
-		// 检查三次是因为可能出现：
-		// 两队列中有任务且正在创建启动任务尚未执行计数，恰巧此时正在运行中的任务为0
-		for i := 0; i < 3; i++ {
-
-			// 确保所有运行中任务也自然退出
-			for atomic.LoadInt32(&t.numFast) != 0 || atomic.LoadInt32(&t.numSlow) != 0 {
-				time.Sleep(time.Second)
-			}
-		}
-
-		// 通知外部调用者
-		close(t.done)
-	}()
-
-	return t.done
-}
-
-// Stop 强制关闭
-// 目标：立刻关闭并且返回所有剩下未执行的任务
-// 策略：关闭等待队列不再接受新任务，中断任务启动循环，清空等待队列并保存返回
-func (t *TaskExecutor) Stop() []Task {
-
-	close(t.fastTasks)
-	close(t.slowTasks)
-
-	// 发送中断信号，中断任务启动循环
-	t.cancelFunc()
-
-	// 清空队列并保存
-	var tasks []Task
-	for task := range t.fastTasks {
-		tasks = append(tasks, task)
-	}
-	for task := range t.slowTasks {
-		tasks = append(tasks, task)
-	}
-	return tasks
+func (b *BlockQueueTaskPool) NumGo() int32 {
+	return atomic.LoadInt32(&b.num)
 }
