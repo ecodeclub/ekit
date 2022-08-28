@@ -186,38 +186,71 @@ func TestLinkedList_Append(t *testing.T) {
 		name           string
 		list           *LinkedList[int]
 		index          int
-		newVal         int
+		newVal         []int
 		wantLinkedList *LinkedList[int]
 		wantErr        error
 	}{
 		{
-			name:           "append val",
-			list:           NewLinkedListOf[int]([]int{1, 2, 3}),
-			newVal:         100,
-			wantLinkedList: NewLinkedListOf[int]([]int{1, 2, 3, 100}),
+			name:           "append non-empty values to non-empty list",
+			list:           NewLinkedListOf[int]([]int{123}),
+			newVal:         []int{234, 456},
+			wantLinkedList: NewLinkedListOf[int]([]int{123, 234, 456}),
 		},
 		{
-			name:           "append val in list length of 1",
-			list:           NewLinkedListOf[int]([]int{1}),
-			newVal:         100,
-			wantLinkedList: NewLinkedListOf[int]([]int{1, 100}),
+			name:           "append empty values to non-empty list",
+			list:           NewLinkedListOf[int]([]int{123}),
+			newVal:         []int{},
+			wantLinkedList: NewLinkedListOf[int]([]int{123}),
 		},
 		{
-			name:           "append val to nil list",
+			name:           "append nil to non-empty list",
+			list:           NewLinkedListOf[int]([]int{123}),
+			newVal:         nil,
+			wantLinkedList: NewLinkedListOf[int]([]int{123}),
+		},
+		{
+			name:           "append non-empty values to empty list",
 			list:           NewLinkedListOf[int]([]int{}),
-			newVal:         100,
-			wantLinkedList: NewLinkedListOf[int]([]int{100}),
+			newVal:         []int{234, 456},
+			wantLinkedList: NewLinkedListOf[int]([]int{234, 456}),
+		},
+		{
+			name:           "append empty values to empty list",
+			list:           NewLinkedListOf[int]([]int{}),
+			newVal:         []int{},
+			wantLinkedList: NewLinkedListOf[int]([]int{}),
+		},
+		{
+			name:           "append nil to empty list",
+			list:           NewLinkedListOf[int]([]int{}),
+			newVal:         nil,
+			wantLinkedList: NewLinkedListOf[int]([]int{}),
+		},
+		{
+			name:           "append non-empty values to nil list",
+			list:           NewLinkedListOf[int](nil),
+			newVal:         []int{234, 456},
+			wantLinkedList: NewLinkedListOf[int]([]int{234, 456}),
+		},
+		{
+			name:           "append empty values to nil list",
+			list:           NewLinkedListOf[int](nil),
+			newVal:         []int{},
+			wantLinkedList: NewLinkedListOf[int]([]int{}),
+		},
+		{
+			name:           "append nil to nil list",
+			list:           NewLinkedListOf[int](nil),
+			newVal:         nil,
+			wantLinkedList: NewLinkedListOf[int]([]int{}),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.list.Append(tc.newVal)
+			err := tc.list.Append(tc.newVal...)
 			assert.Equal(t, tc.wantErr, err)
 			// 因为返回了 error，所以我们不用继续往下比较了
-			if err != nil {
-				return
-			}
 			assert.True(t, linkedListEqual(tc.list, tc.wantLinkedList))
 		})
 	}

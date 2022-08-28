@@ -21,7 +21,7 @@ type List[T any] interface {
 	// 在下标超出范围的情况下，返回错误
 	Get(index int) (T, error)
 	// Append 在末尾追加元素
-	Append(t T) error
+	Append(ts ...T) error
 	// Add 在特定下标处增加一个新元素
 	// 如果下标超出范围，应该返回错误
 	Add(index int, t T) error
