@@ -571,4 +571,4 @@ func testNewRunningStateTaskPool(t *testing.T, concurrency int, queueSize int) *
 
 type FakeTask struct{}
 
-func (f *FakeTask) Run(ctx context.Context) error { return nil }
+func (f *FakeTask) Run(_ context.Context) error { return nil }
