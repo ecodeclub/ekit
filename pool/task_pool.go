@@ -90,7 +90,7 @@ func (s *SlowTask) Run(ctx context.Context) error { return s.task.Run(ctx) }
 
 // BlockQueueTaskPool 并发阻塞的任务池
 type BlockQueueTaskPool struct {
-	state atomic.Int32
+	state int32
 	numGo int
 	lenQu int
 
@@ -119,13 +119,13 @@ func NewBlockQueueTaskPool(concurrency int, queueSize int) (*BlockQueueTaskPool,
 		slowTaskQueue: taskExecutor.SlowQueue(),
 		locked:        int32(101),
 	}
-	b.state.Store(StateCreated)
+	atomic.StoreInt32(&b.state, StateCreated)
 	return b, nil
 }
 
 func (b *BlockQueueTaskPool) State() int32 {
 	for {
-		state := b.state.Load()
+		state := atomic.LoadInt32(&b.state)
 		if state != b.locked {
 			return state
 		}
@@ -143,30 +143,30 @@ func (b *BlockQueueTaskPool) Submit(ctx context.Context, task Task) error {
 	// todo: 用户未设置超时，可以考虑内部给个超时提交
 	for {
 
-		if b.state.Load() == StateClosing {
+		if atomic.LoadInt32(&b.state) == StateClosing {
 			return fmt.Errorf("%w", ErrTaskPoolIsClosing)
 		}
 
-		if b.state.Load() == StateStopped {
+		if atomic.LoadInt32(&b.state) == StateStopped {
 			return fmt.Errorf("%w", ErrTaskPoolIsStopped)
 		}
 
-		if b.state.CompareAndSwap(StateCreated, b.locked) {
+		if atomic.CompareAndSwapInt32(&b.state, StateCreated, b.locked) {
 			ok, err := b.submitTask(ctx, task, func() chan<- Task { return b.chanByTask(task) })
 			if ok || err != nil {
-				b.state.Swap(StateCreated)
+				atomic.SwapInt32(&b.state, StateCreated)
 				return err
 			}
-			b.state.Swap(StateCreated)
+			atomic.SwapInt32(&b.state, StateCreated)
 		}
 
-		if b.state.CompareAndSwap(StateRunning, b.locked) {
+		if atomic.CompareAndSwapInt32(&b.state, StateRunning, b.locked) {
 			ok, err := b.submitTask(ctx, task, func() chan<- Task { return b.chanByTask(task) })
 			if ok || err != nil {
-				b.state.Swap(StateRunning)
+				atomic.SwapInt32(&b.state, StateRunning)
 				return err
 			}
-			b.state.Swap(StateRunning)
+			atomic.SwapInt32(&b.state, StateRunning)
 		}
 	}
 }
@@ -201,20 +201,20 @@ func (b *BlockQueueTaskPool) Start() error {
 
 	for {
 
-		if b.state.Load() == StateClosing {
+		if atomic.LoadInt32(&b.state) == StateClosing {
 			return fmt.Errorf("%w", ErrTaskPoolIsClosing)
 		}
 
-		if b.state.Load() == StateStopped {
+		if atomic.LoadInt32(&b.state) == StateStopped {
 			return fmt.Errorf("%w", ErrTaskPoolIsStopped)
 		}
 
-		if b.state.Load() == StateRunning {
+		if atomic.LoadInt32(&b.state) == StateRunning {
 			// 重复调用，返回缓存结果
 			return nil
 		}
 
-		if b.state.CompareAndSwap(StateCreated, StateRunning) {
+		if atomic.CompareAndSwapInt32(&b.state, StateCreated, StateRunning) {
 			// todo: 启动task调度器，开始执行task
 			b.taskExecutor.Start()
 			return nil
@@ -230,28 +230,28 @@ func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
 
 	for {
 
-		if b.state.Load() == StateCreated {
+		if atomic.LoadInt32(&b.state) == StateCreated {
 			return nil, fmt.Errorf("%w", ErrTaskPoolIsNotRunning)
 		}
 
-		if b.state.Load() == StateStopped {
+		if atomic.LoadInt32(&b.state) == StateStopped {
 			// 重复调用时，恰好前一个Shutdown调用将状态迁移为StateStopped
 			// 这种情况与先调用ShutdownNow状态迁移为StateStopped再调用Shutdown效果一样
 			return nil, fmt.Errorf("%w", ErrTaskPoolIsStopped)
 		}
 
-		if b.state.Load() == StateClosing {
+		if atomic.LoadInt32(&b.state) == StateClosing {
 			// 重复调用，返回缓存结果
 			return b.done, nil
 		}
 
-		if b.state.CompareAndSwap(StateRunning, StateClosing) {
+		if atomic.CompareAndSwapInt32(&b.state, StateRunning, StateClosing) {
 			// todo: 等待task完成，关闭b.done
 			// 监听done信号，然后完成状态迁移StateClosing -> StateStopped
 			b.done = b.taskExecutor.Close()
 			go func() {
 				<-b.done
-				b.state.CompareAndSwap(StateClosing, StateStopped)
+				atomic.CompareAndSwapInt32(&b.state, StateClosing, StateStopped)
 			}()
 			return b.done, nil
 		}
@@ -264,22 +264,22 @@ func (b *BlockQueueTaskPool) ShutdownNow() ([]Task, error) {
 
 	for {
 
-		if b.state.Load() == StateCreated {
+		if atomic.LoadInt32(&b.state) == StateCreated {
 			return nil, fmt.Errorf("%w", ErrTaskPoolIsNotRunning)
 		}
 
-		if b.state.Load() == StateClosing {
+		if atomic.LoadInt32(&b.state) == StateClosing {
 			return nil, fmt.Errorf("%w", ErrTaskPoolIsClosing)
 		}
 
-		if b.state.Load() == StateStopped {
+		if atomic.LoadInt32(&b.state) == StateStopped {
 			// 重复调用，返回缓存结果
 			b.mux.RLock()
 			tasks := append([]Task(nil), b.tasks...)
 			b.mux.RUnlock()
 			return tasks, nil
 		}
-		if b.state.CompareAndSwap(StateRunning, StateStopped) {
+		if atomic.CompareAndSwapInt32(&b.state, StateRunning, StateStopped) {
 			b.mux.Lock()
 			b.tasks = b.taskExecutor.Stop()
 			tasks := append([]Task(nil), b.tasks...)
@@ -300,8 +300,8 @@ type TaskExecutor struct {
 	ctx        context.Context
 	cancelFunc context.CancelFunc
 	// 统计
-	numSlow atomic.Int32
-	numFast atomic.Int32
+	numSlow int32
+	numFast int32
 }
 
 func NewTaskExecutor(maxGo int, queueSize int) *TaskExecutor {
@@ -328,11 +328,11 @@ func (t *TaskExecutor) startFastTasks() {
 				return
 			}
 			go func() {
-				t.numFast.Add(1)
-				// log.Println("fast N", t.numFast.Add(1))
+				atomic.AddInt32(&t.numFast, 1)
+				// log.Println("fast N", atomic.AddInt32(&t.numFast, 1))
 				defer func() {
 					// 恢复统计
-					t.numFast.Add(-1)
+					atomic.AddInt32(&t.numFast, -1)
 
 					// handle panic
 					if r := recover(); r != nil {
@@ -342,7 +342,10 @@ func (t *TaskExecutor) startFastTasks() {
 					}
 				}()
 				// todo: handle err
-				fmt.Println(task.Run(t.ctx))
+				err := task.Run(t.ctx)
+				if err != nil {
+					return
+				}
 			}()
 		}
 	}
@@ -366,12 +369,12 @@ func (t *TaskExecutor) startSlowTasks() {
 				return
 			}
 			go func() {
-				t.numSlow.Add(1)
+				atomic.AddInt32(&t.numSlow, 1)
 				// log.Println("slow N=", t.numSlow.Add(1))
 				defer func() {
 					// 恢复
 					atomic.AddInt32(&t.maxGo, 1)
-					t.numSlow.Add(-1)
+					atomic.AddInt32(&t.numSlow, -1)
 
 					// handle panic
 					if r := recover(); r != nil {
@@ -381,7 +384,10 @@ func (t *TaskExecutor) startSlowTasks() {
 					}
 				}()
 				// todo: handle err
-				fmt.Println(task.Run(t.ctx))
+				err := task.Run(t.ctx)
+				if err != nil {
+					return
+				}
 			}()
 		}
 	}
@@ -396,11 +402,11 @@ func (t *TaskExecutor) SlowQueue() chan<- Task {
 }
 
 func (t *TaskExecutor) NumRunningSlow() int32 {
-	return t.numSlow.Load()
+	return atomic.LoadInt32(&t.numSlow)
 }
 
 func (t *TaskExecutor) NumRunningFast() int32 {
-	return t.numFast.Load()
+	return atomic.LoadInt32(&t.numFast)
 }
 
 // Close 优雅关闭
@@ -420,7 +426,7 @@ func (t *TaskExecutor) Close() <-chan struct{} {
 		for i := 0; i < 3; i++ {
 
 			// 确保所有运行中任务也自然退出
-			for t.numFast.Load() != 0 || t.numSlow.Load() != 0 {
+			for atomic.LoadInt32(&t.numFast) != 0 || atomic.LoadInt32(&t.numSlow) != 0 {
 				time.Sleep(time.Second)
 			}
 		}
