@@ -14,6 +14,10 @@
 
 package list
 
+var (
+	_ List[any] = &LinkedList[any]{}
+)
+
 // LinkedList 双向链表
 type LinkedList[T any] struct {
 	head *node[T]
@@ -52,17 +56,19 @@ func (l *LinkedList[T]) Get(index int) (T, error) {
 }
 
 // Append 往链表最后添加元素
-func (l *LinkedList[T]) Append(t T) error {
-	newLastNode := &node[T]{val: t}
-	if l.length == 0 {
-		l.head = newLastNode
-		l.tail = newLastNode
-	} else {
-		l.tail.next = newLastNode
-		newLastNode.prev = l.tail
-		l.tail = newLastNode
+func (l *LinkedList[T]) Append(ts ...T) error {
+	for _, t := range ts {
+		newLastNode := &node[T]{val: t}
+		if l.length == 0 {
+			l.head = newLastNode
+			l.tail = newLastNode
+		} else {
+			l.tail.next = newLastNode
+			newLastNode.prev = l.tail
+			l.tail = newLastNode
+		}
+		l.length += 1
 	}
-	l.length += 1
 	return nil
 }
 
@@ -160,13 +166,11 @@ func (l *LinkedList[T]) Delete(index int) (T, error) {
 }
 
 func (l *LinkedList[T]) Len() int {
-	// TODO implement me
-	panic("implement me")
+	return l.length
 }
 
 func (l *LinkedList[T]) Cap() int {
-	// TODO implement me
-	panic("implement me")
+	return l.Len()
 }
 
 func (l *LinkedList[T]) Range(fn func(index int, t T) error) error {
@@ -202,7 +206,12 @@ func (n *node[T]) insertAfter(newNode *node[T]) {
 	newNode.prev = n
 }
 
-// NewLinkedListOf 将切片转换为链表, 数组的值是浅拷贝.
+// NewLinkedList 创建一个空链表
+func NewLinkedList[T any]() *LinkedList[T] {
+	return &LinkedList[T]{}
+}
+
+// NewLinkedListOf 将切片转换为链表, 直接使用了切片元素的值，而没有进行复制
 func NewLinkedListOf[T any](ts []T) *LinkedList[T] {
 	var head *node[T] = nil
 	var tail *node[T] = nil

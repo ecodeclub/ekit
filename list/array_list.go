@@ -14,6 +14,10 @@
 
 package list
 
+var (
+	_ List[any] = &ArrayList[any]{}
+)
+
 // ArrayList 基于切片的简单封装
 type ArrayList[T any] struct {
 	vals []T
@@ -40,8 +44,8 @@ func (a *ArrayList[T]) Get(index int) (t T, e error) {
 }
 
 // Append 往ArrayList里追加数据
-func (a *ArrayList[T]) Append(t T) error {
-	a.vals = append(a.vals, t)
+func (a *ArrayList[T]) Append(ts ...T) error {
+	a.vals = append(a.vals, ts...)
 	return nil
 }
 

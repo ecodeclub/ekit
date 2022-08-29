@@ -22,7 +22,7 @@ type TaskPool interface {
 	// 如果任务池提供了阻塞的功能，那么如果在 ctx 过期都没有提交成功，那么应该返回错误
 	// 调用 Start 之后能否继续提交任务，则取决于具体的实现
 	// 调用 Shutdown 或者 ShutdownNow 之后提交任务都会返回错误
-	Submit(ctx context.Context, task func()) error
+	Submit(ctx context.Context, task Task) error
 
 	// Start 开始调度任务执行。在调用 Start 之前，所有的任务都不会被调度执行。
 	// Start 之后，能否继续调用 Submit 提交任务，取决于具体的实现
@@ -72,14 +72,14 @@ func NewBlockQueueTaskPool(concurrency int, queueSize int) (*BlockQueueTaskPool,
 // 如果因为 ctx 的原因返回，那么将会返回 ctx.Err()
 // 在调用 Start 前后都可以调用 Submit
 func (b *BlockQueueTaskPool) Submit(ctx context.Context, task func()) error {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 // Start 开始调度任务执行
 // Start 之后，调用者可以继续使用 Submit 提交任务
 func (b *BlockQueueTaskPool) Start() error {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -88,12 +88,12 @@ func (b *BlockQueueTaskPool) Start() error {
 // Shutdown 会负责关闭返回的 chan
 // Shutdown 无法中断正在执行的任务
 func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 // ShutdownNow 立刻关闭任务池，并且返回所有剩余未执行的任务（不包含正在执行的任务）
 func (b *BlockQueueTaskPool) ShutdownNow() ([]Task, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }

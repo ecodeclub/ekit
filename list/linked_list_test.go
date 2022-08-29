@@ -17,6 +17,7 @@ package list
 import (
 	"errors"
 	"fmt"
+
 	"github.com/stretchr/testify/assert"
 
 	"math/rand"
@@ -24,7 +25,6 @@ import (
 )
 
 func TestLinkedList_Add(t *testing.T) {
-
 	testCases := []struct {
 		name           string
 		list           *LinkedList[int]
@@ -186,38 +186,71 @@ func TestLinkedList_Append(t *testing.T) {
 		name           string
 		list           *LinkedList[int]
 		index          int
-		newVal         int
+		newVal         []int
 		wantLinkedList *LinkedList[int]
 		wantErr        error
 	}{
 		{
-			name:           "append val",
-			list:           NewLinkedListOf[int]([]int{1, 2, 3}),
-			newVal:         100,
-			wantLinkedList: NewLinkedListOf[int]([]int{1, 2, 3, 100}),
+			name:           "append non-empty values to non-empty list",
+			list:           NewLinkedListOf[int]([]int{123}),
+			newVal:         []int{234, 456},
+			wantLinkedList: NewLinkedListOf[int]([]int{123, 234, 456}),
 		},
 		{
-			name:           "append val in list length of 1",
-			list:           NewLinkedListOf[int]([]int{1}),
-			newVal:         100,
-			wantLinkedList: NewLinkedListOf[int]([]int{1, 100}),
+			name:           "append empty values to non-empty list",
+			list:           NewLinkedListOf[int]([]int{123}),
+			newVal:         []int{},
+			wantLinkedList: NewLinkedListOf[int]([]int{123}),
 		},
 		{
-			name:           "append val to nil list",
+			name:           "append nil to non-empty list",
+			list:           NewLinkedListOf[int]([]int{123}),
+			newVal:         nil,
+			wantLinkedList: NewLinkedListOf[int]([]int{123}),
+		},
+		{
+			name:           "append non-empty values to empty list",
 			list:           NewLinkedListOf[int]([]int{}),
-			newVal:         100,
-			wantLinkedList: NewLinkedListOf[int]([]int{100}),
+			newVal:         []int{234, 456},
+			wantLinkedList: NewLinkedListOf[int]([]int{234, 456}),
+		},
+		{
+			name:           "append empty values to empty list",
+			list:           NewLinkedListOf[int]([]int{}),
+			newVal:         []int{},
+			wantLinkedList: NewLinkedListOf[int]([]int{}),
+		},
+		{
+			name:           "append nil to empty list",
+			list:           NewLinkedListOf[int]([]int{}),
+			newVal:         nil,
+			wantLinkedList: NewLinkedListOf[int]([]int{}),
+		},
+		{
+			name:           "append non-empty values to nil list",
+			list:           NewLinkedListOf[int](nil),
+			newVal:         []int{234, 456},
+			wantLinkedList: NewLinkedListOf[int]([]int{234, 456}),
+		},
+		{
+			name:           "append empty values to nil list",
+			list:           NewLinkedListOf[int](nil),
+			newVal:         []int{},
+			wantLinkedList: NewLinkedListOf[int]([]int{}),
+		},
+		{
+			name:           "append nil to nil list",
+			list:           NewLinkedListOf[int](nil),
+			newVal:         nil,
+			wantLinkedList: NewLinkedListOf[int]([]int{}),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.list.Append(tc.newVal)
+			err := tc.list.Append(tc.newVal...)
 			assert.Equal(t, tc.wantErr, err)
 			// 因为返回了 error，所以我们不用继续往下比较了
-			if err != nil {
-				return
-			}
 			assert.True(t, linkedListEqual(tc.list, tc.wantLinkedList))
 		})
 	}
@@ -271,7 +304,13 @@ func TestLinkedList_AsSlice(t *testing.T) {
 }
 
 func TestLinkedList_Cap(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
+	list := NewLinkedList[int]()
+	assert.Equal(t, 0, list.Cap())
+	err := list.Append(12)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, 1, list.Cap())
 }
 
 func TestLinkedList_Get(t *testing.T) {
@@ -328,10 +367,6 @@ func TestLinkedList_Get(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestLinkedList_Len(t *testing.T) {
-	fmt.Println("仿照 ArrayList 的测试写代码")
 }
 
 func TestLinkedList_Range(t *testing.T) {
@@ -458,7 +493,6 @@ func TestLinkedList_Set(t *testing.T) {
 
 func linkedListEqual[T comparable](l1 *LinkedList[T], l2 *LinkedList[T]) bool {
 	if l1.length != l2.length {
-		fmt.Println(l1.length, l2.length)
 		return false
 	}
 
@@ -470,7 +504,6 @@ func linkedListEqual[T comparable](l1 *LinkedList[T], l2 *LinkedList[T]) bool {
 	l2Pos := l2.head
 	for l1Pos != nil && l2Pos != nil {
 		if l1Pos.val != l2Pos.val {
-			fmt.Println(l1Pos.val, l2Pos.val)
 			return false
 		}
 		l1Pos = l1Pos.next
