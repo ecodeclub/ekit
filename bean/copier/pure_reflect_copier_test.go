@@ -474,6 +474,16 @@ func TestReflectCopier_CopyTo(t *testing.T) {
 			},
 			wantDst: &SpecialDst1{},
 		},
+		{
+			name: "成员有别名类型1",
+			copyFunc: func() (any, error) {
+				dst := &SpecialDst2{}
+				return dst, CopyTo(&SpecialSrc1{
+					A: 1,
+				}, dst)
+			},
+			wantDst: &SpecialDst2{A: 1},
+		},
 	}
 
 	for _, tc := range testCases {
