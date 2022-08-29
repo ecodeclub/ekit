@@ -182,9 +182,9 @@ func (b *BlockQueueTaskPool) trySubmit(ctx context.Context, task Task, state int
 		case b.queue <- task:
 			return true, nil
 		default:
-			// 不能阻塞在临界区
+			// 不能阻塞在临界区,要给Shutdown和ShutdownNow机会
+			return false, nil
 		}
-		return false, nil
 	}
 	return false, nil
 }
