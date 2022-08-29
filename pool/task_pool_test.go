@@ -127,7 +127,7 @@ func TestTaskPool_Submit(t *testing.T) {
 			// 与下方 testSubmitBlockingAndTimeout 并发执行
 			errChan := make(chan error)
 			go func() {
-				<-time.After(1 * time.Millisecond)
+				time.Sleep(1 * time.Millisecond)
 				errChan <- pool.Start()
 			}()
 
@@ -150,7 +150,7 @@ func TestTaskPool_Submit(t *testing.T) {
 			for i := 0; i < n; i++ {
 				go func() {
 					err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-						<-time.After(10 * time.Millisecond)
+						time.Sleep(10 * time.Millisecond)
 						return nil
 					}))
 					if err != nil {
@@ -166,7 +166,7 @@ func TestTaskPool_Submit(t *testing.T) {
 			}
 			resultChan := make(chan ShutdownResult)
 			go func() {
-				<-time.After(time.Millisecond)
+				time.Sleep(time.Millisecond)
 				done, err := pool.Shutdown()
 				resultChan <- ShutdownResult{done: done, err: err}
 			}()
@@ -180,7 +180,8 @@ func TestTaskPool_Submit(t *testing.T) {
 			assert.NoError(t, r.err)
 			<-r.done
 			// 等待状态迁移完成，并最终进入StateStopped状态
-			<-time.After(100 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
+
 			assert.Equal(t, stateStopped, pool.internalState())
 		})
 
@@ -195,7 +196,7 @@ func TestTaskPool_Submit(t *testing.T) {
 			for i := 0; i < n; i++ {
 				go func() {
 					err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-						<-time.After(10 * time.Millisecond)
+						time.Sleep(10 * time.Millisecond)
 						return nil
 					}))
 					if err != nil {
@@ -208,7 +209,7 @@ func TestTaskPool_Submit(t *testing.T) {
 
 			result := make(chan ShutdownNowResult, 1)
 			go func() {
-				<-time.After(time.Millisecond)
+				time.Sleep(time.Millisecond)
 				tasks, err := pool.ShutdownNow()
 				result <- ShutdownNowResult{tasks: tasks, err: err}
 			}()
@@ -387,7 +388,7 @@ func TestTaskPool__Closing_(t *testing.T) {
 		for i := 0; i < num; i++ {
 			go func() {
 				err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-					<-time.After(10 * time.Millisecond)
+					time.Sleep(10 * time.Millisecond)
 					return nil
 				}))
 				t.Log(err)
@@ -404,7 +405,7 @@ func TestTaskPool__Closing_(t *testing.T) {
 		}
 
 		<-done
-		<-time.After(10 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		assert.Equal(t, stateStopped, pool.internalState())
 	})
 
@@ -418,7 +419,7 @@ func TestTaskPool__Closing_(t *testing.T) {
 		for i := 0; i < num; i++ {
 			go func() {
 				err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-					<-time.After(10 * time.Millisecond)
+					time.Sleep(10 * time.Millisecond)
 					return nil
 				}))
 				t.Log(err)
@@ -437,7 +438,7 @@ func TestTaskPool__Closing_(t *testing.T) {
 		}
 
 		<-done
-		<-time.After(50 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 		assert.Equal(t, stateStopped, pool.internalState())
 	})
 
@@ -454,14 +455,14 @@ func TestTestPool__Stopped_(t *testing.T) {
 		go func() {
 			t.Log(pool.NumGo())
 			err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-				<-time.After(time.Second)
+				time.Sleep(time.Second)
 				return nil
 			}))
 			t.Log(err)
 		}()
 	}
 
-	<-time.After(100 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	assert.Equal(t, int32(concurrency), pool.NumGo())
 
 	tasks, err := pool.ShutdownNow()
@@ -508,7 +509,7 @@ func TestTestPool__Stopped_(t *testing.T) {
 func testSubmitBlockingAndTimeout(t *testing.T, pool *BlockQueueTaskPool) {
 
 	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-		<-time.After(2 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 		return nil
 	}))
 	assert.NoError(t, err)
@@ -520,7 +521,7 @@ func testSubmitBlockingAndTimeout(t *testing.T, pool *BlockQueueTaskPool) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 			defer cancel()
 			err := pool.Submit(ctx, TaskFunc(func(ctx context.Context) error {
-				<-time.After(2 * time.Millisecond)
+				time.Sleep(2 * time.Millisecond)
 				return nil
 			}))
 			if err != nil {

@@ -36,6 +36,7 @@ var (
 	errTaskPoolIsClosing    = errors.New("ekit：TaskPool关闭中")
 	errTaskPoolIsStopped    = errors.New("ekit: TaskPool已停止")
 	errTaskIsInvalid        = errors.New("ekit: Task非法")
+	errTaskRunningPanic     = errors.New("ekit: Task运行时异常")
 
 	errInvalidArgument = errors.New("ekit: 参数非法")
 
@@ -86,13 +87,13 @@ type taskWrapper struct {
 	t Task
 }
 
-func (tw *taskWrapper) Run(ctx context.Context) error {
+func (tw *taskWrapper) Run(ctx context.Context) (err error) {
 	defer func() {
 		// 处理 panic
 		if r := recover(); r != nil {
 			buf := make([]byte, panicBuffLen)
 			buf = buf[:runtime.Stack(buf, false)]
-			fmt.Printf("[PANIC]:\t%+v\n%s\n", r, buf)
+			err = fmt.Errorf("%w：%s", errTaskRunningPanic, fmt.Sprintf("[PANIC]:\t%+v\n%s\n", r, buf))
 		}
 	}()
 	return tw.t.Run(ctx)
