@@ -43,7 +43,7 @@ func CopyTo(src any, dst any) error {
 
 func copyStruct(srcTyp reflect.Type, srcValue reflect.Value, dstTyp reflect.Type, dstValue reflect.Value) error {
 	srcFieldNameIndex := make(map[string]int, 0)
-	for i := 0; i < srcTyp.NumField(); i += 1 {
+	for i := 0; i < srcTyp.NumField(); i++ {
 		fTyp := srcTyp.Field(i)
 		if !fTyp.IsExported() {
 			continue
@@ -51,7 +51,7 @@ func copyStruct(srcTyp reflect.Type, srcValue reflect.Value, dstTyp reflect.Type
 		srcFieldNameIndex[fTyp.Name] = i
 	}
 
-	for i := 0; i < dstTyp.NumField(); i += 1 {
+	for i := 0; i < dstTyp.NumField(); i++ {
 		fTyp := dstTyp.Field(i)
 		if !fTyp.IsExported() {
 			continue
@@ -76,7 +76,7 @@ func copyStructField(
 	srcFieldType := srcTyp.Field(srcFiledIndex)
 	dstFieldType := dstTyp.Field(dstFiledIndex)
 	if srcFieldType.Type.Kind() != dstFieldType.Type.Kind() {
-		return newErrKindNotMatchError(srcFieldType.Type.Kind(), dstFieldType.Type.Kind(), srcFieldType.Name)
+		return nil
 	}
 	srcFiledValue := srcValue.Field(srcFiledIndex)
 	dstFiledValue := dstValue.Field(dstFiledIndex)
@@ -105,10 +105,10 @@ func copyData(
 		return newErrMultiPointer(fieldName)
 	}
 	if srcTyp.Kind() != dstTyp.Kind() {
-		return newErrKindNotMatchError(srcTyp.Kind(), dstTyp.Kind(), fieldName)
+		return nil
 	}
 
-	if isShadowCopyType(srcTyp.Kind()) {
+	if isShadowCopyType(srcTyp, dstTyp) {
 		if dstValue.CanSet() {
 			dstValue.Set(srcValue)
 		}

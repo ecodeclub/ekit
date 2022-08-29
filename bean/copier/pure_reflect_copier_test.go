@@ -218,7 +218,7 @@ func TestReflectCopier_CopyTo(t *testing.T) {
 			},
 		},
 		{
-			name: "复杂 Struct 不匹配",
+			name: "复杂 Struct 部分字段不匹配",
 			copyFunc: func() (any, error) {
 				dst := &NotMatchDst{}
 				err := CopyTo(&NotMatchSrc{
@@ -248,7 +248,30 @@ func TestReflectCopier_CopyTo(t *testing.T) {
 				}, dst)
 				return dst, err
 			},
-			wantErr: newErrKindNotMatchError(reflect.String, reflect.Int, "A"),
+			wantDst: &NotMatchDst{
+				Simple: SimpleDst{
+					Name:    "xiaohong",
+					Age:     ekit.ToPtr[int](18),
+					Friends: []string{"ha", "ha", "le"},
+				},
+				Embed: &EmbedDst{
+					SimpleSrc: SimpleSrc{
+						Name:    "xiaopeng",
+						Age:     ekit.ToPtr[int](88),
+						Friends: []string{"la", "ha", "le"},
+					},
+					BasicSrc: &BasicSrc{
+						Name:    "wang",
+						Age:     22,
+						CNumber: complex(2, 1),
+					},
+				},
+				BasicSrc: BasicSrc{
+					Name:    "wang11",
+					Age:     22,
+					CNumber: complex(2, 1),
+				},
+			},
 		},
 		{
 			name: "多重指针",
@@ -334,6 +357,122 @@ func TestReflectCopier_CopyTo(t *testing.T) {
 					CNumber: complex(1, 2),
 				},
 			},
+		},
+		{
+			name: "跨层级别匹配",
+			copyFunc: func() (any, error) {
+				dst := &SimpleEmbedDst{}
+				err := CopyTo(&SimpleSrc{
+					Name: "haha",
+				}, dst)
+				return dst, err
+			},
+			wantDst: &SimpleEmbedDst{},
+		},
+		{
+			name: "成员为结构体数组",
+			copyFunc: func() (any, error) {
+				dst := &ArrayDst{}
+				return dst, CopyTo(&ArraySrc{
+					A: []SimpleSrc{
+						{
+							Name:    "大明",
+							Age:     ekit.ToPtr[int](18),
+							Friends: []string{"Tom", "Jerry"},
+						},
+						{
+							Name:    "小明",
+							Age:     ekit.ToPtr[int](8),
+							Friends: []string{"Tom"},
+						},
+					},
+				}, dst)
+			},
+			wantDst: &ArrayDst{
+				A: []SimpleSrc{
+					{
+						Name:    "大明",
+						Age:     ekit.ToPtr[int](18),
+						Friends: []string{"Tom", "Jerry"},
+					},
+					{
+						Name:    "小明",
+						Age:     ekit.ToPtr[int](8),
+						Friends: []string{"Tom"},
+					},
+				},
+			},
+		},
+		{
+			name: "成员为结构体数组，结构体不同",
+			copyFunc: func() (any, error) {
+				dst := &ArrayDst1{}
+				return dst, CopyTo(&ArraySrc{
+					A: []SimpleSrc{
+						{
+							Name:    "大明",
+							Age:     ekit.ToPtr[int](18),
+							Friends: []string{"Tom", "Jerry"},
+						},
+						{
+							Name:    "小明",
+							Age:     ekit.ToPtr[int](8),
+							Friends: []string{"Tom"},
+						},
+					},
+				}, dst)
+			},
+			wantDst: &ArrayDst1{},
+		},
+		{
+			name: "成员为map结构体",
+			copyFunc: func() (any, error) {
+				dst := &MapDst{}
+				return dst, CopyTo(&MapSrc{
+					A: map[string]SimpleSrc{
+						"a": {
+							Name:    "大明",
+							Age:     ekit.ToPtr[int](18),
+							Friends: []string{"Tom", "Jerry"},
+						},
+					},
+				}, dst)
+			},
+			wantDst: &MapDst{
+				A: map[string]SimpleSrc{
+					"a": {
+						Name:    "大明",
+						Age:     ekit.ToPtr[int](18),
+						Friends: []string{"Tom", "Jerry"},
+					},
+				},
+			},
+		},
+		{
+			name: "成员为不同的map结构体",
+			copyFunc: func() (any, error) {
+				dst := &MapDst1{}
+				return dst, CopyTo(&MapSrc{
+					A: map[string]SimpleSrc{
+						"a": {
+							Name:    "大明",
+							Age:     ekit.ToPtr[int](18),
+							Friends: []string{"Tom", "Jerry"},
+						},
+					},
+				}, dst)
+			},
+			wantDst: &MapDst1{},
+		},
+		{
+			name: "成员有别名类型",
+			copyFunc: func() (any, error) {
+				dst := &SpecialDst1{}
+				return dst, CopyTo(&SpecialSrc1{
+					A: 1,
+				}, dst)
+			},
+			wantDst: &SpecialDst1{},
 		},
 	}
 

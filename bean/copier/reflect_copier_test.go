@@ -235,7 +235,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 			},
 		},
 		{
-			name: "复杂 Struct 不匹配",
+			name: "复杂 Struct 部分字段不匹配",
 			copyFunc: func() (any, error) {
 				copier, err := NewReflectCopier[NotMatchSrc, NotMatchDst]()
 				if err != nil {
@@ -267,7 +267,30 @@ func TestReflectCopier_Copy(t *testing.T) {
 					S: struct{ A string }{A: "a"},
 				})
 			},
-			wantErr: newErrKindNotMatchError(reflect.String, reflect.Int, "A"),
+			wantDst: &NotMatchDst{
+				Simple: SimpleDst{
+					Name:    "xiaohong",
+					Age:     ekit.ToPtr[int](18),
+					Friends: []string{"ha", "ha", "le"},
+				},
+				Embed: &EmbedDst{
+					SimpleSrc: SimpleSrc{
+						Name:    "xiaopeng",
+						Age:     ekit.ToPtr[int](88),
+						Friends: []string{"la", "ha", "le"},
+					},
+					BasicSrc: &BasicSrc{
+						Name:    "wang",
+						Age:     22,
+						CNumber: complex(2, 1),
+					},
+				},
+				BasicSrc: BasicSrc{
+					Name:    "wang11",
+					Age:     22,
+					CNumber: complex(2, 1),
+				},
+			},
 		},
 		{
 			name: "多重指针",
@@ -371,6 +394,139 @@ func TestReflectCopier_Copy(t *testing.T) {
 				return copier.Copy(&SimpleSrc{})
 			},
 			wantDst: &SimpleEmbedDst{},
+		},
+		{
+			name: "成员为结构体数组",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ArraySrc, ArrayDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&ArraySrc{
+					A: []SimpleSrc{
+						{
+							Name:    "大明",
+							Age:     ekit.ToPtr[int](18),
+							Friends: []string{"Tom", "Jerry"},
+						},
+						{
+							Name:    "小明",
+							Age:     ekit.ToPtr[int](8),
+							Friends: []string{"Tom"},
+						},
+					},
+				})
+			},
+			wantDst: &ArrayDst{
+				A: []SimpleSrc{
+					{
+						Name:    "大明",
+						Age:     ekit.ToPtr[int](18),
+						Friends: []string{"Tom", "Jerry"},
+					},
+					{
+						Name:    "小明",
+						Age:     ekit.ToPtr[int](8),
+						Friends: []string{"Tom"},
+					},
+				},
+			},
+		},
+		{
+			name: "成员为结构体数组，结构体不同",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ArraySrc, ArrayDst1]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&ArraySrc{
+					A: []SimpleSrc{
+						{
+							Name:    "大明",
+							Age:     ekit.ToPtr[int](18),
+							Friends: []string{"Tom", "Jerry"},
+						},
+						{
+							Name:    "小明",
+							Age:     ekit.ToPtr[int](8),
+							Friends: []string{"Tom"},
+						},
+					},
+				})
+			},
+			wantDst: &ArrayDst1{},
+		},
+		{
+			name: "成员为map结构体",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[MapSrc, MapDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&MapSrc{
+					A: map[string]SimpleSrc{
+						"a": {
+							Name:    "大明",
+							Age:     ekit.ToPtr[int](18),
+							Friends: []string{"Tom", "Jerry"},
+						},
+					},
+				})
+			},
+			wantDst: &MapDst{
+				A: map[string]SimpleSrc{
+					"a": {
+						Name:    "大明",
+						Age:     ekit.ToPtr[int](18),
+						Friends: []string{"Tom", "Jerry"},
+					},
+				},
+			},
+		},
+		{
+			name: "成员为不同的map结构体",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[MapSrc, MapDst1]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&MapSrc{
+					A: map[string]SimpleSrc{
+						"a": {
+							Name:    "大明",
+							Age:     ekit.ToPtr[int](18),
+							Friends: []string{"Tom", "Jerry"},
+						},
+					},
+				})
+			},
+			wantDst: &MapDst1{},
+		},
+		{
+			name: "成员有别名类型",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[SpecialSrc1, SpecialDst1]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&SpecialSrc1{
+					A: 1,
+				})
+			},
+			wantDst: &SpecialDst1{},
+		},
+		{
+			name: "成员有别名类型1",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[SpecialSrc1, SpecialDst2]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&SpecialSrc1{
+					A: 1,
+				})
+			},
+			wantDst: &SpecialDst2{A: 1},
 		},
 	}
 
@@ -493,6 +649,44 @@ type DiffDst struct {
 
 type SimpleEmbedDst struct {
 	SimpleSrc
+}
+
+type ArraySrc struct {
+	A []SimpleSrc
+}
+
+type ArrayDst struct {
+	A []SimpleSrc
+}
+
+type ArrayDst1 struct {
+	A []SimpleDst
+}
+
+type MapSrc struct {
+	A map[string]SimpleSrc
+}
+
+type MapDst struct {
+	A map[string]SimpleSrc
+}
+
+type MapDst1 struct {
+	A map[string]SimpleDst
+}
+
+type SpecialSrc1 struct {
+	A int
+}
+
+type aliasInt int
+type SpecialDst1 struct {
+	A aliasInt
+}
+
+type aliasInt1 = int
+type SpecialDst2 struct {
+	A aliasInt1
 }
 
 func BenchmarkReflectCopier_Copy(b *testing.B) {
