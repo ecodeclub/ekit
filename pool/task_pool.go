@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -35,6 +34,7 @@ var (
 	errTaskPoolIsNotRunning = errors.New("ekit: TaskPool未运行")
 	errTaskPoolIsClosing    = errors.New("ekit：TaskPool关闭中")
 	errTaskPoolIsStopped    = errors.New("ekit: TaskPool已停止")
+	errTaskPoolIsStarted    = errors.New("ekit：TaskPool已运行")
 	errTaskIsInvalid        = errors.New("ekit: Task非法")
 	errTaskRunningPanic     = errors.New("ekit: Task运行时异常")
 
@@ -143,7 +143,7 @@ func NewBlockQueueTaskPool(concurrency int, queueSize int) (*BlockQueueTaskPool,
 // 如果因为 ctx 的原因返回，那么将会返回 ctx.Err()
 // 在调用 Start 前后都可以调用 Submit
 func (b *BlockQueueTaskPool) Submit(ctx context.Context, task Task) error {
-	if task == nil || reflect.ValueOf(task).IsNil() {
+	if task == nil {
 		return fmt.Errorf("%w", errTaskIsInvalid)
 	}
 	// todo: 用户未设置超时，可以考虑内部给个超时提交
@@ -207,8 +207,7 @@ func (b *BlockQueueTaskPool) Start() error {
 		}
 
 		if atomic.LoadInt32(&b.state) == stateRunning {
-			// 重复调用，不予处理
-			return nil
+			return fmt.Errorf("%w", errTaskPoolIsStarted)
 		}
 
 		if atomic.CompareAndSwapInt32(&b.state, stateCreated, stateRunning) {
@@ -227,9 +226,8 @@ func (b *BlockQueueTaskPool) startTasks() {
 			return
 		case b.token <- struct{}{}:
 
-			task := <-b.queue
-			// handle close(b.queue)
-			if task == nil {
+			task, ok := <-b.queue
+			if !ok {
 				return
 			}
 
@@ -270,8 +268,7 @@ func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
 		}
 
 		if atomic.LoadInt32(&b.state) == stateClosing {
-			// 重复调用
-			return b.done, nil
+			return nil, fmt.Errorf("%w", errTaskPoolIsClosing)
 		}
 
 		if atomic.CompareAndSwapInt32(&b.state, stateRunning, stateClosing) {
@@ -312,12 +309,9 @@ func (b *BlockQueueTaskPool) ShutdownNow() ([]Task, error) {
 		}
 
 		if atomic.LoadInt32(&b.state) == stateStopped {
-			// 重复调用，返回缓存结果
-			b.mux.RLock()
-			tasks := append([]Task(nil), b.submittedTasks...)
-			b.mux.RUnlock()
-			return tasks, nil
+			return nil, fmt.Errorf("%w", errTaskPoolIsStopped)
 		}
+
 		if atomic.CompareAndSwapInt32(&b.state, stateRunning, stateStopped) {
 			// 目标：立刻关闭并且返回所有剩下未执行的任务
 			// 策略：关闭等待队列不再接受新任务，中断任务启动循环，清空等待队列并保存返回
