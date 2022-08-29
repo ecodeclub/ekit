@@ -21,7 +21,6 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 var (
@@ -107,15 +106,13 @@ type BlockQueueTaskPool struct {
 	queue chan Task
 	token chan struct{}
 	num   int32
+	wg    sync.WaitGroup
 
 	// 外部信号
 	done chan struct{}
 	// 内部中断信号
 	ctx        context.Context
 	cancelFunc context.CancelFunc
-	// 缓存
-	mux            sync.RWMutex
-	submittedTasks []Task
 }
 
 // NewBlockQueueTaskPool 创建一个新的 BlockQueueTaskPool
@@ -211,13 +208,14 @@ func (b *BlockQueueTaskPool) Start() error {
 		}
 
 		if atomic.CompareAndSwapInt32(&b.state, stateCreated, stateRunning) {
-			go b.startTasks()
+			go b.schedulingTasks()
 			return nil
 		}
 	}
 }
 
-func (b *BlockQueueTaskPool) startTasks() {
+// Schedule tasks
+func (b *BlockQueueTaskPool) schedulingTasks() {
 	defer close(b.token)
 
 	for {
@@ -228,14 +226,23 @@ func (b *BlockQueueTaskPool) startTasks() {
 
 			task, ok := <-b.queue
 			if !ok {
+				// 调用Shutdown后，TaskPool处于Closing状态
+				if atomic.CompareAndSwapInt32(&b.state, stateClosing, stateStopped) {
+					// 等待运行中的Task自然结束
+					b.wg.Wait()
+					// 通知外部调用者
+					close(b.done)
+				}
 				return
 			}
 
-			go func() {
+			b.wg.Add(1)
+			atomic.AddInt32(&b.num, 1)
 
-				atomic.AddInt32(&b.num, 1)
+			go func() {
 				defer func() {
 					atomic.AddInt32(&b.num, -1)
+					b.wg.Done()
 					<-b.token
 				}()
 
@@ -262,8 +269,6 @@ func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
 		}
 
 		if atomic.LoadInt32(&b.state) == stateStopped {
-			// 重复调用时，恰好前一个Shutdown调用将状态迁移为StateStopped
-			// 这种情况与先调用ShutdownNow状态迁移为StateStopped再调用Shutdown效果一样
 			return nil, fmt.Errorf("%w", errTaskPoolIsStopped)
 		}
 
@@ -276,19 +281,8 @@ func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
 			// 策略：先将队列中的任务启动并执行（清空队列），再等待全部运行中的任务自然退出
 
 			// 先关闭等待队列不再允许提交
-			// 同时任务启动循环能够通过Task==nil来终止循环
+			// 同时任务调度循环能够通过b.queue是否被关闭来终止循环
 			close(b.queue)
-
-			go func() {
-				// 等待运行中的Task自然结束
-				for atomic.LoadInt32(&b.num) != 0 {
-					time.Sleep(time.Second)
-				}
-				// 通知外部调用者
-				close(b.done)
-				// 完成最终的状态迁移
-				atomic.CompareAndSwapInt32(&b.state, stateClosing, stateStopped)
-			}()
 			return b.done, nil
 		}
 
@@ -321,15 +315,11 @@ func (b *BlockQueueTaskPool) ShutdownNow() ([]Task, error) {
 			// 发送中断信号，中断任务启动循环
 			b.cancelFunc()
 
-			b.mux.Lock()
 			// 清空队列并保存
 			var tasks []Task
 			for task := range b.queue {
-				b.submittedTasks = append(b.submittedTasks, task)
 				tasks = append(tasks, task)
 			}
-			b.mux.Unlock()
-
 			return tasks, nil
 		}
 	}

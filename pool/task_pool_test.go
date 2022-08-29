@@ -124,6 +124,7 @@ func TestTaskPool_Submit(t *testing.T) {
 		})
 
 		t.Run("TaskPool状态由Running变为Closing", func(t *testing.T) {
+			// t.Skip()
 			t.Parallel()
 
 			pool := testNewRunningStateTaskPool(t, 1, 2)
@@ -154,7 +155,6 @@ func TestTaskPool_Submit(t *testing.T) {
 				done, err := pool.Shutdown()
 				resultChan <- ShutdownResult{done: done, err: err}
 			}()
-
 			r := <-resultChan
 
 			// 阻塞中的任务报错，证明处于TaskPool处于StateClosing状态
@@ -323,6 +323,7 @@ func TestTaskPool__Running_(t *testing.T) {
 
 		t.Run("提交非法Task", func(t *testing.T) {
 			t.Parallel()
+
 			pool := testNewRunningStateTaskPool(t, 1, 1)
 			assert.ErrorIs(t, pool.Submit(context.Background(), nil), errTaskIsInvalid)
 			assert.Equal(t, stateRunning, pool.internalState())
@@ -330,6 +331,7 @@ func TestTaskPool__Running_(t *testing.T) {
 
 		t.Run("正常提交Task", func(t *testing.T) {
 			t.Parallel()
+
 			pool := testNewRunningStateTaskPool(t, 1, 3)
 			testSubmitValidTask(t, pool)
 			assert.Equal(t, stateRunning, pool.internalState())
@@ -337,6 +339,7 @@ func TestTaskPool__Running_(t *testing.T) {
 
 		t.Run("阻塞提交并导致超时", func(t *testing.T) {
 			t.Parallel()
+
 			pool := testNewRunningStateTaskPool(t, 1, 1)
 			testSubmitBlockingAndTimeout(t, pool)
 			assert.Equal(t, stateRunning, pool.internalState())
