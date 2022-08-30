@@ -45,7 +45,7 @@ type fieldNode struct {
 }
 
 // NewReflectCopier 如果类型不匹配, 创建时直接检查报错.
-func NewReflectCopier[Src any, Dst any]() (Copier[Src, Dst], error) {
+func NewReflectCopier[Src any, Dst any]() (*ReflectCopier[Src, Dst], error) {
 	src := new(Src)
 	srcTyp := reflect.TypeOf(src).Elem()
 	dst := new(Dst)
@@ -148,7 +148,7 @@ func (r *ReflectCopier[Src, Dst]) Copy(src *Src) (*Dst, error) {
 // 执行复制的逻辑是：
 // 1. 按照字段的映射关系进行匹配
 // 2. 如果 Src 和 Dst 中匹配的字段，其类型是基本类型（及其指针）或者内置类型（及其指针），并且类型一样，则直接用 Src 的值
-// 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，如果结构体类型相同，则直接用 Src 的值，否则会深入复制
+// 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，则会深入复制
 // 4. 否则，忽略字段
 func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst) error {
 	return r.copyToWithTree(src, dst)
