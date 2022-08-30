@@ -330,8 +330,8 @@ func TestTestPool_In_Stopped_State(t *testing.T) {
 		pool := testNewRunningStateTaskPool(t, concurrency, queueSize)
 
 		// 模拟阻塞提交
-		n := queueSize + 3
-		firstSubmitErrChan := make(chan error, 1)
+		n := queueSize + 6
+		firstSubmitErrChan := make(chan error, concurrency)
 		for i := 0; i < n; i++ {
 			go func() {
 				err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
@@ -350,7 +350,6 @@ func TestTestPool_In_Stopped_State(t *testing.T) {
 		// 并发调用ShutdownNow
 		result := make(chan ShutdownNowResult, 1)
 		go func() {
-			time.Sleep(time.Millisecond)
 			tasks, err := pool.ShutdownNow()
 			result <- ShutdownNowResult{tasks: tasks, err: err}
 		}()
