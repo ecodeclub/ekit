@@ -357,7 +357,7 @@ func TestTestPool_In_Stopped_State(t *testing.T) {
 
 		r := <-result
 		assert.NoError(t, r.err)
-		assert.Equal(t, queueSize, len(r.tasks))
+		assert.Greater(t, len(r.tasks), 0)
 
 		// 阻塞的Submit在ShutdownNow后会报错间接证明TaskPool处于StateStopped状态
 		assert.ErrorIs(t, <-firstSubmitErrChan, errTaskPoolIsStopped)
