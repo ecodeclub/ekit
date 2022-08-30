@@ -22,7 +22,7 @@ import (
 // ReflectCopier 是浅拷贝
 type ReflectCopier[Src any, Dst any] struct {
 
-	// rootFiled 字典树的根节点
+	// rootField 字典树的根节点
 	rootField fieldNode
 }
 
@@ -73,33 +73,33 @@ func NewReflectCopier[Src any, Dst any]() (*ReflectCopier[Src, Dst], error) {
 // createFieldNodes 递归创建 field 的前缀树, srcTyp 和 dstTyp 只能是结构体
 func createFieldNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 
-	filedMap := map[string]int{}
+	fieldMap := map[string]int{}
 	for i := 0; i < srcTyp.NumField(); i++ {
 		srcFieldTypStruct := srcTyp.Field(i)
 		if !srcFieldTypStruct.IsExported() {
 			continue
 		}
-		filedMap[srcFieldTypStruct.Name] = i
+		fieldMap[srcFieldTypStruct.Name] = i
 	}
 
-	for dstIndex := 0; dstIndex < dstTyp.NumField(); dstIndex += 1 {
+	for dstIndex := 0; dstIndex < dstTyp.NumField(); dstIndex++ {
 
 		dstFieldTypStruct := dstTyp.Field(dstIndex)
 		if !dstFieldTypStruct.IsExported() {
 			continue
 		}
-		srcIndex, ok := filedMap[dstFieldTypStruct.Name]
+		srcIndex, ok := fieldMap[dstFieldTypStruct.Name]
 		if !ok {
 			continue
 		}
 		srcFieldTypStruct := srcTyp.Field(srcIndex)
 		if srcFieldTypStruct.Type.Kind() != dstFieldTypStruct.Type.Kind() {
-			continue
+			return newErrKindNotMatchError(srcFieldTypStruct.Type.Kind(), dstFieldTypStruct.Type.Kind(), dstFieldTypStruct.Name)
 		}
 
 		if srcFieldTypStruct.Type.Kind() == reflect.Pointer {
 			if srcFieldTypStruct.Type.Elem().Kind() != dstFieldTypStruct.Type.Elem().Kind() {
-				continue
+				return newErrKindNotMatchError(srcFieldTypStruct.Type.Kind(), dstFieldTypStruct.Type.Kind(), dstFieldTypStruct.Name)
 			}
 			if srcFieldTypStruct.Type.Elem().Kind() == reflect.Pointer {
 				return newErrMultiPointer(dstFieldTypStruct.Name)

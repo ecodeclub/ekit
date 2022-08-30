@@ -218,7 +218,7 @@ func TestReflectCopier_CopyTo(t *testing.T) {
 			},
 		},
 		{
-			name: "复杂 Struct 部分字段不匹配",
+			name: "复杂 Struct 不匹配",
 			copyFunc: func() (any, error) {
 				dst := &NotMatchDst{}
 				err := CopyTo(&NotMatchSrc{
@@ -248,30 +248,7 @@ func TestReflectCopier_CopyTo(t *testing.T) {
 				}, dst)
 				return dst, err
 			},
-			wantDst: &NotMatchDst{
-				Simple: SimpleDst{
-					Name:    "xiaohong",
-					Age:     ekit.ToPtr[int](18),
-					Friends: []string{"ha", "ha", "le"},
-				},
-				Embed: &EmbedDst{
-					SimpleSrc: SimpleSrc{
-						Name:    "xiaopeng",
-						Age:     ekit.ToPtr[int](88),
-						Friends: []string{"la", "ha", "le"},
-					},
-					BasicSrc: &BasicSrc{
-						Name:    "wang",
-						Age:     22,
-						CNumber: complex(2, 1),
-					},
-				},
-				BasicSrc: BasicSrc{
-					Name:    "wang11",
-					Age:     22,
-					CNumber: complex(2, 1),
-				},
-			},
+			wantErr: newErrKindNotMatchError(reflect.String, reflect.Int, "A"),
 		},
 		{
 			name: "多重指针",

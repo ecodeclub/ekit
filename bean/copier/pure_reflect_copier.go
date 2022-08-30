@@ -70,28 +70,28 @@ func copyStructField(
 	srcValue reflect.Value,
 	dstTyp reflect.Type,
 	dstValue reflect.Value,
-	srcFiledIndex int,
-	dstFiledIndex int) error {
+	srcFieldIndex int,
+	dstFieldIndex int) error {
 
-	srcFieldType := srcTyp.Field(srcFiledIndex)
-	dstFieldType := dstTyp.Field(dstFiledIndex)
+	srcFieldType := srcTyp.Field(srcFieldIndex)
+	dstFieldType := dstTyp.Field(dstFieldIndex)
 	if srcFieldType.Type.Kind() != dstFieldType.Type.Kind() {
-		return nil
+		return newErrKindNotMatchError(srcFieldType.Type.Kind(), dstFieldType.Type.Kind(), srcFieldType.Name)
 	}
-	srcFiledValue := srcValue.Field(srcFiledIndex)
-	dstFiledValue := dstValue.Field(dstFiledIndex)
+	srcFieldValue := srcValue.Field(srcFieldIndex)
+	dstFieldValue := dstValue.Field(dstFieldIndex)
 
 	if srcFieldType.Type.Kind() == reflect.Pointer {
-		if srcFiledValue.IsNil() {
+		if srcFieldValue.IsNil() {
 			return nil
 		}
-		if dstFiledValue.IsNil() {
-			dstFiledValue.Set(reflect.New(dstFieldType.Type.Elem()))
+		if dstFieldValue.IsNil() {
+			dstFieldValue.Set(reflect.New(dstFieldType.Type.Elem()))
 		}
-		return copyData(srcFieldType.Type.Elem(), srcFiledValue.Elem(), dstFieldType.Type.Elem(), dstFiledValue.Elem(), srcFieldType.Name)
+		return copyData(srcFieldType.Type.Elem(), srcFieldValue.Elem(), dstFieldType.Type.Elem(), dstFieldValue.Elem(), srcFieldType.Name)
 	}
 
-	return copyData(srcFieldType.Type, srcFiledValue, dstFieldType.Type, dstFiledValue, srcFieldType.Name)
+	return copyData(srcFieldType.Type, srcFieldValue, dstFieldType.Type, dstFieldValue, srcFieldType.Name)
 }
 
 func copyData(
@@ -105,7 +105,7 @@ func copyData(
 		return newErrMultiPointer(fieldName)
 	}
 	if srcTyp.Kind() != dstTyp.Kind() {
-		return nil
+		return newErrKindNotMatchError(srcTyp.Kind(), dstTyp.Kind(), fieldName)
 	}
 
 	if isShadowCopyType(srcTyp, dstTyp) {
