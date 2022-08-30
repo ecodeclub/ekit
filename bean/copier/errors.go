@@ -29,6 +29,11 @@ func newErrKindNotMatchError(src, dst reflect.Kind, field string) error {
 	return fmt.Errorf("ekit: 字段 %s 的 Kind 不匹配, src: %v, dst: %v", field, src, dst)
 }
 
+// newErrTypeNotMatchError 字段不匹配
+func newErrTypeNotMatchError(src, dst reflect.Type, field string) error {
+	return fmt.Errorf("ekit: 字段 %s 的 Type 不匹配, src: %v, dst: %v", field, src, dst)
+}
+
 // newErrMultiPointer
 func newErrMultiPointer(field string) error {
 	return fmt.Errorf("ekit: 字段 %s 是多级指针", field)

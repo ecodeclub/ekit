@@ -121,8 +121,12 @@ func createFieldNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 			fieldDstTyp = fieldDstTyp.Elem()
 		}
 
-		// 说明当前节点是叶子节点, 直接拷贝
-		if isShadowCopyType(fieldSrcTyp, fieldDstTyp) {
+		if isShadowCopyType(fieldSrcTyp.Kind()) {
+			// 内置类型，但不匹配，如别名、map和slice
+			if fieldSrcTyp != fieldDstTyp {
+				return newErrTypeNotMatchError(srcFieldTypStruct.Type, dstFieldTypStruct.Type, dstFieldTypStruct.Name)
+			}
+			// 说明当前节点是叶子节点, 直接拷贝
 			child.isLeaf = true
 		} else if fieldSrcTyp.Kind() == reflect.Struct {
 			if err := createFieldNodes(&child, fieldSrcTyp, fieldDstTyp); err != nil {
@@ -199,8 +203,7 @@ func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue ref
 	return nil
 }
 
-func isShadowCopyType(srcType reflect.Type, dstType reflect.Type) bool {
-	kind := srcType.Kind()
+func isShadowCopyType(kind reflect.Kind) bool {
 	switch kind {
 	case reflect.Bool,
 		reflect.Int,
@@ -223,7 +226,7 @@ func isShadowCopyType(srcType reflect.Type, dstType reflect.Type) bool {
 		reflect.Map,
 		reflect.Chan,
 		reflect.Array:
-		return srcType == dstType
+		return true
 	}
 	return false
 }

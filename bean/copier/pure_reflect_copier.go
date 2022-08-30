@@ -108,7 +108,11 @@ func copyData(
 		return newErrKindNotMatchError(srcTyp.Kind(), dstTyp.Kind(), fieldName)
 	}
 
-	if isShadowCopyType(srcTyp, dstTyp) {
+	if isShadowCopyType(srcTyp.Kind()) {
+		// 内置类型，但不匹配，如别名、map和slice
+		if srcTyp != dstTyp {
+			return newErrTypeNotMatchError(srcTyp, dstTyp, fieldName)
+		}
 		if dstValue.CanSet() {
 			dstValue.Set(srcValue)
 		}

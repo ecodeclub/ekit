@@ -431,7 +431,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 					},
 				})
 			},
-			wantDst: &ArrayDst1{},
+			wantErr: newErrTypeNotMatchError(reflect.TypeOf(new([]SimpleSrc)).Elem(), reflect.TypeOf(new([]SimpleDst)).Elem(), "A"),
 		},
 		{
 			name: "成员为map结构体",
@@ -477,7 +477,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 					},
 				})
 			},
-			wantDst: &MapDst1{},
+			wantErr: newErrTypeNotMatchError(reflect.TypeOf(new(map[string]SimpleSrc)).Elem(), reflect.TypeOf(new(map[string]SimpleDst)).Elem(), "A"),
 		},
 		{
 			name: "成员有别名类型",
@@ -490,7 +490,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 					A: 1,
 				})
 			},
-			wantDst: &SpecialDst1{},
+			wantErr: newErrTypeNotMatchError(reflect.TypeOf(new(int)).Elem(), reflect.TypeOf(new(aliasInt)).Elem(), "A"),
 		},
 		{
 			name: "成员有别名类型1",
