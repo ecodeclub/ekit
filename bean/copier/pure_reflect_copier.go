@@ -43,7 +43,7 @@ func CopyTo(src any, dst any) error {
 
 func copyStruct(srcTyp reflect.Type, srcValue reflect.Value, dstTyp reflect.Type, dstValue reflect.Value) error {
 	srcFieldNameIndex := make(map[string]int, 0)
-	for i := 0; i < srcTyp.NumField(); i += 1 {
+	for i := 0; i < srcTyp.NumField(); i++ {
 		fTyp := srcTyp.Field(i)
 		if !fTyp.IsExported() {
 			continue
@@ -51,7 +51,7 @@ func copyStruct(srcTyp reflect.Type, srcValue reflect.Value, dstTyp reflect.Type
 		srcFieldNameIndex[fTyp.Name] = i
 	}
 
-	for i := 0; i < dstTyp.NumField(); i += 1 {
+	for i := 0; i < dstTyp.NumField(); i++ {
 		fTyp := dstTyp.Field(i)
 		if !fTyp.IsExported() {
 			continue
@@ -70,28 +70,28 @@ func copyStructField(
 	srcValue reflect.Value,
 	dstTyp reflect.Type,
 	dstValue reflect.Value,
-	srcFiledIndex int,
-	dstFiledIndex int) error {
+	srcFieldIndex int,
+	dstFieldIndex int) error {
 
-	srcFieldType := srcTyp.Field(srcFiledIndex)
-	dstFieldType := dstTyp.Field(dstFiledIndex)
+	srcFieldType := srcTyp.Field(srcFieldIndex)
+	dstFieldType := dstTyp.Field(dstFieldIndex)
 	if srcFieldType.Type.Kind() != dstFieldType.Type.Kind() {
 		return newErrKindNotMatchError(srcFieldType.Type.Kind(), dstFieldType.Type.Kind(), srcFieldType.Name)
 	}
-	srcFiledValue := srcValue.Field(srcFiledIndex)
-	dstFiledValue := dstValue.Field(dstFiledIndex)
+	srcFieldValue := srcValue.Field(srcFieldIndex)
+	dstFieldValue := dstValue.Field(dstFieldIndex)
 
 	if srcFieldType.Type.Kind() == reflect.Pointer {
-		if srcFiledValue.IsNil() {
+		if srcFieldValue.IsNil() {
 			return nil
 		}
-		if dstFiledValue.IsNil() {
-			dstFiledValue.Set(reflect.New(dstFieldType.Type.Elem()))
+		if dstFieldValue.IsNil() {
+			dstFieldValue.Set(reflect.New(dstFieldType.Type.Elem()))
 		}
-		return copyData(srcFieldType.Type.Elem(), srcFiledValue.Elem(), dstFieldType.Type.Elem(), dstFiledValue.Elem(), srcFieldType.Name)
+		return copyData(srcFieldType.Type.Elem(), srcFieldValue.Elem(), dstFieldType.Type.Elem(), dstFieldValue.Elem(), srcFieldType.Name)
 	}
 
-	return copyData(srcFieldType.Type, srcFiledValue, dstFieldType.Type, dstFiledValue, srcFieldType.Name)
+	return copyData(srcFieldType.Type, srcFieldValue, dstFieldType.Type, dstFieldValue, srcFieldType.Name)
 }
 
 func copyData(
@@ -109,6 +109,10 @@ func copyData(
 	}
 
 	if isShadowCopyType(srcTyp.Kind()) {
+		// 内置类型，但不匹配，如别名、map和slice
+		if srcTyp != dstTyp {
+			return newErrTypeNotMatchError(srcTyp, dstTyp, fieldName)
+		}
 		if dstValue.CanSet() {
 			dstValue.Set(srcValue)
 		}

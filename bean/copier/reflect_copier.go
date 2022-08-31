@@ -22,8 +22,8 @@ import (
 // ReflectCopier 是浅拷贝
 type ReflectCopier[Src any, Dst any] struct {
 
-	// rootFiled 字典树的根节点
-	rootFiled fieldNode
+	// rootField 字典树的根节点
+	rootField fieldNode
 }
 
 // fieldNode 字段的前缀树
@@ -60,35 +60,35 @@ func NewReflectCopier[Src any, Dst any]() (*ReflectCopier[Src, Dst], error) {
 	if dstTyp.Kind() != reflect.Struct {
 		return nil, newErrTypeError(dstTyp)
 	}
-	if err := createFiledNodes(&root, srcTyp, dstTyp); err != nil {
+	if err := createFieldNodes(&root, srcTyp, dstTyp); err != nil {
 		return nil, err
 	}
 
 	copier := &ReflectCopier[Src, Dst]{
-		rootFiled: root,
+		rootField: root,
 	}
 	return copier, nil
 }
 
-// createFiledNodes 递归创建 field 的前缀树, srcTyp 和 dstTyp 只能是结构体
-func createFiledNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
+// createFieldNodes 递归创建 field 的前缀树, srcTyp 和 dstTyp 只能是结构体
+func createFieldNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 
-	filedMap := map[string]int{}
-	for i := 0; i < srcTyp.NumField(); i += 1 {
+	fieldMap := map[string]int{}
+	for i := 0; i < srcTyp.NumField(); i++ {
 		srcFieldTypStruct := srcTyp.Field(i)
 		if !srcFieldTypStruct.IsExported() {
 			continue
 		}
-		filedMap[srcFieldTypStruct.Name] = i
+		fieldMap[srcFieldTypStruct.Name] = i
 	}
 
-	for dstIndex := 0; dstIndex < dstTyp.NumField(); dstIndex += 1 {
+	for dstIndex := 0; dstIndex < dstTyp.NumField(); dstIndex++ {
 
 		dstFieldTypStruct := dstTyp.Field(dstIndex)
 		if !dstFieldTypStruct.IsExported() {
 			continue
 		}
-		srcIndex, ok := filedMap[dstFieldTypStruct.Name]
+		srcIndex, ok := fieldMap[dstFieldTypStruct.Name]
 		if !ok {
 			continue
 		}
@@ -99,7 +99,7 @@ func createFiledNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 
 		if srcFieldTypStruct.Type.Kind() == reflect.Pointer {
 			if srcFieldTypStruct.Type.Elem().Kind() != dstFieldTypStruct.Type.Elem().Kind() {
-				return newErrKindNotMatchError(srcFieldTypStruct.Type.Elem().Kind(), dstFieldTypStruct.Type.Elem().Kind(), dstFieldTypStruct.Name)
+				return newErrKindNotMatchError(srcFieldTypStruct.Type.Kind(), dstFieldTypStruct.Type.Kind(), dstFieldTypStruct.Name)
 			}
 			if srcFieldTypStruct.Type.Elem().Kind() == reflect.Pointer {
 				return newErrMultiPointer(dstFieldTypStruct.Name)
@@ -121,11 +121,15 @@ func createFiledNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 			fieldDstTyp = fieldDstTyp.Elem()
 		}
 
-		// 说明当前节点是叶子节点, 直接拷贝
 		if isShadowCopyType(fieldSrcTyp.Kind()) {
+			// 内置类型，但不匹配，如别名、map和slice
+			if fieldSrcTyp != fieldDstTyp {
+				return newErrTypeNotMatchError(srcFieldTypStruct.Type, dstFieldTypStruct.Type, dstFieldTypStruct.Name)
+			}
+			// 说明当前节点是叶子节点, 直接拷贝
 			child.isLeaf = true
 		} else if fieldSrcTyp.Kind() == reflect.Struct {
-			if err := createFiledNodes(&child, fieldSrcTyp, fieldDstTyp); err != nil {
+			if err := createFieldNodes(&child, fieldSrcTyp, fieldDstTyp); err != nil {
 				return err
 			}
 		} else {
@@ -148,8 +152,8 @@ func (r *ReflectCopier[Src, Dst]) Copy(src *Src) (*Dst, error) {
 // 执行复制的逻辑是：
 // 1. 按照字段的映射关系进行匹配
 // 2. 如果 Src 和 Dst 中匹配的字段，其类型是基本类型（及其指针）或者内置类型（及其指针），并且类型一样，则直接用 Src 的值
-// 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，那么会深入复制
-// 4. 否则，返回类型不匹配的错误
+// 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，则会深入复制
+// 4. 否则，忽略字段
 func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst) error {
 	return r.copyToWithTree(src, dst)
 }
@@ -160,7 +164,7 @@ func (r *ReflectCopier[Src, Dst]) copyToWithTree(src *Src, dst *Dst) error {
 	srcValue := reflect.ValueOf(src)
 	dstValue := reflect.ValueOf(dst)
 
-	return r.copyTreeNode(srcTyp, srcValue, dstTyp, dstValue, &r.rootFiled)
+	return r.copyTreeNode(srcTyp, srcValue, dstTyp, dstValue, &r.rootField)
 }
 
 func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue reflect.Value, dstType reflect.Type, dstValue reflect.Value, root *fieldNode) error {
