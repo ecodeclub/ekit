@@ -17,6 +17,7 @@ package pool
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -42,27 +43,27 @@ func TestTaskPool_In_Created_State(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
 		t.Parallel()
 
-		pool, err := NewBlockQueueTaskPool(1, -1)
+		pool, err := NewOnDemandBlockTaskPool(1, -1)
 		assert.ErrorIs(t, err, errInvalidArgument)
 		assert.Nil(t, pool)
 
-		pool, err = NewBlockQueueTaskPool(1, 0)
+		pool, err = NewOnDemandBlockTaskPool(1, 0)
 		assert.NoError(t, err)
 		assert.NotNil(t, pool)
 
-		pool, err = NewBlockQueueTaskPool(1, 1)
+		pool, err = NewOnDemandBlockTaskPool(1, 1)
 		assert.NoError(t, err)
 		assert.NotNil(t, pool)
 
-		pool, err = NewBlockQueueTaskPool(-1, 1)
+		pool, err = NewOnDemandBlockTaskPool(-1, 1)
 		assert.ErrorIs(t, err, errInvalidArgument)
 		assert.Nil(t, pool)
 
-		pool, err = NewBlockQueueTaskPool(0, 1)
+		pool, err = NewOnDemandBlockTaskPool(0, 1)
 		assert.ErrorIs(t, err, errInvalidArgument)
 		assert.Nil(t, pool)
 
-		pool, err = NewBlockQueueTaskPool(1, 1)
+		pool, err = NewOnDemandBlockTaskPool(1, 1)
 		assert.NoError(t, err)
 		assert.NotNil(t, pool)
 	})
@@ -75,7 +76,7 @@ func TestTaskPool_In_Created_State(t *testing.T) {
 		t.Run("提交非法Task", func(t *testing.T) {
 			t.Parallel()
 
-			pool, _ := NewBlockQueueTaskPool(1, 1)
+			pool, _ := NewOnDemandBlockTaskPool(1, 1)
 			assert.Equal(t, stateCreated, pool.internalState())
 			assert.ErrorIs(t, pool.Submit(context.Background(), nil), errTaskIsInvalid)
 			assert.Equal(t, stateCreated, pool.internalState())
@@ -84,7 +85,7 @@ func TestTaskPool_In_Created_State(t *testing.T) {
 		t.Run("正常提交Task", func(t *testing.T) {
 			t.Parallel()
 
-			pool, _ := NewBlockQueueTaskPool(1, 3)
+			pool, _ := NewOnDemandBlockTaskPool(1, 3)
 			assert.Equal(t, stateCreated, pool.internalState())
 			testSubmitValidTask(t, pool)
 			assert.Equal(t, stateCreated, pool.internalState())
@@ -93,7 +94,7 @@ func TestTaskPool_In_Created_State(t *testing.T) {
 		t.Run("阻塞提交并导致超时", func(t *testing.T) {
 			t.Parallel()
 
-			pool, _ := NewBlockQueueTaskPool(1, 1)
+			pool, _ := NewOnDemandBlockTaskPool(1, 1)
 			assert.Equal(t, stateCreated, pool.internalState())
 			testSubmitBlockingAndTimeout(t, pool)
 			assert.Equal(t, stateCreated, pool.internalState())
@@ -103,7 +104,7 @@ func TestTaskPool_In_Created_State(t *testing.T) {
 	t.Run("Shutdown", func(t *testing.T) {
 		t.Parallel()
 
-		pool, err := NewBlockQueueTaskPool(1, 1)
+		pool, err := NewOnDemandBlockTaskPool(1, 1)
 		assert.NoError(t, err)
 		assert.Equal(t, stateCreated, pool.internalState())
 
@@ -116,7 +117,7 @@ func TestTaskPool_In_Created_State(t *testing.T) {
 	t.Run("ShutdownNow", func(t *testing.T) {
 		t.Parallel()
 
-		pool, err := NewBlockQueueTaskPool(1, 1)
+		pool, err := NewOnDemandBlockTaskPool(1, 1)
 		assert.NoError(t, err)
 		assert.Equal(t, stateCreated, pool.internalState())
 
@@ -133,7 +134,7 @@ func TestTaskPool_In_Running_State(t *testing.T) {
 	t.Run("Start —— 使TaskPool状态由Created变为Running", func(t *testing.T) {
 		t.Parallel()
 
-		pool, _ := NewBlockQueueTaskPool(1, 1)
+		pool, _ := NewOnDemandBlockTaskPool(1, 1)
 
 		// 与下方 testSubmitBlockingAndTimeout 并发执行
 		errChan := make(chan error)
@@ -332,10 +333,13 @@ func TestTestPool_In_Stopped_State(t *testing.T) {
 		// 模拟阻塞提交
 		n := queueSize + 6
 		firstSubmitErrChan := make(chan error, concurrency)
+		var submitWg sync.WaitGroup
+		submitWg.Add(concurrency)
 		for i := 0; i < n; i++ {
 			go func() {
 				err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-					time.Sleep(10 * time.Millisecond)
+					submitWg.Done()
+					time.Sleep(20 * time.Millisecond)
 					return nil
 				}))
 				if err != nil {
@@ -344,7 +348,7 @@ func TestTestPool_In_Stopped_State(t *testing.T) {
 			}()
 		}
 
-		time.Sleep(1 * time.Millisecond)
+		submitWg.Wait()
 		assert.Equal(t, int32(concurrency), pool.NumGo())
 
 		// 并发调用ShutdownNow
@@ -397,7 +401,7 @@ func TestTestPool_In_Stopped_State(t *testing.T) {
 	})
 }
 
-func testSubmitBlockingAndTimeout(t *testing.T, pool *BlockQueueTaskPool) {
+func testSubmitBlockingAndTimeout(t *testing.T, pool *OnDemandBlockTaskPool) {
 
 	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
 		time.Sleep(2 * time.Millisecond)
@@ -424,7 +428,7 @@ func testSubmitBlockingAndTimeout(t *testing.T, pool *BlockQueueTaskPool) {
 	assert.ErrorIs(t, <-errChan, context.DeadlineExceeded)
 }
 
-func testSubmitValidTask(t *testing.T, pool *BlockQueueTaskPool) {
+func testSubmitValidTask(t *testing.T, pool *OnDemandBlockTaskPool) {
 
 	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error { return nil }))
 	assert.NoError(t, err)
@@ -441,15 +445,15 @@ type ShutdownNowResult struct {
 	err   error
 }
 
-func testNewRunningStateTaskPool(t *testing.T, concurrency int, queueSize int) *BlockQueueTaskPool {
-	pool, _ := NewBlockQueueTaskPool(concurrency, queueSize)
+func testNewRunningStateTaskPool(t *testing.T, concurrency int, queueSize int) *OnDemandBlockTaskPool {
+	pool, _ := NewOnDemandBlockTaskPool(concurrency, queueSize)
 	assert.Equal(t, stateCreated, pool.internalState())
 	assert.NoError(t, pool.Start())
 	assert.Equal(t, stateRunning, pool.internalState())
 	return pool
 }
 
-func testNewStoppedStateTaskPool(t *testing.T, concurrency int, queueSize int) *BlockQueueTaskPool {
+func testNewStoppedStateTaskPool(t *testing.T, concurrency int, queueSize int) *OnDemandBlockTaskPool {
 	pool := testNewRunningStateTaskPool(t, concurrency, queueSize)
 	_, err := pool.ShutdownNow()
 	assert.NoError(t, err)
