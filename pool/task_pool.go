@@ -39,7 +39,7 @@ var (
 
 	errInvalidArgument = errors.New("ekit: 参数非法")
 
-	_            TaskPool = &BlockQueueTaskPool{}
+	_            TaskPool = &OnDemandBlockTaskPool{}
 	panicBuffLen          = 2048
 )
 
@@ -98,8 +98,11 @@ func (tw *taskWrapper) Run(ctx context.Context) (err error) {
 	return tw.t.Run(ctx)
 }
 
-// BlockQueueTaskPool 并发阻塞的任务池
-type BlockQueueTaskPool struct {
+// OnDemandBlockTaskPool 按需创建goroutine的并发阻塞的任务池
+// 任务池使用的 goroutine 是按需创建，并且可以确保不会超过 concurrency 所规定的数量
+// 每一个任务都会使用新的 goroutine 来处理，并且任务池本身处理了 panic 的场景
+// 如果当前 goroutine 数量已经达到了 concurrency，那么任务会被缓存在队列中
+type OnDemandBlockTaskPool struct {
 	// TaskPool内部状态
 	state int32
 
@@ -115,17 +118,17 @@ type BlockQueueTaskPool struct {
 	cancelFunc context.CancelFunc
 }
 
-// NewBlockQueueTaskPool 创建一个新的 BlockQueueTaskPool
-// concurrency 是并发数，即最多允许多少个 goroutine 执行任务
+// NewOnDemandBlockTaskPool 创建一个新的 OnDemandBlockTaskPool
+// concurrency 是并发数
 // queueSize 是队列大小，即最多有多少个任务在等待调度
-func NewBlockQueueTaskPool(concurrency int, queueSize int) (*BlockQueueTaskPool, error) {
+func NewOnDemandBlockTaskPool(concurrency int, queueSize int) (*OnDemandBlockTaskPool, error) {
 	if concurrency < 1 {
 		return nil, fmt.Errorf("%w：concurrency应该大于0", errInvalidArgument)
 	}
 	if queueSize < 0 {
 		return nil, fmt.Errorf("%w：queueSize应该大于等于0", errInvalidArgument)
 	}
-	b := &BlockQueueTaskPool{
+	b := &OnDemandBlockTaskPool{
 		queue: make(chan Task, queueSize),
 		token: make(chan struct{}, concurrency),
 		done:  make(chan struct{}),
@@ -139,7 +142,7 @@ func NewBlockQueueTaskPool(concurrency int, queueSize int) (*BlockQueueTaskPool,
 // 如果此时队列已满，那么将会阻塞调用者。
 // 如果因为 ctx 的原因返回，那么将会返回 ctx.Err()
 // 在调用 Start 前后都可以调用 Submit
-func (b *BlockQueueTaskPool) Submit(ctx context.Context, task Task) error {
+func (b *OnDemandBlockTaskPool) Submit(ctx context.Context, task Task) error {
 	if task == nil {
 		return fmt.Errorf("%w", errTaskIsInvalid)
 	}
@@ -168,7 +171,7 @@ func (b *BlockQueueTaskPool) Submit(ctx context.Context, task Task) error {
 	}
 }
 
-func (b *BlockQueueTaskPool) trySubmit(ctx context.Context, task Task, state int32) (bool, error) {
+func (b *OnDemandBlockTaskPool) trySubmit(ctx context.Context, task Task, state int32) (bool, error) {
 	// 进入临界区
 	if atomic.CompareAndSwapInt32(&b.state, state, stateLocked) {
 		defer atomic.CompareAndSwapInt32(&b.state, stateLocked, state)
@@ -191,7 +194,7 @@ func (b *BlockQueueTaskPool) trySubmit(ctx context.Context, task Task, state int
 
 // Start 开始调度任务执行
 // Start 之后，调用者可以继续使用 Submit 提交任务
-func (b *BlockQueueTaskPool) Start() error {
+func (b *OnDemandBlockTaskPool) Start() error {
 
 	for {
 
@@ -215,7 +218,7 @@ func (b *BlockQueueTaskPool) Start() error {
 }
 
 // Schedule tasks
-func (b *BlockQueueTaskPool) schedulingTasks() {
+func (b *OnDemandBlockTaskPool) schedulingTasks() {
 	defer close(b.token)
 
 	for {
@@ -260,7 +263,7 @@ func (b *BlockQueueTaskPool) schedulingTasks() {
 // 当执行完毕后，会往返回的 chan 中丢入信号
 // Shutdown 会负责关闭返回的 chan
 // Shutdown 无法中断正在执行的任务
-func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
+func (b *OnDemandBlockTaskPool) Shutdown() (<-chan struct{}, error) {
 
 	for {
 
@@ -290,7 +293,7 @@ func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
 }
 
 // ShutdownNow 立刻关闭任务池，并且返回所有剩余未执行的任务（不包含正在执行的任务）
-func (b *BlockQueueTaskPool) ShutdownNow() ([]Task, error) {
+func (b *OnDemandBlockTaskPool) ShutdownNow() ([]Task, error) {
 
 	for {
 
@@ -326,7 +329,7 @@ func (b *BlockQueueTaskPool) ShutdownNow() ([]Task, error) {
 }
 
 // internalState 用于查看TaskPool状态
-func (b *BlockQueueTaskPool) internalState() int32 {
+func (b *OnDemandBlockTaskPool) internalState() int32 {
 	for {
 		state := atomic.LoadInt32(&b.state)
 		if state != stateLocked {
@@ -335,6 +338,6 @@ func (b *BlockQueueTaskPool) internalState() int32 {
 	}
 }
 
-func (b *BlockQueueTaskPool) NumGo() int32 {
+func (b *OnDemandBlockTaskPool) NumGo() int32 {
 	return atomic.LoadInt32(&b.num)
 }
