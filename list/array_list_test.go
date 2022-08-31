@@ -271,6 +271,34 @@ func TestArrayList_Delete(t *testing.T) {
 	}
 }
 
+// TestArrayList_Delete_Shrinkage 测试缩容
+func TestArrayList_Delete_Shrinkage(t *testing.T) {
+	// case : cap大于2048，元素是容量的 1/2。 target:已有容量的 5/8
+	list := NewArrayList[int](4000)
+	for i := 0; i < 999; i++ {
+		_ = list.Append(i)
+	}
+	_, _ = list.Delete(0)
+	assert.Equal(t, int(4000*0.625), list.Cap())
+
+	// case : cap小于等于2048，元素是容量的四分之一。 target:缩到原本的一半
+	list = NewArrayList[int](2048)
+	for i := 0; i < 300; i++ {
+		_ = list.Append(i)
+	}
+	_, _ = list.Delete(0)
+	assert.Equal(t, int(2048*0.5), list.Cap())
+
+	// case : cap小于等于2048，元素是容量的四分之一。 target:缩到原本的一半
+	// ps:当容量小于64的时候，容量为64
+	list = NewArrayList[int](100)
+	for i := 0; i < 10; i++ {
+		_ = list.Append(i)
+	}
+	_, _ = list.Delete(0)
+	assert.Equal(t, 64, list.Cap())
+}
+
 func TestArrayList_Len(t *testing.T) {
 	testCases := []struct {
 		name      string
