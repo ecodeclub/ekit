@@ -106,15 +106,13 @@ func (b *BlockQueueTaskPool) Start() error {
 // Shutdown 会负责关闭返回的 chan
 // Shutdown 无法中断正在执行的任务
 func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
-	for {
-		if b.status != statusOpen && b.status != statusNew {
-			return nil, errPoolStatus
-		}
-		b.changePoolStatus(statusClose)
-		tmp := make(chan struct{})
-		close(b.waitTask)
-		return tmp, nil
+	if b.status != statusOpen && b.status != statusNew {
+		return nil, errPoolStatus
 	}
+	b.changePoolStatus(statusClose)
+	close(b.waitTask)
+	tmp := make(chan struct{})
+	return tmp, nil
 }
 
 // ShutdownNow 立刻关闭任务池，并且返回所有剩余未执行的任务（不包含正在执行的任务）

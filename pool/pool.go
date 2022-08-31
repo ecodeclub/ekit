@@ -20,7 +20,7 @@ var (
 	// taskEmpty task为nil
 	errTaskEmpty = errors.New("task pool:一个无效的task")
 	// poolClosed 任务池已经关闭
-	errPoolClosed = errors.New("task pool:连接池已经关闭")
+	//errPoolClosed = errors.New("task pool:连接池已经关闭")
 	// errPoolStatus 任务池状态错误
 	errPoolStatus = errors.New("task pool:任务池状态错误")
 	// errPoolOpened 任务池已经启动

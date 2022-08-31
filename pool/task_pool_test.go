@@ -172,15 +172,12 @@ func startTaskPool(concurrency, queueSize, flag int) *BlockQueueTaskPool {
 	switch flag {
 	case 1:
 		_ = r.Start()
-		break
 	case 2:
 		_ = r.Start()
 		_, _ = r.Shutdown()
-		break
 	case 3:
 		_ = r.Start()
 		_, _ = r.ShutdownNow()
-		break
 	}
 	return r
 }
