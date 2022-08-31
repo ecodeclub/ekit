@@ -1,191 +1,462 @@
+// Copyright 2021 gotomicro
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package pool
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNew(t *testing.T) {
-	// new an err pool
-	_, e := NewBlockQueueTaskPool(1, -1)
-	assert.Equal(t, errData, e)
-	_, e = NewBlockQueueTaskPool(-3, 1)
-	assert.Equal(t, errData, e)
+/*
+TaskPool有限状态机
+                                                       Start/Submit/ShutdownNow() Error
+                                                                \     /
+                                               Shutdown()  --> CLOSING  ---等待所有任务结束
+         Submit()nil--执行中状态迁移--Submit()      /    \----------/ \----------/
+           \    /                    \   /      /
+New() --> CREATED -- Start() --->  RUNNING -- --
+           \   /                    \   /       \           Start/Submit/Shutdown() Error
+  Shutdown/ShutdownNow()Error      Start()       \                \    /
+                                               ShutdownNow() ---> STOPPED  -- ShutdownNow() --> STOPPED
+*/
 
-	// new an opened pool
-	_ = startTaskPool(1, 1, 1)
-	r, e := NewBlockQueueTaskPool(1, 1)
-	assert.Nil(t, e)
-	assert.Equal(t, statusNew, r.showPoolStatus()) // check status
+func TestTaskPool_In_Created_State(t *testing.T) {
+	t.Parallel()
 
-	// new a shutdown pool
-	_ = startTaskPool(2, 2, 2)
-	r, e = NewBlockQueueTaskPool(2, 2)
-	assert.Nil(t, e)
-	assert.Equal(t, statusNew, r.showPoolStatus())
+	t.Run("New", func(t *testing.T) {
+		t.Parallel()
 
-	// new a shutdown_now pool
-	_ = startTaskPool(3, 3, 3)
-	r, e = NewBlockQueueTaskPool(3, 3)
-	assert.Nil(t, e)
-	assert.Equal(t, statusNew, r.showPoolStatus())
+		pool, err := NewBlockQueueTaskPool(1, -1)
+		assert.ErrorIs(t, err, errInvalidArgument)
+		assert.Nil(t, pool)
 
-	// no-error start
-	r, err := NewBlockQueueTaskPool(1, 1)
-	assert.NoError(t, err)
-	assert.Equal(t, statusNew, r.showPoolStatus())
-}
+		pool, err = NewBlockQueueTaskPool(1, 0)
+		assert.NoError(t, err)
+		assert.NotNil(t, pool)
 
-func TestBlockQueueTaskPool_Start(t *testing.T) {
-	testCases := []struct {
-		name       string
-		list       *BlockQueueTaskPool
-		wantStatus int
-		wantErr    error
-	}{
-		{
-			name:    "start",
-			list:    startTaskPool(1, 1, 0),
-			wantErr: nil,
-		},
-		{
-			name:    "start opened",
-			list:    startTaskPool(1, 1, 1),
-			wantErr: errPoolOpened,
-		},
-		{
-			name:    "start Shutdown",
-			list:    startTaskPool(1, 1, 2),
-			wantErr: errPoolStatus,
-		},
-		{
-			name:    "start ShutdownNow",
-			list:    startTaskPool(1, 1, 3),
-			wantErr: errPoolStatus,
-		},
-	}
+		pool, err = NewBlockQueueTaskPool(1, 1)
+		assert.NoError(t, err)
+		assert.NotNil(t, pool)
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := tc.list.Start()
-			assert.Equal(t, tc.wantErr, err)
+		pool, err = NewBlockQueueTaskPool(-1, 1)
+		assert.ErrorIs(t, err, errInvalidArgument)
+		assert.Nil(t, pool)
+
+		pool, err = NewBlockQueueTaskPool(0, 1)
+		assert.ErrorIs(t, err, errInvalidArgument)
+		assert.Nil(t, pool)
+
+		pool, err = NewBlockQueueTaskPool(1, 1)
+		assert.NoError(t, err)
+		assert.NotNil(t, pool)
+	})
+
+	// Start()导致TaskPool状态迁移，测试见TestTaskPool_In_Running_State/Start
+
+	t.Run("Submit", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("提交非法Task", func(t *testing.T) {
+			t.Parallel()
+
+			pool, _ := NewBlockQueueTaskPool(1, 1)
+			assert.Equal(t, stateCreated, pool.internalState())
+			assert.ErrorIs(t, pool.Submit(context.Background(), nil), errTaskIsInvalid)
+			assert.Equal(t, stateCreated, pool.internalState())
 		})
-	}
+
+		t.Run("正常提交Task", func(t *testing.T) {
+			t.Parallel()
+
+			pool, _ := NewBlockQueueTaskPool(1, 3)
+			assert.Equal(t, stateCreated, pool.internalState())
+			testSubmitValidTask(t, pool)
+			assert.Equal(t, stateCreated, pool.internalState())
+		})
+
+		t.Run("阻塞提交并导致超时", func(t *testing.T) {
+			t.Parallel()
+
+			pool, _ := NewBlockQueueTaskPool(1, 1)
+			assert.Equal(t, stateCreated, pool.internalState())
+			testSubmitBlockingAndTimeout(t, pool)
+			assert.Equal(t, stateCreated, pool.internalState())
+		})
+	})
+
+	t.Run("Shutdown", func(t *testing.T) {
+		t.Parallel()
+
+		pool, err := NewBlockQueueTaskPool(1, 1)
+		assert.NoError(t, err)
+		assert.Equal(t, stateCreated, pool.internalState())
+
+		done, err := pool.Shutdown()
+		assert.Nil(t, done)
+		assert.ErrorIs(t, err, errTaskPoolIsNotRunning)
+		assert.Equal(t, stateCreated, pool.internalState())
+	})
+
+	t.Run("ShutdownNow", func(t *testing.T) {
+		t.Parallel()
+
+		pool, err := NewBlockQueueTaskPool(1, 1)
+		assert.NoError(t, err)
+		assert.Equal(t, stateCreated, pool.internalState())
+
+		tasks, err := pool.ShutdownNow()
+		assert.Nil(t, tasks)
+		assert.ErrorIs(t, err, errTaskPoolIsNotRunning)
+		assert.Equal(t, stateCreated, pool.internalState())
+	})
 }
 
-func TestBlockQueueTaskPool_Submit(t *testing.T) {
-	// submit a nil-task
-	p := startTaskPool(3, 3, 0)
-	e := p.Submit(p.ctx, nil)
-	assert.Equal(t, errTaskEmpty, e)
+func TestTaskPool_In_Running_State(t *testing.T) {
+	t.Parallel()
 
-	// submit a task to new pool
-	p = startTaskPool(3, 3, 0)
-	e = p.Submit(p.ctx, TaskFunc(testSubmitFunc()))
-	assert.Equal(t, errPoolStatus, e)
+	t.Run("Start —— 使TaskPool状态由Created变为Running", func(t *testing.T) {
+		t.Parallel()
 
-	// submit a task to shut down pool
-	p = startTaskPool(3, 3, 2)
-	e = p.Submit(p.ctx, TaskFunc(testSubmitFunc()))
-	assert.Equal(t, errPoolStatus, e)
+		pool, _ := NewBlockQueueTaskPool(1, 1)
 
-	// submit a task to shutdown-now pool
-	p = startTaskPool(3, 3, 3)
-	e = p.Submit(p.ctx, TaskFunc(testSubmitFunc()))
-	assert.Equal(t, errPoolStatus, e)
+		// 与下方 testSubmitBlockingAndTimeout 并发执行
+		errChan := make(chan error)
+		go func() {
+			time.Sleep(1 * time.Millisecond)
+			errChan <- pool.Start()
+		}()
 
-	// submit a task to an opened pool
-	p = startTaskPool(1, 1, 1)
-	e = p.Submit(p.ctx, TaskFunc(testSubmitFunc()))
-	assert.Nil(t, e)
-	assert.Equal(t, statusOpen, p.showPoolStatus())
+		assert.Equal(t, stateCreated, pool.internalState())
 
-	// test cancel()
-	p = startTaskPool(1, 1, 1)
-	defer p.ctxCancel()
-	for i := 0; i < 5; i++ {
-		e = p.Submit(p.ctx, TaskFunc(testSubmitFunc()))
-		assert.Nil(t, e)
-		assert.Equal(t, statusOpen, p.showPoolStatus())
-	}
+		testSubmitBlockingAndTimeout(t, pool)
+
+		assert.NoError(t, <-errChan)
+		assert.Equal(t, stateRunning, pool.internalState())
+
+		// 重复调用
+		assert.ErrorIs(t, pool.Start(), errTaskPoolIsStarted)
+		assert.Equal(t, stateRunning, pool.internalState())
+	})
+
+	t.Run("Submit", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("提交非法Task", func(t *testing.T) {
+			t.Parallel()
+
+			pool := testNewRunningStateTaskPool(t, 1, 1)
+			assert.ErrorIs(t, pool.Submit(context.Background(), nil), errTaskIsInvalid)
+			assert.Equal(t, stateRunning, pool.internalState())
+		})
+
+		t.Run("正常提交Task", func(t *testing.T) {
+			t.Parallel()
+
+			pool := testNewRunningStateTaskPool(t, 1, 3)
+			testSubmitValidTask(t, pool)
+			assert.Equal(t, stateRunning, pool.internalState())
+		})
+
+		t.Run("阻塞提交并导致超时", func(t *testing.T) {
+			t.Parallel()
+
+			pool := testNewRunningStateTaskPool(t, 1, 1)
+			testSubmitBlockingAndTimeout(t, pool)
+			assert.Equal(t, stateRunning, pool.internalState())
+		})
+	})
+
+	// Shutdown()导致TaskPool状态迁移，TestTaskPool_In_Closing_State/Shutdown
+
+	// ShutdownNow()导致TaskPool状态迁移，TestTestPool_In_Stopped_State/ShutdownNow
 }
 
-func TestBlockQueueTaskPool_Shutdown(t *testing.T) {
-	// shutdown a new pool
-	p := startTaskPool(1, 1, 0)
-	_, e := p.Shutdown()
-	assert.Nil(t, e)
-	assert.Equal(t, statusClose, p.showPoolStatus())
+func TestTaskPool_In_Closing_State(t *testing.T) {
+	t.Parallel()
 
-	// shutdown an opened pool
-	p = startTaskPool(1, 1, 1)
-	_, e = p.Shutdown()
-	assert.Nil(t, e)
-	assert.Equal(t, statusClose, p.showPoolStatus())
+	t.Run("Shutdown —— 使TaskPool状态由Running变为Closing", func(t *testing.T) {
+		t.Parallel()
 
-	// shutdown a shutdown-pool
-	p = startTaskPool(2, 2, 2)
-	_, e = p.Shutdown()
-	assert.Equal(t, errPoolStatus, e)
-	assert.Equal(t, statusClose, p.showPoolStatus())
+		queueSize := 2
+		pool := testNewRunningStateTaskPool(t, 1, queueSize)
 
-	// shutdown a shutdown-now-pool
-	p = startTaskPool(3, 3, 3)
-	_, e = p.Shutdown()
-	assert.Equal(t, errPoolStatus, e)
-	assert.Equal(t, statusClose, p.showPoolStatus())
+		// 模拟阻塞提交
+		n := queueSize * 5
+		firstSubmitErrChan := make(chan error, 1)
+		for i := 0; i < n; i++ {
+			go func() {
+				err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+					time.Sleep(10 * time.Millisecond)
+					return nil
+				}))
+				if err != nil {
+					firstSubmitErrChan <- err
+				}
+			}()
+		}
+
+		// 调用Shutdown使TaskPool状态发生迁移
+		type ShutdownResult struct {
+			done <-chan struct{}
+			err  error
+		}
+		resultChan := make(chan ShutdownResult)
+		go func() {
+			time.Sleep(time.Millisecond)
+			done, err := pool.Shutdown()
+			resultChan <- ShutdownResult{done: done, err: err}
+		}()
+		r := <-resultChan
+
+		// Closing过程中Submit会报错间接证明TaskPool处于StateClosing状态
+		assert.ErrorIs(t, <-firstSubmitErrChan, errTaskPoolIsClosing)
+
+		// Shutdown调用成功
+		assert.NoError(t, r.err)
+		select {
+		case <-r.done:
+			break
+		default:
+			// 第二次调用
+			done2, err2 := pool.Shutdown()
+			assert.Nil(t, done2)
+			assert.ErrorIs(t, err2, errTaskPoolIsClosing)
+			assert.Equal(t, stateClosing, pool.internalState())
+		}
+
+		<-r.done
+		assert.Equal(t, stateStopped, pool.internalState())
+
+		// 第一个Shutdown将状态迁移至StateStopped
+		// 第三次调用
+		done, err := pool.Shutdown()
+		assert.Nil(t, done)
+		assert.ErrorIs(t, err, errTaskPoolIsStopped)
+	})
+
+	t.Run("Start", func(t *testing.T) {
+		t.Parallel()
+
+		queueSize := 10
+		pool := testNewRunningStateTaskPool(t, 2, queueSize)
+
+		// 提交任务
+		for i := 0; i < queueSize; i++ {
+			go func() {
+				err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+					time.Sleep(10 * time.Millisecond)
+					return nil
+				}))
+				if err != nil {
+					return
+				}
+			}()
+		}
+
+		done, err := pool.Shutdown()
+		assert.NoError(t, err)
+
+		select {
+		case <-done:
+		default:
+			assert.ErrorIs(t, pool.Start(), errTaskPoolIsClosing)
+		}
+
+		<-done
+		assert.Equal(t, stateStopped, pool.internalState())
+	})
+
+	// Submit()在状态中会报错，因为Closing是一个中间状态，故在上面的Shutdown间接测到了
+
+	t.Run("ShutdownNow", func(t *testing.T) {
+		t.Parallel()
+
+		concurrency := 2
+		pool := testNewRunningStateTaskPool(t, concurrency, 0)
+
+		// 提交任务
+		num := concurrency * 5
+		for i := 0; i < num; i++ {
+			go func() {
+				err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+					time.Sleep(10 * time.Millisecond)
+					return nil
+				}))
+				if err != nil {
+					return
+				}
+			}()
+		}
+
+		done, err := pool.Shutdown()
+		assert.NoError(t, err)
+
+		select {
+		case <-done:
+		default:
+			tasks, err := pool.ShutdownNow()
+			assert.ErrorIs(t, err, errTaskPoolIsClosing)
+			assert.Nil(t, tasks)
+		}
+
+		<-done
+		assert.Equal(t, stateStopped, pool.internalState())
+	})
 }
 
-func TestBlockQueueTaskPool_ShutdownNow(t *testing.T) {
-	// shutdown-now a new pool
-	p := startTaskPool(1, 1, 0)
-	_, e := p.ShutdownNow()
-	assert.Nil(t, e)
-	assert.Equal(t, statusClose, p.showPoolStatus())
+func TestTestPool_In_Stopped_State(t *testing.T) {
+	t.Parallel()
 
-	// shutdown-now an opened pool
-	p = startTaskPool(1, 1, 1)
-	_, e = p.ShutdownNow()
-	assert.Nil(t, e)
-	assert.Equal(t, statusClose, p.showPoolStatus())
+	t.Run("ShutdownNow —— 使TaskPool状态由Running变为Stopped", func(t *testing.T) {
+		t.Parallel()
 
-	// shutdown-now a shutdown-pool
-	p = startTaskPool(2, 2, 2)
-	_, e = p.ShutdownNow()
-	assert.Equal(t, errPoolStatus, e)
-	assert.Equal(t, statusClose, p.showPoolStatus())
+		concurrency, queueSize := 2, 4
+		pool := testNewRunningStateTaskPool(t, concurrency, queueSize)
 
-	// shutdown-now a shutdown-now-pool
-	p = startTaskPool(3, 3, 3)
-	_, e = p.ShutdownNow()
-	assert.Equal(t, errPoolStatus, e)
-	assert.Equal(t, statusClose, p.showPoolStatus())
+		// 模拟阻塞提交
+		n := queueSize + 6
+		firstSubmitErrChan := make(chan error, concurrency)
+		for i := 0; i < n; i++ {
+			go func() {
+				err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+					time.Sleep(10 * time.Millisecond)
+					return nil
+				}))
+				if err != nil {
+					firstSubmitErrChan <- err
+				}
+			}()
+		}
+
+		time.Sleep(1 * time.Millisecond)
+		assert.Equal(t, int32(concurrency), pool.NumGo())
+
+		// 并发调用ShutdownNow
+		result := make(chan ShutdownNowResult, 1)
+		go func() {
+			tasks, err := pool.ShutdownNow()
+			result <- ShutdownNowResult{tasks: tasks, err: err}
+		}()
+
+		r := <-result
+		assert.NoError(t, r.err)
+		assert.Greater(t, len(r.tasks), 0)
+
+		// 阻塞的Submit在ShutdownNow后会报错间接证明TaskPool处于StateStopped状态
+		assert.ErrorIs(t, <-firstSubmitErrChan, errTaskPoolIsStopped)
+		assert.Equal(t, stateStopped, pool.internalState())
+
+		// 重复调用
+		tasks, err := pool.ShutdownNow()
+		assert.Nil(t, tasks)
+		assert.ErrorIs(t, err, errTaskPoolIsStopped)
+		assert.Equal(t, stateStopped, pool.internalState())
+	})
+
+	t.Run("Start", func(t *testing.T) {
+		t.Parallel()
+
+		pool := testNewStoppedStateTaskPool(t, 1, 1)
+		assert.ErrorIs(t, pool.Start(), errTaskPoolIsStopped)
+		assert.Equal(t, stateStopped, pool.internalState())
+	})
+
+	t.Run("Submit", func(t *testing.T) {
+		t.Parallel()
+
+		pool := testNewStoppedStateTaskPool(t, 1, 1)
+		err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error { return nil }))
+		assert.ErrorIs(t, err, errTaskPoolIsStopped)
+		assert.Equal(t, stateStopped, pool.internalState())
+	})
+
+	t.Run("Shutdown", func(t *testing.T) {
+		t.Parallel()
+
+		pool := testNewStoppedStateTaskPool(t, 1, 1)
+		done, err := pool.Shutdown()
+		assert.Nil(t, done)
+		assert.ErrorIs(t, err, errTaskPoolIsStopped)
+		assert.Equal(t, stateStopped, pool.internalState())
+	})
 }
 
-func startTaskPool(concurrency, queueSize, flag int) *BlockQueueTaskPool {
-	r, _ := NewBlockQueueTaskPool(concurrency, queueSize)
+func testSubmitBlockingAndTimeout(t *testing.T, pool *BlockQueueTaskPool) {
 
-	switch flag {
-	case 1:
-		_ = r.Start()
-	case 2:
-		_ = r.Start()
-		_, _ = r.Shutdown()
-	case 3:
-		_ = r.Start()
-		_, _ = r.ShutdownNow()
-	}
-	return r
-}
-
-func testSubmitFunc() func(ctx context.Context) error {
-	return func(ctx context.Context) error {
-		time.Sleep(6 * time.Second)
-		spew.Dump("a task finished")
+	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+		time.Sleep(2 * time.Millisecond)
 		return nil
+	}))
+	assert.NoError(t, err)
+
+	n := len(pool.queue) + 1
+	errChan := make(chan error, n)
+	for i := 0; i < n; i++ {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+			defer cancel()
+			err := pool.Submit(ctx, TaskFunc(func(ctx context.Context) error {
+				time.Sleep(2 * time.Millisecond)
+				return nil
+			}))
+			if err != nil {
+				errChan <- err
+			}
+		}()
 	}
+
+	assert.ErrorIs(t, <-errChan, context.DeadlineExceeded)
 }
+
+func testSubmitValidTask(t *testing.T, pool *BlockQueueTaskPool) {
+
+	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error { return nil }))
+	assert.NoError(t, err)
+
+	err = pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error { panic("task panic") }))
+	assert.NoError(t, err)
+
+	err = pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error { return errors.New("fake error") }))
+	assert.NoError(t, err)
+}
+
+type ShutdownNowResult struct {
+	tasks []Task
+	err   error
+}
+
+func testNewRunningStateTaskPool(t *testing.T, concurrency int, queueSize int) *BlockQueueTaskPool {
+	pool, _ := NewBlockQueueTaskPool(concurrency, queueSize)
+	assert.Equal(t, stateCreated, pool.internalState())
+	assert.NoError(t, pool.Start())
+	assert.Equal(t, stateRunning, pool.internalState())
+	return pool
+}
+
+func testNewStoppedStateTaskPool(t *testing.T, concurrency int, queueSize int) *BlockQueueTaskPool {
+	pool := testNewRunningStateTaskPool(t, concurrency, queueSize)
+	_, err := pool.ShutdownNow()
+	assert.NoError(t, err)
+	assert.Equal(t, stateStopped, pool.internalState())
+	return pool
+}
+
+type FakeTask struct{}
+
+func (f *FakeTask) Run(_ context.Context) error { return nil }
