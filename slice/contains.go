@@ -73,7 +73,7 @@ func ContainsAll[T comparable](src, dst []T) bool {
 		mp[elem] = true
 	}
 	for _, elem := range dst {
-		if mp[elem] == false {
+		if !mp[elem] {
 			return false
 		}
 	}

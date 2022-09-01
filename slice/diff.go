@@ -22,11 +22,12 @@ func Diff[T comparable](src, dst []T) []T {
 		mp[elem] = true
 	}
 	for _, elem := range src {
-		if mp[elem] == false {
+		if !mp[elem] {
 			res = append(res, elem)
 		}
 	}
 	return res
+
 }
 
 // DiffFunc 差集

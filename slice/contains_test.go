@@ -39,7 +39,6 @@ func TestContains(t *testing.T) {
 }
 
 func TestContainsFunc(t *testing.T) {
-	//简单用== 实现equal函数
 	f := func(a, b int) bool {
 		return a == b
 	}
@@ -99,7 +98,6 @@ func TestContainsAny(t *testing.T) {
 }
 
 func TestContainsAnyFunc(t *testing.T) {
-	//简单用== 实现equal函数
 	f := func(a, b int) bool {
 		return a == b
 	}
@@ -147,7 +145,6 @@ func TestContainsAll(t *testing.T) {
 }
 
 func TestContainsAllFunc(t *testing.T) {
-	//简单用== 实现equal函数
 	f := func(a, b int) bool {
 		return a == b
 	}
