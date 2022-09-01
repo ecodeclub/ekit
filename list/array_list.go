@@ -86,27 +86,21 @@ func (a *ArrayList[T]) Delete(index int) (T, error) {
 		}
 	}
 	a.vals = a.vals[:j]
-	if a.Cap() > 64 {
-		a.arrShrinkage()
-	}
+	a.shrink()
 	return res, nil
 }
 
 // arrShrinkage 数组缩容
-func (a *ArrayList[T]) arrShrinkage() {
+func (a *ArrayList[T]) shrink() {
 	var newCap int
 	c, l := a.Cap(), a.Len()
 	if c <= 64 {
 		return
 	}
-	// 如果当前容量 > 2048，元素是容量的 1/2的时候缩容
 	if c > 2048 && (c/l >= 2) {
-		// 缩到已有容量的 5/8
 		newCap = int(float32(c) * float32(0.625))
-	} else if c <= 2048 && (c/l >= 4) { // 如果当前容量 <=2048，元素是容量的四分之一的时候缩容
-		// 缩到原本的一半
+	} else if c <= 2048 && (c/l >= 4) {
 		newCap = c / 2
-		// 当容量小于64的时候，不需要继续缩容了
 		if newCap < 64 {
 			newCap = 64
 		}
@@ -114,9 +108,9 @@ func (a *ArrayList[T]) arrShrinkage() {
 		// 不满足缩容
 		return
 	}
-	newList := NewArrayList[T](newCap)
-	_ = newList.Append(a.vals...)
-	a.vals = newList.vals
+	newSlice := make([]T, 0, newCap)
+	newSlice = append(newSlice, a.vals...)
+	a.vals = newSlice
 }
 
 func (a *ArrayList[T]) Len() int {
