@@ -16,7 +16,17 @@ package slice
 
 // Diff 差集，只支持 comparable 类型
 func Diff[T comparable](src, dst []T) []T {
-	return nil
+	var res []T
+	mp := make(map[T]bool)
+	for _, elem := range dst {
+		mp[elem] = true
+	}
+	for _, elem := range src {
+		if mp[elem] == false {
+			res = append(res, elem)
+		}
+	}
+	return res
 }
 
 // DiffFunc 差集
