@@ -29,6 +29,63 @@ func TestDiff(t *testing.T) {
 	}{
 		{
 			name: "src and dst nil",
+			src:  nil,
+			dst:  nil,
+			want: nil,
+		},
+		{
+			name: "only src nil",
+			src:  nil,
+			dst:  []int{1, 2, 3},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "only dst nil",
+			src:  []int{1, 2, 3},
+			dst:  nil,
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "src and dst empty slice",
+			src:  []int{},
+			dst:  []int{},
+			want: []int{},
+		},
+		{
+			name: "only src empty slice",
+			src:  []int{},
+			dst:  []int{1, 2, 3},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "only dst empty slice",
+			src:  []int{1, 2, 3},
+			dst:  []int{},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "src have diff element",
+			src:  []int{1, 2, 3, 4, 5},
+			dst:  []int{1, 2, 3, 5},
+			want: []int{4},
+		},
+		{
+			name: "dst have diff element",
+			src:  []int{1, 2, 3, 5},
+			dst:  []int{1, 2, 3, 4, 5},
+			want: []int{4},
+		},
+		{
+			name: "src and dst have diff element",
+			src:  []int{1, 2, 3, 4, 5},
+			dst:  []int{3, 4, 5, 6, 7},
+			want: []int{1, 2, 6, 7},
+		},
+		{
+			name: "not sorted array",
+			src:  []int{3, 4, 5, 1, 2},
+			dst:  []int{6, 7, 3, 4, 5},
+			want: []int{1, 2, 6, 7},
 		},
 	}
 	for _, tt := range tests {
@@ -48,6 +105,63 @@ func TestDiffAny(t *testing.T) {
 	}{
 		{
 			name: "src and dst nil",
+			src:  nil,
+			dst:  nil,
+			want: nil,
+		},
+		{
+			name: "only src nil",
+			src:  nil,
+			dst:  []int{1, 2, 3},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "only dst nil",
+			src:  []int{1, 2, 3},
+			dst:  nil,
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "src and dst empty slice",
+			src:  []int{},
+			dst:  []int{},
+			want: []int{},
+		},
+		{
+			name: "only src empty slice",
+			src:  []int{},
+			dst:  []int{1, 2, 3},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "only dst empty slice",
+			src:  []int{1, 2, 3},
+			dst:  []int{},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "src have diff element",
+			src:  []int{1, 2, 3, 4, 5},
+			dst:  []int{1, 2, 3, 5},
+			want: []int{4},
+		},
+		{
+			name: "dst have diff element",
+			src:  []int{1, 2, 3, 5},
+			dst:  []int{1, 2, 3, 4, 5},
+			want: []int{4},
+		},
+		{
+			name: "src and dst have diff element",
+			src:  []int{1, 2, 3, 4, 5},
+			dst:  []int{3, 4, 5, 6, 7},
+			want: []int{1, 2, 6, 7},
+		},
+		{
+			name: "not sorted array",
+			src:  []int{3, 4, 5, 1, 2},
+			dst:  []int{6, 7, 3, 4, 5},
+			want: []int{1, 2, 6, 7},
 		},
 	}
 	for _, tt := range tests {

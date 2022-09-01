@@ -16,12 +16,75 @@ package slice
 
 // Diff 差集，只支持 comparable 类型
 func Diff[T comparable](src, dst []T) []T {
-	return nil
+	if src == nil {
+		return dst
+	}
+	if dst == nil {
+		return src
+	}
+
+	diff := make([]T, 0)
+	for i := 0; i < len(src); i++ {
+		found := false
+		for j := 0; j < len(dst); j++ {
+			if src[i] == dst[j] {
+				found = true
+				break
+			}
+		}
+		if !found {
+			diff = append(diff, src[i])
+		}
+	}
+	for i := 0; i < len(dst); i++ {
+		found := false
+		for j := 0; j < len(src); j++ {
+			if dst[i] == src[j] {
+				found = true
+				break
+			}
+		}
+		if !found {
+			diff = append(diff, dst[i])
+		}
+	}
+	return diff
 }
 
 // DiffFunc 差集
 // 你应该优先使用 Diff
 func DiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
-	// 双重循环检测
-	return nil
+	if src == nil {
+		return dst
+	}
+	if dst == nil {
+		return src
+	}
+
+	diff := make([]T, 0)
+	for i := 0; i < len(src); i++ {
+		found := false
+		for j := 0; j < len(dst); j++ {
+			if equal(src[i], dst[j]) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			diff = append(diff, src[i])
+		}
+	}
+	for i := 0; i < len(dst); i++ {
+		found := false
+		for j := 0; j < len(src); j++ {
+			if equal(dst[i], src[j]) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			diff = append(diff, dst[i])
+		}
+	}
+	return diff
 }
