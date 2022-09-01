@@ -17,7 +17,6 @@ package pool
 import (
 	"context"
 	"errors"
-	"sync"
 	"testing"
 	"time"
 
@@ -333,12 +332,9 @@ func TestTestPool_In_Stopped_State(t *testing.T) {
 		// 模拟阻塞提交
 		n := queueSize + 6
 		firstSubmitErrChan := make(chan error, concurrency)
-		var submitWg sync.WaitGroup
-		submitWg.Add(concurrency)
 		for i := 0; i < n; i++ {
 			go func() {
 				err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-					submitWg.Done()
 					time.Sleep(20 * time.Millisecond)
 					return nil
 				}))
@@ -348,7 +344,7 @@ func TestTestPool_In_Stopped_State(t *testing.T) {
 			}()
 		}
 
-		submitWg.Wait()
+		time.Sleep(10 * time.Millisecond)
 		assert.Equal(t, int32(concurrency), pool.NumGo())
 
 		// 并发调用ShutdownNow
