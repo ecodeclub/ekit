@@ -87,7 +87,7 @@ func (l *LinkedList[T]) Append(ts ...T) error {
 	for _, t := range ts {
 		node := &node[T]{prev: l.tail.prev, next: l.tail, val: t}
 		node.prev.next, node.next.prev = node, node
-		l.length += 1
+		l.length++
 	}
 	return nil
 }
@@ -127,6 +127,7 @@ func (l *LinkedList[T]) Delete(index int) (T, error) {
 	node := l.findNode(index)
 	node.prev.next = node.next
 	node.next.prev = node.prev
+	node.prev, node.next = nil, nil
 	l.length--
 	return node.val, nil
 }
