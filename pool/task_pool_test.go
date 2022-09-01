@@ -37,7 +37,7 @@ New() --> CREATED -- Start() --->  RUNNING -- --
                                                ShutdownNow() ---> STOPPED  -- ShutdownNow() --> STOPPED
 */
 
-func TestTaskPool_In_Created_State(t *testing.T) {
+func TestOnDemandBlockTaskPool_In_Created_State(t *testing.T) {
 	t.Parallel()
 
 	t.Run("New", func(t *testing.T) {
@@ -128,7 +128,7 @@ func TestTaskPool_In_Created_State(t *testing.T) {
 	})
 }
 
-func TestTaskPool_In_Running_State(t *testing.T) {
+func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Start —— 使TaskPool状态由Created变为Running", func(t *testing.T) {
@@ -188,7 +188,7 @@ func TestTaskPool_In_Running_State(t *testing.T) {
 	// ShutdownNow()导致TaskPool状态迁移，TestTestPool_In_Stopped_State/ShutdownNow
 }
 
-func TestTaskPool_In_Closing_State(t *testing.T) {
+func TestOnDemandBlockTaskPool_In_Closing_State(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Shutdown —— 使TaskPool状态由Running变为Closing", func(t *testing.T) {
@@ -295,7 +295,7 @@ func TestTaskPool_In_Closing_State(t *testing.T) {
 	})
 }
 
-func TestTestPool_In_Stopped_State(t *testing.T) {
+func TestOnDemandBlockTaskPool_In_Stopped_State(t *testing.T) {
 	t.Parallel()
 
 	t.Run("ShutdownNow —— 使TaskPool状态由Running变为Stopped", func(t *testing.T) {
