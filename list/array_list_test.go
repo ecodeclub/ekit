@@ -271,6 +271,132 @@ func TestArrayList_Delete(t *testing.T) {
 	}
 }
 
+// TestArrayList_Delete_Shrinkage 测试缩容
+func TestArrayList_Delete_Shrink(t *testing.T) {
+	testCases := []struct {
+		name    string // 用例名称
+		cap     int    // 原始容量
+		loop    int    // 切片中元素个数
+		wantCap int    // 期望缩容后的容量
+	}{
+		// ----- #阶段一 逻辑测试# -----
+		// 只测试需求的逻辑和代码的逻辑是否一致
+
+		// case 1: cap小于等于64，不进行缩容
+		{
+			name:    "case 1",
+			cap:     64,
+			loop:    1,
+			wantCap: 64,
+		},
+		// case 2: cap大于2048，元素是容量的 1/2。 target:已有容量的 5/8
+		{
+			name:    "case 2",
+			cap:     4000,
+			loop:    999,
+			wantCap: 2500,
+		},
+		// case 3: cap小于等于2048，元素是容量的四分之一。 target:缩到原本的一半
+		{
+			name:    "case 3",
+			cap:     2048,
+			loop:    300,
+			wantCap: 1024,
+		},
+		// case 4: cap > 2048，但不满足缩容条件的例子
+		{
+			name:    "case 4",
+			cap:     4000,
+			loop:    3888,
+			wantCap: 4000,
+		},
+		// case 5: cap <= 2048，但不满足缩容条件的例子
+		{
+			name:    "case 5",
+			cap:     2048,
+			loop:    666,
+			wantCap: 2048,
+		},
+
+		// ----- #阶段二 边界测试# -----
+		// 测试用例边界
+		// ps:测试时：
+		//		（1）会默认删除一个元素，loop需要+1
+		//		（2）测试结果向下取整
+
+		// case 6: cap65
+		{
+			name:    "case 6",
+			cap:     65,
+			loop:    2,
+			wantCap: 64,
+		},
+		// case 6-2:  cap65,loop为16
+		{
+			name:    "case 6-2",
+			cap:     65,
+			loop:    16,
+			wantCap: 64,
+		},
+		// case 6-3:  cap130,loop为34，删除一个元素后为33，刚好不满足四分之一
+		{
+			name:    "case 6-3",
+			cap:     130,
+			loop:    34,
+			wantCap: 130,
+		},
+		// case 7 cap2047
+		{
+			name:    "case 7",
+			cap:     2047,
+			loop:    10,
+			wantCap: 1023, // 1023.5 ，向下取整
+		},
+		{
+			name:    "case 7-1",
+			cap:     2047,
+			loop:    512,
+			wantCap: 1023,
+		},
+		{
+			name:    "case 7-2",
+			cap:     2047,
+			loop:    513, // 四分之一为511.75，513删除一个元素512刚好不满足
+			wantCap: 2047,
+		},
+		//  case 8 : cap 2049
+		{
+			name:    "case 8",
+			cap:     2049,
+			loop:    10,
+			wantCap: 1280, // 1280.625 ，向下取整
+		},
+		{
+			name:    "case 8-1",
+			cap:     2049,
+			loop:    1025,
+			wantCap: 1280, // 1280.625 ，向下取整
+		},
+		{
+			name:    "case 8-2",
+			cap:     2049,
+			loop:    1026, // 二分之一为1024，1026删除一个元素后1025刚好不满足
+			wantCap: 2049,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			list := NewArrayList[int](tc.cap)
+			for i := 0; i < tc.loop; i++ {
+				_ = list.Append(i)
+			}
+			_, _ = list.Delete(0)
+			assert.Equal(t, tc.wantCap, list.Cap())
+		})
+	}
+}
+
 func TestArrayList_Len(t *testing.T) {
 	testCases := []struct {
 		name      string
