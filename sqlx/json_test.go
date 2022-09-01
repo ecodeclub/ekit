@@ -15,7 +15,7 @@
 package sqlx
 
 import (
-	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"testing"
@@ -24,64 +24,72 @@ import (
 )
 
 func TestJsonColumn_Value(t *testing.T) {
-	js := JsonColumn[User]{Valid: true, Val: User{Name: "Tom"}}
-	value, err := js.Value()
-	assert.Nil(t, err)
-	assert.Equal(t, []byte(`{"Name":"Tom"}`), value)
-	js = JsonColumn[User]{}
-	value, err = js.Value()
-	assert.Nil(t, err)
-	assert.Nil(t, value)
+	testCases := []struct {
+		name    string
+		valuer  driver.Valuer
+		wantRes any
+		wantErr error
+	}{
+		{
+			name:    "user",
+			valuer:  JsonColumn[User]{Valid: true, Val: User{Name: "Tom"}},
+			wantRes: []byte(`{"Name":"Tom"}`),
+		},
+		{
+			name:   "invalid",
+			valuer: JsonColumn[User]{},
+		},
+		{
+			name:   "nil",
+			valuer: JsonColumn[*User]{},
+		},
+		{
+			name:    "nil but valid",
+			valuer:  JsonColumn[*User]{Valid: true},
+			wantRes: []uint8("null"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			value, err := tc.valuer.Value()
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantRes, value)
+		})
+	}
 }
 
 func TestJsonColumn_Scan(t *testing.T) {
 	testCases := []struct {
-		name    string
-		src     any
-		wantErr error
-		wantVal User
+		name      string
+		src       any
+		wantErr   error
+		wantValid bool
+		wantVal   User
 	}{
 		{
 			name:    "nil",
-			wantErr: errors.New("ekit：JsonColumn.Scan 不支持 src 类型 <nil>"),
+			wantVal: User{},
 		},
 		{
-			name:    "string",
-			src:     `{"Name":"Tom"}`,
-			wantVal: User{Name: "Tom"},
+			name:      "string",
+			src:       `{"Name":"Tom"}`,
+			wantVal:   User{Name: "Tom"},
+			wantValid: true,
 		},
 		{
-			name: "string pointer",
-			src: func() string {
-				return `{"Name":"Tom"}`
-			}(),
-			wantVal: User{Name: "Tom"},
+			name:      "bytes",
+			src:       []byte(`{"Name":"Tom"}`),
+			wantVal:   User{Name: "Tom"},
+			wantValid: true,
 		},
 		{
-			name:    "bytes",
-			src:     []byte(`{"Name":"Tom"}`),
-			wantVal: User{Name: "Tom"},
-		},
-		{
-			name: "bytes pointer",
-			src: func() *[]byte {
-				res := []byte(`{"Name":"Tom"}`)
-				return &res
-			}(),
-			wantVal: User{Name: "Tom"},
-		},
-		{
-			name:    "sql.RawBytes",
-			src:     sql.RawBytes(`{"Name":"Tom"}`),
-			wantVal: User{Name: "Tom"},
-		},
-		{
-			name: "sql.RawBytes pointer",
-			src: func() *sql.RawBytes {
-				res := sql.RawBytes(`{"Name":"Tom"}`)
-				return &res
-			}(),
-			wantVal: User{Name: "Tom"},
+			name:    "int",
+			src:     123,
+			wantErr: errors.New("ekit：JsonColumn.Scan 不支持 src 类型 123"),
 		},
 	}
 	for _, tc := range testCases {
@@ -92,8 +100,11 @@ func TestJsonColumn_Scan(t *testing.T) {
 			if err != nil {
 				return
 			}
+			assert.Equal(t, tc.wantValid, js.Valid)
+			if !js.Valid {
+				return
+			}
 			assert.Equal(t, tc.wantVal, js.Val)
-			assert.True(t, js.Valid)
 		})
 	}
 }
