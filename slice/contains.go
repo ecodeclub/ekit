@@ -37,7 +37,7 @@ func ContainsFunc[T any](src []T, dst T, equal EqualFunc[T]) bool {
 
 // ContainsAny 判断 src 里面是否存在 dst 中的任何一个元素
 func ContainsAny[T comparable](src, dst []T) bool {
-	mp := make(map[T]bool)
+	mp := make(map[T]bool, len(src))
 	for _, elem := range src {
 		mp[elem] = true
 	}
@@ -68,7 +68,7 @@ func ContainsAll[T comparable](src, dst []T) bool {
 	if src == nil {
 		return false
 	}
-	mp := make(map[T]bool)
+	mp := make(map[T]bool, len(src))
 	for _, elem := range src {
 		mp[elem] = true
 	}

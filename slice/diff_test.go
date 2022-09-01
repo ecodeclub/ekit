@@ -30,12 +30,6 @@ func TestDiff(t *testing.T) {
 		{
 			name: "src and dst nil",
 		},
-		{
-			name: "测试int差级",
-			src:  []int{1, 2, 3, 6},
-			dst:  []int{2, 3, 8},
-			want: []int{1, 6},
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
