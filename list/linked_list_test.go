@@ -96,12 +96,10 @@ func TestLinkedList_Add(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.list.Add(tc.index, tc.newVal)
 			assert.Equal(t, tc.wantErr, err)
-			// 因为返回了 error，所以我们不用继续往下比较了
 			if err != nil {
 				return
 			}
-			assert.True(t, linkedListEqual(tc.list, tc.wantLinkedList))
-
+			assert.Equal(t, tc.wantLinkedList.AsSlice(), tc.list.AsSlice())
 		})
 	}
 }
@@ -175,7 +173,7 @@ func TestLinkedList_Delete(t *testing.T) {
 				assert.Equal(t, tc.wantErr, err)
 			} else {
 				assert.Equal(t, tc.delVal, delVal)
-				assert.Equal(t, tc.wantLinkedList, tc.list)
+				assert.Equal(t, tc.wantLinkedList.AsSlice(), tc.list.AsSlice())
 			}
 		})
 	}
@@ -250,8 +248,7 @@ func TestLinkedList_Append(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.list.Append(tc.newVal...)
 			assert.Equal(t, tc.wantErr, err)
-			// 因为返回了 error，所以我们不用继续往下比较了
-			assert.True(t, linkedListEqual(tc.list, tc.wantLinkedList))
+			assert.Equal(t, tc.wantLinkedList.AsSlice(), tc.list.AsSlice())
 		})
 	}
 }
@@ -362,9 +359,7 @@ func TestLinkedList_Get(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			get, err := tc.list.Get(tc.index)
 			assert.Equal(t, tc.wantErr, err)
-			if err == nil {
-				assert.Equal(t, tc.wantVal, get)
-			}
+			assert.Equal(t, tc.wantVal, get)
 		})
 	}
 }
@@ -489,27 +484,6 @@ func TestLinkedList_Set(t *testing.T) {
 			}
 		})
 	}
-}
-
-func linkedListEqual[T comparable](l1 *LinkedList[T], l2 *LinkedList[T]) bool {
-	if l1.length != l2.length {
-		return false
-	}
-
-	if l1.length == 0 {
-		return true
-	}
-
-	l1Pos := l1.head
-	l2Pos := l2.head
-	for l1Pos != nil && l2Pos != nil {
-		if l1Pos.val != l2Pos.val {
-			return false
-		}
-		l1Pos = l1Pos.next
-		l2Pos = l2Pos.next
-	}
-	return l1Pos == l2Pos
 }
 
 func BenchmarkLinkedList_Add(b *testing.B) {
