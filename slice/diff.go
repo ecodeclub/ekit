@@ -17,7 +17,7 @@ package slice
 // Diff 差集，只支持 comparable 类型
 func Diff[T comparable](src, dst []T) []T {
 	if src == nil {
-		return dst
+		return nil
 	}
 	if dst == nil {
 		return src
@@ -25,27 +25,8 @@ func Diff[T comparable](src, dst []T) []T {
 
 	diff := make([]T, 0)
 	for i := 0; i < len(src); i++ {
-		found := false
-		for j := 0; j < len(dst); j++ {
-			if src[i] == dst[j] {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !Contains(dst, src[i]) {
 			diff = append(diff, src[i])
-		}
-	}
-	for i := 0; i < len(dst); i++ {
-		found := false
-		for j := 0; j < len(src); j++ {
-			if dst[i] == src[j] {
-				found = true
-				break
-			}
-		}
-		if !found {
-			diff = append(diff, dst[i])
 		}
 	}
 	return diff
@@ -55,7 +36,7 @@ func Diff[T comparable](src, dst []T) []T {
 // 你应该优先使用 Diff
 func DiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
 	if src == nil {
-		return dst
+		return nil
 	}
 	if dst == nil {
 		return src
@@ -63,28 +44,27 @@ func DiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
 
 	diff := make([]T, 0)
 	for i := 0; i < len(src); i++ {
-		found := false
-		for j := 0; j < len(dst); j++ {
-			if equal(src[i], dst[j]) {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !ContainsFunc(dst, src[i], equal) {
 			diff = append(diff, src[i])
 		}
 	}
-	for i := 0; i < len(dst); i++ {
-		found := false
-		for j := 0; j < len(src); j++ {
-			if equal(dst[i], src[j]) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			diff = append(diff, dst[i])
-		}
-	}
+
+	return diff
+}
+
+// SymmetricDiff 对称差集
+func SymmetricDiff[T comparable](src, dst []T) []T {
+	srcDiffDst := Diff(src, dst)
+	dstDiffSrc := Diff(dst, src)
+	diff := append(srcDiffDst, dstDiffSrc...)
+	return diff
+}
+
+// SymmetricDiffFunc 对称差集
+// 你应该优先使用 SymmetricDiff
+func SymmetricDiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
+	srcDiffDst := DiffFunc(src, dst, equal)
+	dstDiffSrc := DiffFunc(dst, src, equal)
+	diff := append(srcDiffDst, dstDiffSrc...)
 	return diff
 }

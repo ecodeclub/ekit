@@ -15,6 +15,7 @@
 package slice
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,7 +38,7 @@ func TestDiff(t *testing.T) {
 			name: "only src nil",
 			src:  nil,
 			dst:  []int{1, 2, 3},
-			want: []int{1, 2, 3},
+			want: nil,
 		},
 		{
 			name: "only dst nil",
@@ -55,7 +56,7 @@ func TestDiff(t *testing.T) {
 			name: "only src empty slice",
 			src:  []int{},
 			dst:  []int{1, 2, 3},
-			want: []int{1, 2, 3},
+			want: []int{},
 		},
 		{
 			name: "only dst empty slice",
@@ -70,22 +71,22 @@ func TestDiff(t *testing.T) {
 			want: []int{4},
 		},
 		{
-			name: "dst have diff element",
+			name: "src not have diff element",
 			src:  []int{1, 2, 3, 5},
 			dst:  []int{1, 2, 3, 4, 5},
-			want: []int{4},
+			want: []int{},
 		},
 		{
 			name: "src and dst have diff element",
 			src:  []int{1, 2, 3, 4, 5},
 			dst:  []int{3, 4, 5, 6, 7},
-			want: []int{1, 2, 6, 7},
+			want: []int{1, 2},
 		},
 		{
 			name: "not sorted array",
 			src:  []int{3, 4, 5, 1, 2},
 			dst:  []int{6, 7, 3, 4, 5},
-			want: []int{1, 2, 6, 7},
+			want: []int{1, 2},
 		},
 	}
 	for _, tt := range tests {
@@ -113,6 +114,84 @@ func TestDiffAny(t *testing.T) {
 			name: "only src nil",
 			src:  nil,
 			dst:  []int{1, 2, 3},
+			want: nil,
+		},
+		{
+			name: "only dst nil",
+			src:  []int{1, 2, 3},
+			dst:  nil,
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "src and dst empty slice",
+			src:  []int{},
+			dst:  []int{},
+			want: []int{},
+		},
+		{
+			name: "only src empty slice",
+			src:  []int{},
+			dst:  []int{1, 2, 3},
+			want: []int{},
+		},
+		{
+			name: "only dst empty slice",
+			src:  []int{1, 2, 3},
+			dst:  []int{},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "src have diff element",
+			src:  []int{1, 2, 3, 4, 5},
+			dst:  []int{1, 2, 3, 5},
+			want: []int{4},
+		},
+		{
+			name: "src not have diff element",
+			src:  []int{1, 2, 3, 5},
+			dst:  []int{1, 2, 3, 4, 5},
+			want: []int{},
+		},
+		{
+			name: "src and dst have diff element",
+			src:  []int{1, 2, 3, 4, 5},
+			dst:  []int{3, 4, 5, 6, 7},
+			want: []int{1, 2},
+		},
+		{
+			name: "not sorted array",
+			src:  []int{3, 4, 5, 1, 2},
+			dst:  []int{6, 7, 3, 4, 5},
+			want: []int{1, 2},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := DiffFunc[int](tt.src, tt.dst, func(src, dst int) bool {
+				return src == dst
+			})
+			assert.Equal(t, tt.want, res)
+		})
+	}
+}
+
+func TestSymmetricDiff(t *testing.T) {
+	tests := []struct {
+		name string
+		src  []int
+		dst  []int
+		want []int
+	}{
+		{
+			name: "src and dst nil",
+			src:  nil,
+			dst:  nil,
+			want: nil,
+		},
+		{
+			name: "only src nil",
+			src:  nil,
+			dst:  []int{1, 2, 3},
 			want: []int{1, 2, 3},
 		},
 		{
@@ -166,10 +245,124 @@ func TestDiffAny(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := DiffFunc[int](tt.src, tt.dst, func(src, dst int) bool {
+			res := SymmetricDiff[int](tt.src, tt.dst)
+			assert.Equal(t, tt.want, res)
+		})
+	}
+}
+
+func TestSymmetricDiffFunc(t *testing.T) {
+	tests := []struct {
+		name string
+		src  []int
+		dst  []int
+		want []int
+	}{
+		{
+			name: "src and dst nil",
+			src:  nil,
+			dst:  nil,
+			want: nil,
+		},
+		{
+			name: "only src nil",
+			src:  nil,
+			dst:  []int{1, 2, 3},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "only dst nil",
+			src:  []int{1, 2, 3},
+			dst:  nil,
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "src and dst empty slice",
+			src:  []int{},
+			dst:  []int{},
+			want: []int{},
+		},
+		{
+			name: "only src empty slice",
+			src:  []int{},
+			dst:  []int{1, 2, 3},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "only dst empty slice",
+			src:  []int{1, 2, 3},
+			dst:  []int{},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "src have diff element",
+			src:  []int{1, 2, 3, 4, 5},
+			dst:  []int{1, 2, 3, 5},
+			want: []int{4},
+		},
+		{
+			name: "dst have diff element",
+			src:  []int{1, 2, 3, 5},
+			dst:  []int{1, 2, 3, 4, 5},
+			want: []int{4},
+		},
+		{
+			name: "src and dst have diff element",
+			src:  []int{1, 2, 3, 4, 5},
+			dst:  []int{3, 4, 5, 6, 7},
+			want: []int{1, 2, 6, 7},
+		},
+		{
+			name: "not sorted array",
+			src:  []int{3, 4, 5, 1, 2},
+			dst:  []int{6, 7, 3, 4, 5},
+			want: []int{1, 2, 6, 7},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := SymmetricDiffFunc[int](tt.src, tt.dst, func(src, dst int) bool {
 				return src == dst
 			})
 			assert.Equal(t, tt.want, res)
 		})
 	}
+}
+
+func ExampleDiff() {
+	src := []int{1, 2, 3, 4, 5}
+	des := []int{3, 4, 5, 6, 7}
+	diff := Diff(src, des)
+	fmt.Println(diff)
+	// Output: [1 2]
+}
+
+func ExampleDiffFunc() {
+	src := []int{1, 2, 3, 4, 5}
+	des := []int{3, 4, 5, 6, 7}
+	equalFunc := func(src int, dst int) bool {
+		return src == dst
+	}
+	diff := DiffFunc(src, des, equalFunc)
+	fmt.Println(diff)
+	// Output: [1 2]
+}
+
+func ExampleSymmetricDiff() {
+	src := []int{1, 2, 3, 4, 5}
+	des := []int{3, 4, 5, 6, 7}
+	diff := SymmetricDiff(src, des)
+	fmt.Println(diff)
+	// Output: [1 2 6 7]
+}
+
+func ExampleSymmetricDiffFunc() {
+	src := []int{1, 2, 3, 4, 5}
+	des := []int{3, 4, 5, 6, 7}
+	equalFunc := func(src int, dst int) bool {
+		return src == dst
+	}
+	diff := SymmetricDiffFunc(src, des, equalFunc)
+	fmt.Println(diff)
+	// Output: [1 2 6 7]
 }
