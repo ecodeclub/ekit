@@ -14,9 +14,14 @@
 
 package slice
 
-// Map 将一个切片转化为另外一个切片
+// Map 将一个切片转化为另外一个切片,如果发生panic,或者src 为nil,会返回nil.
 func Map[Src any, Dst any](src []Src, m func(idx int, src Src) Dst) []Dst {
-	var res []Dst
+	res := make([]Dst, 0, len(src))
+	defer func() {
+		if err := recover(); err != nil {
+			res = nil
+		}
+	}()
 	for index, elem := range src {
 		res = append(res, m(index, elem))
 	}

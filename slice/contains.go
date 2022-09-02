@@ -37,12 +37,13 @@ func ContainsFunc[T any](src []T, dst T, equal EqualFunc[T]) bool {
 
 // ContainsAny 判断 src 里面是否存在 dst 中的任何一个元素
 func ContainsAny[T comparable](src, dst []T) bool {
-	mp := make(map[T]bool, len(src))
+	set := make(map[T]struct{}, len(src))
 	for _, elem := range src {
-		mp[elem] = true
+		set[elem] = struct{}{}
 	}
 	for _, elem := range dst {
-		if mp[elem] {
+
+		if _, ok := set[elem]; ok {
 			return true
 		}
 	}
@@ -65,15 +66,15 @@ func ContainsAnyFunc[T any](src, dst []T, equal EqualFunc[T]) bool {
 
 // ContainsAll 判断 src 里面是否存在 dst 中的所有元素
 func ContainsAll[T comparable](src, dst []T) bool {
-	if src == nil {
+	if src == nil || len(src) == 0 {
 		return false
 	}
-	mp := make(map[T]bool, len(src))
+	set := make(map[T]struct{}, len(src))
 	for _, elem := range src {
-		mp[elem] = true
+		set[elem] = struct{}{}
 	}
 	for _, elem := range dst {
-		if !mp[elem] {
+		if _, ok := set[elem]; !ok {
 			return false
 		}
 	}
@@ -83,7 +84,7 @@ func ContainsAll[T comparable](src, dst []T) bool {
 // ContainsAllFunc 判断 src 里面是否存在 dst 中的所有元素
 // 你应该优先使用 ContainsAllFunc
 func ContainsAllFunc[T any](src, dst []T, equal EqualFunc[T]) bool {
-	if src == nil {
+	if src == nil || len(src) == 0 {
 		return false
 	}
 	for _, elem := range dst {

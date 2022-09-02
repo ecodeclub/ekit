@@ -43,7 +43,7 @@ func TestMap(t *testing.T) {
 			want: []string{`1`, `3`, `4`},
 		},
 		{
-			name: "切片为nil",
+			name: "src为nil",
 			args: args{
 				src: nil,
 				m: func(idx int, src int) string {
@@ -51,6 +51,25 @@ func TestMap(t *testing.T) {
 				},
 			},
 			want: nil,
+		},
+		{
+			name: "发生panic",
+			args: args{
+				src: []int{1, 3, 4},
+				m: func(idx int, src int) string {
+					panic("occur panic")
+				},
+			},
+			want: nil,
+		}, {
+			name: "src容量为0",
+			args: args{
+				src: []int{},
+				m: func(idx int, src int) string {
+					return strconv.Itoa(src)
+				},
+			},
+			want: []string{},
 		},
 	}
 	for _, tt := range tests {
@@ -61,9 +80,10 @@ func TestMap(t *testing.T) {
 }
 
 func ExampleMap() {
-	ins := []int{1, 2, 4, 8, 15}
+	ins := []int{1, 4, 9, 16, 25}
 	floats := Map(ins, func(idx int, src int) float64 {
 		return math.Sqrt(float64(src))
 	})
 	fmt.Println(ins, `开平方根运算:`, floats)
+	// Output: [1 2 3 4 5]
 }

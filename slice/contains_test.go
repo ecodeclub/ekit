@@ -135,6 +135,7 @@ func TestContainsAll(t *testing.T) {
 	}{
 		{name: "dst和src为nil", args: args{nil, nil}, want: false},
 		{name: "dst为nil", args: args{[]int{1, 2, 3}, nil}, want: true},
+		{name: "src为{}和dst为nil", args: args{[]int{}, nil}, want: false},
 		{name: "dst 是src 子集", args: args{[]int{5, 7, 8, 1, 2, 3, 4}, []int{1, 2, 3, 4}}, want: true},
 		{name: "dst 不是src 子集", args: args{[]int{5, 7, 8, 1, 2, 3, 4}, []int{1, 2, 3, 4, 32}}, want: false},
 	}
@@ -173,6 +174,7 @@ func TestContainsAllFunc(t *testing.T) {
 func ExampleContains() {
 	contains := Contains([]string{`php`, `python`, `golang`, `java`}, `java`)
 	fmt.Println(contains)
+	// Output: true
 }
 func ExampleContainsFunc() {
 	contains := ContainsFunc(
@@ -183,21 +185,25 @@ func ExampleContainsFunc() {
 		},
 	)
 	fmt.Println(contains)
+	// Output: true
 }
 func ExampleContainsAny() {
 	containsAny := ContainsAny([]string{`php`, `python`, `golang`, `java`}, []string{`C#`, `C++`, `golang`, `java`})
 	fmt.Println(containsAny)
+	// Output: true
 }
 func ExampleContainsAnyFunc() {
 	containsAny := ContainsAnyFunc([]string{`php`, `python`, `golang`, `java`}, []string{`C#`, `C++`, `golang`, `java`}, func(src, dst string) bool {
 		return src == dst
 	})
 	fmt.Println(containsAny)
+	// Output: true
 }
 
 func ExampleContainsAll() {
 	all := ContainsAll([]string{`php`, `python`, `golang`, `java`}, []string{`C#`, `C++`, `golang`, `java`})
 	fmt.Println(all)
+	// Output: false
 }
 
 func ExampleContainsAllFunc() {
@@ -205,4 +211,5 @@ func ExampleContainsAllFunc() {
 		return src == dst
 	})
 	fmt.Println(all)
+	// Output: false
 }
