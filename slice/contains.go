@@ -16,11 +16,9 @@ package slice
 
 // Contains 判断 src 里面是否存在 dst
 func Contains[T comparable](src []T, dst T) bool {
-	if len(src) > 0 {
-		for i := 0; i < len(src); i++ {
-			if src[i] == dst {
-				return true
-			}
+	for _, val := range src {
+		if val == dst {
+			return true
 		}
 	}
 	return false
@@ -29,11 +27,9 @@ func Contains[T comparable](src []T, dst T) bool {
 // ContainsFunc 判断 src 里面是否存在 dst
 // 你应该优先使用 Contains
 func ContainsFunc[T any](src []T, dst T, equal EqualFunc[T]) bool {
-	if len(src) > 0 {
-		for i := 0; i < len(src); i++ {
-			if equal(src[i], dst) {
-				return true
-			}
+	for _, val := range src {
+		if equal(val, dst) {
+			return true
 		}
 	}
 	return false
@@ -41,11 +37,9 @@ func ContainsFunc[T any](src []T, dst T, equal EqualFunc[T]) bool {
 
 // ContainsAny 判断 src 里面是否存在 dst 中的任何一个元素
 func ContainsAny[T comparable](src, dst []T) bool {
-	if len(src) > 0 && len(dst) > 0 {
-		for i := 0; i < len(dst); i++ {
-			if Contains(src, dst[i]) {
-				return true
-			}
+	for _, val := range dst {
+		if Contains(src, val) {
+			return true
 		}
 	}
 	return false
@@ -54,11 +48,9 @@ func ContainsAny[T comparable](src, dst []T) bool {
 // ContainsAnyFunc 判断 src 里面是否存在 dst 中的任何一个元素
 // 你应该优先使用 ContainsAny
 func ContainsAnyFunc[T any](src, dst []T, equal EqualFunc[T]) bool {
-	if len(src) > 0 && len(dst) > 0 {
-		for i := 0; i < len(dst); i++ {
-			if ContainsFunc(src, dst[i], equal) {
-				return true
-			}
+	for _, val := range dst {
+		if ContainsFunc(src, val, equal) {
+			return true
 		}
 	}
 	return false
@@ -66,27 +58,28 @@ func ContainsAnyFunc[T any](src, dst []T, equal EqualFunc[T]) bool {
 
 // ContainsAll 判断 src 里面是否存在 dst 中的所有元素
 func ContainsAll[T comparable](src, dst []T) bool {
-	if len(src) > 0 && len(dst) > 0 {
-		for i := 0; i < len(dst); i++ {
-			if !Contains(src, dst[i]) {
-				return false
-			}
-		}
-		return true
+	if len(src) <= 0 || len(dst) <= 0 {
+		return false
 	}
-	return false
+	for _, val := range dst {
+		if !Contains(src, val) {
+			return false
+		}
+	}
+	return true
+	//return false
 }
 
 // ContainsAllFunc 判断 src 里面是否存在 dst 中的所有元素
 // 你应该优先使用 ContainsAllFunc
 func ContainsAllFunc[T any](src, dst []T, equal EqualFunc[T]) bool {
-	if len(src) > 0 && len(dst) > 0 {
-		for i := 0; i < len(dst); i++ {
-			if !ContainsFunc(src, dst[i], equal) {
-				return false
-			}
-		}
-		return true
+	if len(src) <= 0 || len(dst) <= 0 {
+		return false
 	}
-	return false
+	for _, val := range dst {
+		if !ContainsFunc(src, val, equal) {
+			return false
+		}
+	}
+	return true
 }
