@@ -1,6 +1,7 @@
 package slice
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -168,4 +169,40 @@ func TestContainsAllFunc(t *testing.T) {
 			assert.Equalf(t, tt.want, ContainsAllFunc(tt.args.src, tt.args.dst, tt.args.equal), "ContainsAllFunc(%v, %v, %v)", tt.args.src, tt.args.dst, tt.args.equal)
 		})
 	}
+}
+func ExampleContains() {
+	contains := Contains([]string{`php`, `python`, `golang`, `java`}, `java`)
+	fmt.Println(contains)
+}
+func ExampleContainsFunc() {
+	contains := ContainsFunc(
+		[]string{`php`, `python`, `golang`, `java`},
+		`java`,
+		func(src, dst string) bool {
+			return src == dst
+		},
+	)
+	fmt.Println(contains)
+}
+func ExampleContainsAny() {
+	containsAny := ContainsAny([]string{`php`, `python`, `golang`, `java`}, []string{`C#`, `C++`, `golang`, `java`})
+	fmt.Println(containsAny)
+}
+func ExampleContainsAnyFunc() {
+	containsAny := ContainsAnyFunc([]string{`php`, `python`, `golang`, `java`}, []string{`C#`, `C++`, `golang`, `java`}, func(src, dst string) bool {
+		return src == dst
+	})
+	fmt.Println(containsAny)
+}
+
+func ExampleContainsAll() {
+	all := ContainsAll([]string{`php`, `python`, `golang`, `java`}, []string{`C#`, `C++`, `golang`, `java`})
+	fmt.Println(all)
+}
+
+func ExampleContainsAllFunc() {
+	all := ContainsAllFunc([]string{`php`, `python`, `golang`, `java`}, []string{`C#`, `C++`, `golang`, `java`}, func(src, dst string) bool {
+		return src == dst
+	})
+	fmt.Println(all)
 }

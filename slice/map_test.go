@@ -15,7 +15,9 @@
 package slice
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
+	"math"
 	"strconv"
 	"testing"
 )
@@ -56,4 +58,12 @@ func TestMap(t *testing.T) {
 			assert.Equalf(t, tt.want, Map(tt.args.src, tt.args.m), "Map(%v, %v)", tt.args.src, tt.args.m)
 		})
 	}
+}
+
+func ExampleMap() {
+	ins := []int{1, 2, 4, 8, 15}
+	floats := Map(ins, func(idx int, src int) float64 {
+		return math.Sqrt(float64(src))
+	})
+	fmt.Println(ins, `开平方根运算:`, floats)
 }
