@@ -71,8 +71,8 @@ type BlockQueueTaskPool struct {
 	queue           chan Task
 	emptySignal     chan struct{}
 	emptySignalOnce sync.Once
-	shutdown        atomic.Value
-	started         atomic.Value
+	Closed          atomic.Value
+	Started         atomic.Value
 	ctx             context.Context
 	cancel          context.CancelFunc
 }
@@ -87,8 +87,8 @@ func NewBlockQueueTaskPool(concurrency int, queueSize int) (*BlockQueueTaskPool,
 		queue:       make(chan Task, queueSize),
 		emptySignal: make(chan struct{}, 1),
 	}
-	b.shutdown.Store(false)
-	b.started.Store(false)
+	b.Closed.Store(false)
+	b.Started.Store(false)
 	b.ctx, b.cancel = context.WithCancel(context.Background())
 	return b, nil
 }
@@ -98,6 +98,9 @@ func NewBlockQueueTaskPool(concurrency int, queueSize int) (*BlockQueueTaskPool,
 // 如果因为 ctx 的原因返回，那么将会返回 ctx.Err()
 // 在调用 Start 前后都可以调用 Submit
 func (b *BlockQueueTaskPool) Submit(ctx context.Context, task Task) error {
+	if b.Closed.Load().(bool) {
+		return errTaskPoolClosed
+	}
 	select {
 	case b.queue <- task:
 		return nil
@@ -109,15 +112,16 @@ func (b *BlockQueueTaskPool) Submit(ctx context.Context, task Task) error {
 // Start 开始调度任务执行
 // Start 之后，调用者可以继续使用 Submit 提交任务
 // Start 时，会启动concurrency数量的goroutine，等待执行task，并反复利用，不建议把concurrency设置过大
+// Shutdown之后，不允许再次调用
 func (b *BlockQueueTaskPool) Start() error {
-	if b.started.Load().(bool) {
+	if b.Started.Load().(bool) {
 		return errTaskPoolAlreadyStarted
 	}
-	if b.shutdown.Load().(bool) {
+	if b.Closed.Load().(bool) {
 		return errTaskPoolClosed
 	}
-	b.shutdown.Store(false)
-	b.started.Store(true)
+	b.Closed.Store(false)
+	b.Started.Store(true)
 	for i := 0; i < b.concurrency; i++ {
 		go func() {
 			for {
@@ -141,9 +145,12 @@ func (b *BlockQueueTaskPool) Start() error {
 // Shutdown 会负责关闭返回的 chan
 // Shutdown 无法中断正在执行的任务
 func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
-	b.shutdown.Store(true)
+	if b.Closed.Load().(bool) {
+		return b.emptySignal, errTaskPoolClosed
+	}
+	b.Closed.Store(true)
 	close(b.queue)
-	if !b.started.Load().(bool) {
+	if !b.Started.Load().(bool) {
 		b.emptySignal <- struct{}{}
 	}
 	return b.emptySignal, nil
@@ -151,7 +158,10 @@ func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
 
 // ShutdownNow 立刻关闭任务池，并且返回所有剩余未执行的任务（不包含正在执行的任务）
 func (b *BlockQueueTaskPool) ShutdownNow() ([]Task, error) {
-	b.shutdown.Store(true)
+	if b.Closed.Load().(bool) {
+		return nil, errTaskPoolClosed
+	}
+	b.Closed.Store(true)
 	close(b.queue)
 	b.cancel()
 	tasks := make([]Task, 0)
