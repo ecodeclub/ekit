@@ -70,7 +70,7 @@ func (l *LinkedList[T]) findNode(index int) *node[T] {
 }
 
 func (l *LinkedList[T]) Get(index int) (T, error) {
-	if !l.ok(index) {
+	if !l.checkIndex(index) {
 		var zeroValue T
 		return zeroValue, newErrIndexOutOfRange(l.Len(), index)
 	}
@@ -78,7 +78,7 @@ func (l *LinkedList[T]) Get(index int) (T, error) {
 	return n.val, nil
 }
 
-func (l *LinkedList[T]) ok(index int) bool {
+func (l *LinkedList[T]) checkIndex(index int) bool {
 	return 0 <= index && index < l.Len()
 }
 
@@ -110,7 +110,7 @@ func (l *LinkedList[T]) Add(index int, t T) error {
 
 // Set 设置链表中index索引处的值为t
 func (l *LinkedList[T]) Set(index int, t T) error {
-	if !l.ok(index) {
+	if !l.checkIndex(index) {
 		return newErrIndexOutOfRange(l.Len(), index)
 	}
 	node := l.findNode(index)
@@ -120,7 +120,7 @@ func (l *LinkedList[T]) Set(index int, t T) error {
 
 // Delete 删除指定位置的元素
 func (l *LinkedList[T]) Delete(index int) (T, error) {
-	if !l.ok(index) {
+	if !l.checkIndex(index) {
 		var zeroValue T
 		return zeroValue, newErrIndexOutOfRange(l.Len(), index)
 	}
