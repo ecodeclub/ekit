@@ -67,7 +67,6 @@ func ContainsAll[T comparable](src, dst []T) bool {
 		}
 	}
 	return true
-	//return false
 }
 
 // ContainsAllFunc 判断 src 里面是否存在 dst 中的所有元素
