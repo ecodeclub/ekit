@@ -54,17 +54,15 @@ func DiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
 
 // SymmetricDiff 对称差集
 func SymmetricDiff[T comparable](src, dst []T) []T {
-	srcDiffDst := Diff(src, dst)
-	dstDiffSrc := Diff(dst, src)
-	diff := append(srcDiffDst, dstDiffSrc...)
+	diff := Diff(src, dst)
+	diff = append(diff, Diff(dst, src)...)
 	return diff
 }
 
 // SymmetricDiffFunc 对称差集
 // 你应该优先使用 SymmetricDiff
 func SymmetricDiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
-	srcDiffDst := DiffFunc(src, dst, equal)
-	dstDiffSrc := DiffFunc(dst, src, equal)
-	diff := append(srcDiffDst, dstDiffSrc...)
+	diff := DiffFunc(src, dst, equal)
+	diff = append(diff, DiffFunc(dst, src, equal)...)
 	return diff
 }
