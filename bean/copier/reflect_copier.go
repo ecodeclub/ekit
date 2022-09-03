@@ -54,6 +54,10 @@ import (
 // )
 var errInvalidType = errors.New("only support struct")
 
+type structFieldMap map[string][]int
+
+var structFieldMapBuffer = make(map[string]structFieldMap)
+
 // |除Invalid外的基本数据类型| Func(一种特殊的指针，应当直接复制) | string | map | slice
 const basicKind = (1<<17 - 1) | (1 << 19) | (1 << 24) | (1 << 21) | (1 << 23)
 
@@ -63,14 +67,32 @@ type ReflectCopier[Src any, Dst any] struct {
 	// fieldMap Src 中字段下标到 Dst 字段下标的映射
 	// 其中 key 是 Src 中字段下标使用连字符 - 连接起来
 	// 不在 fieldMap 中字段则意味着被忽略
-	fieldMap map[string]int
+	fieldMap map[string][]int
 }
 
 func NewReflectCopier[Src any, Dst any]() *ReflectCopier[Src, Dst] {
-	//panic("implement me")
-	return &ReflectCopier[Src, Dst]{
-		make(map[string]int),
+	return &ReflectCopier[Src, Dst]{}
+}
+
+func makeFieldMap(srcVal reflect.Value, dstVal reflect.Value) structFieldMap {
+	//只支持src和dst同时为结构体指针
+	if srcVal.Kind() != reflect.Struct || dstVal.Kind() != reflect.Struct {
+		return nil
 	}
+	fieldMap := make(structFieldMap)
+	//确定目标字段中的key，并记录其偏移量，以供后面直接操作内存
+	for i := 0; i < dstVal.NumField(); i++ {
+		fileKey := dstVal.Type().Field(i).Name + "-" + dstVal.Field(i).Kind().String()
+		//r.fieldMap[fileKey] = append(r.fieldMap[fileKey], i)
+		fieldMap[fileKey] = append(fieldMap[fileKey], i)
+	}
+	for i := 0; i < srcVal.NumField(); i++ {
+		fileKey := srcVal.Type().Field(i).Name + "-" + srcVal.Field(i).Kind().String()
+		if _, ok := fieldMap[fileKey]; ok {
+			fieldMap[fileKey] = append(fieldMap[fileKey], i)
+		}
+	}
+	return fieldMap
 }
 
 // CopyTo 执行复制
@@ -85,22 +107,21 @@ func NewReflectCopier[Src any, Dst any]() *ReflectCopier[Src, Dst] {
 func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst) error {
 	srcVal := reflect.ValueOf(src).Elem()
 	dstVal := reflect.ValueOf(dst).Elem()
-	//只支持src和dst同时为结构体指针
-	if srcVal.Kind() != reflect.Struct || dstVal.Kind() != reflect.Struct {
+	mapName := srcVal.Type().Name() + "-" + dstVal.Type().Name()
+	if offsetMap, ok := structFieldMapBuffer[mapName]; ok {
+		r.fieldMap = offsetMap
+	} else {
+		r.fieldMap = makeFieldMap(srcVal, dstVal)
+		structFieldMapBuffer[mapName] = r.fieldMap
+	}
+	if r.fieldMap == nil {
 		return errInvalidType
 	}
-	//确定目标字段中的key，并记录其偏移量，以供后面直接操作内存
-	for i := 0; i < dstVal.NumField(); i++ {
-		fileKey := dstVal.Type().Field(i).Name + "-" + dstVal.Field(i).Kind().String()
-		//r.fieldMap[fileKey] = append(r.fieldMap[fileKey], i)
-		r.fieldMap[fileKey] = i
-	}
 
-	for i := 0; i < srcVal.NumField(); i++ {
-		fileKey := srcVal.Type().Field(i).Name + "-" + srcVal.Field(i).Kind().String()
-		if dstFiled, ok := r.fieldMap[fileKey]; ok {
-			srcSettable := structOffsetValue(srcVal, i)
-			dstSettable := structOffsetValue(dstVal, dstFiled)
+	for _, pair := range r.fieldMap {
+		if len(pair) == 2 {
+			dstSettable := structOffsetValue(dstVal, pair[0])
+			srcSettable := structOffsetValue(srcVal, pair[1])
 			copyTo(srcSettable, dstSettable)
 		}
 	}
