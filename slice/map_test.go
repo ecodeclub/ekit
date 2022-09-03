@@ -51,16 +51,6 @@ func TestMap(t *testing.T) {
 				},
 			},
 			want: nil,
-		},
-		{
-			name: "发生panic",
-			args: args{
-				src: []int{1, 3, 4},
-				m: func(idx int, src int) string {
-					panic("occur panic")
-				},
-			},
-			want: nil,
 		}, {
 			name: "src容量为0",
 			args: args{

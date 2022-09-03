@@ -22,8 +22,13 @@ func TestContains(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "切片为空",
+			args: args{[]int{}, 1},
+			want: false,
+		},
+		{
 			name: "包含测试",
-			args: args{[]int{1, 2, 3, 4}, 1},
+			args: args{[]int{2, 3, 4}, 2},
 			want: true,
 		},
 		{
@@ -60,6 +65,11 @@ func TestContainsFunc(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "切片为空",
+			args: args{[]int{}, 1, f},
+			want: false,
+		},
+		{
 			name: "包含测试",
 			args: args{[]int{1, 2, 3, 4}, 1, f},
 			want: true,
@@ -90,6 +100,8 @@ func TestContainsAny(t *testing.T) {
 		{"dst和src为nil", args{nil, nil}, false},
 		{"存在交集", args{[]int{1, 2, 3}, []int{5, 8, 2}}, true},
 		{"不存在交集", args{[]int{1, 2, 3}, []int{5, 8, 23}}, false},
+		{"dst为nil", args{[]int{1, 2, 3}, nil}, false},
+		{"src为nil", args{nil, []int{1, 2, 3}}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -115,6 +127,8 @@ func TestContainsAnyFunc(t *testing.T) {
 		{"dst和src为nil", args{nil, nil, f}, false},
 		{"存在交集", args{[]int{1, 2, 3}, []int{5, 8, 2}, f}, true},
 		{"不存在交集", args{[]int{1, 2, 3}, []int{5, 8, 23}, f}, false},
+		{"dst为nil", args{[]int{1, 2, 3}, nil, f}, false},
+		{"src为nil", args{nil, []int{1, 2, 3}, f}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -162,6 +176,7 @@ func TestContainsAllFunc(t *testing.T) {
 	}{
 		{name: "dst和src为nil", args: args{nil, nil, f}, want: false},
 		{name: "dst为nil", args: args{[]int{1, 2, 3}, nil, f}, want: true},
+		{name: "src为{}和dst为nil", args: args{[]int{}, nil, f}, want: false},
 		{name: "dst 是src 子集", args: args{[]int{5, 7, 8, 1, 2, 3, 4}, []int{1, 2, 3, 4}, f}, want: true},
 		{name: "dst 不是src 子集", args: args{[]int{5, 7, 8, 1, 2, 3, 4}, []int{1, 2, 3, 4, 32}, f}, want: false},
 	}
