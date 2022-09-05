@@ -19,7 +19,7 @@ func TestStructHelper(t *testing.T) {
 			name:     "错误输入",
 			inStruct: int32(2),
 			wantDst: &structOffsets{
-				ptrOffsets: []uintptr{},
+				helper: []structHelper{},
 			},
 			wantErr: errorNotStruct,
 		},
@@ -27,7 +27,7 @@ func TestStructHelper(t *testing.T) {
 			name:     "没有指针",
 			inStruct: NonePtr{},
 			wantDst: &structOffsets{
-				ptrOffsets: []uintptr{},
+				helper: []structHelper{},
 			},
 			wantErr: nil,
 		},
@@ -35,7 +35,10 @@ func TestStructHelper(t *testing.T) {
 			name:     "SimplePtr1",
 			inStruct: SimplePtr1{},
 			wantDst: &structOffsets{
-				ptrOffsets: []uintptr{8, 16},
+				helper: []structHelper{
+					{8, reflect.TypeOf(int64(1))},
+					{16, reflect.TypeOf(int32(1))},
+				},
 			},
 			wantErr: nil,
 		},
@@ -43,7 +46,10 @@ func TestStructHelper(t *testing.T) {
 			name:     "SimplePtr2",
 			inStruct: SimplePtr2{},
 			wantDst: &structOffsets{
-				ptrOffsets: []uintptr{8, 16},
+				helper: []structHelper{
+					{8, reflect.TypeOf(int64(1))},
+					{16, reflect.TypeOf(int32(1))},
+				},
 			},
 			wantErr: nil,
 		},
@@ -51,7 +57,10 @@ func TestStructHelper(t *testing.T) {
 			name:     "SimplePtr3",
 			inStruct: SimplePtr3{},
 			wantDst: &structOffsets{
-				ptrOffsets: []uintptr{8, 16},
+				helper: []structHelper{
+					{8, reflect.TypeOf(int64(1))},
+					{16, reflect.TypeOf(int32(1))},
+				},
 			},
 			wantErr: nil,
 		},
@@ -59,7 +68,10 @@ func TestStructHelper(t *testing.T) {
 			name:     "Composite1",
 			inStruct: Composite1{},
 			wantDst: &structOffsets{
-				ptrOffsets: []uintptr{16, 24},
+				helper: []structHelper{
+					{16, reflect.TypeOf(int64(1))},
+					{24, reflect.TypeOf(int32(1))},
+				},
 			},
 			wantErr: nil,
 		},
@@ -67,7 +79,10 @@ func TestStructHelper(t *testing.T) {
 			name:     "Composite2",
 			inStruct: Composite2{},
 			wantDst: &structOffsets{
-				ptrOffsets: []uintptr{32, 40},
+				helper: []structHelper{
+					{32, reflect.TypeOf(int64(1))},
+					{40, reflect.TypeOf(int32(1))},
+				},
 			},
 			wantErr: nil,
 		},
@@ -75,7 +90,10 @@ func TestStructHelper(t *testing.T) {
 			name:     "Composite3",
 			inStruct: Composite3{},
 			wantDst: &structOffsets{
-				ptrOffsets: []uintptr{40, 48},
+				helper: []structHelper{
+					{40, reflect.TypeOf(int64(1))},
+					{48, reflect.TypeOf(int32(1))},
+				},
 			},
 			wantErr: nil,
 		},
@@ -83,8 +101,7 @@ func TestStructHelper(t *testing.T) {
 			name:     "SpecialOffsets",
 			inStruct: SpecialOffsets{},
 			wantDst: &structOffsets{
-				ptrOffsets: []uintptr{},
-
+				helper: []structHelper{},
 				deepCopyOffsets: map[reflect.Kind][]uintptr{
 					/*
 						type SliceHeader struct {

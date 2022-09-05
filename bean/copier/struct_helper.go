@@ -5,8 +5,13 @@ import (
 	"reflect"
 )
 
+type structHelper struct {
+	ptrOffset uintptr
+	typ       reflect.Type
+}
+
 type structOffsets struct {
-	ptrOffsets []uintptr
+	helper []structHelper
 	//Slice、Array、Map等需要深度拷贝的
 	deepCopyOffsets map[reflect.Kind][]uintptr
 }
@@ -24,29 +29,35 @@ func findOffsets(typ reflect.Type, offsets *structOffsets, lastOffset uintptr, s
 	name := typ.Name()
 	// 若之前已经存过，直接加上offset后返回
 	if storeStructOffsets, ok := structOffsetsMap[name]; ok {
-		for _, subOffsets := range storeStructOffsets.ptrOffsets {
+		for _, subOffsets := range storeStructOffsets.helper {
 			//对于上一层的struct，需要添加相应的偏移量
-			offsets.ptrOffsets = append(offsets.ptrOffsets, subOffsets+lastOffset)
+			offsets.helper = append(offsets.helper, structHelper{
+				subOffsets.ptrOffset + lastOffset,
+				subOffsets.typ,
+			})
 		}
 		return
 	}
 	newStructOffsets := &structOffsets{
-		ptrOffsets: make([]uintptr, 0, 0),
+		helper: make([]structHelper, 0, 0),
 	}
 	for i := 0; i < typ.NumField(); i++ {
 		subType := typ.Field(i).Type
 		switch subType.Kind() {
 		case reflect.Pointer, reflect.UnsafePointer:
-			newStructOffsets.ptrOffsets = append(newStructOffsets.ptrOffsets, typ.Field(i).Offset)
 			sSubType := subType.Elem()
 			//指针解下去，直到找到一个struct
+			newStructOffsets.helper = append(newStructOffsets.helper, structHelper{
+				typ.Field(i).Offset,
+				sSubType,
+			})
 			for sSubType.Kind() == reflect.Pointer || sSubType.Kind() == reflect.UnsafePointer {
 				sSubType = sSubType.Elem()
 			}
 			if sSubType.Kind() == reflect.Struct {
 				//指针类型结构体的具体内存分布和原结构体没有任何关系，所以要新建一个
 				newSubStructOffsets := &structOffsets{
-					ptrOffsets: make([]uintptr, 0, 0),
+					helper: make([]structHelper, 0, 0),
 				}
 				findOffsets(sSubType, newSubStructOffsets, 0, structOffsetsMap)
 			}
@@ -62,9 +73,12 @@ func findOffsets(typ reflect.Type, offsets *structOffsets, lastOffset uintptr, s
 			continue
 		}
 	}
-	for _, subOffsets := range newStructOffsets.ptrOffsets {
+	for _, subOffsets := range newStructOffsets.helper {
 		//对于上一层的struct，需要添加相应的偏移量
-		offsets.ptrOffsets = append(offsets.ptrOffsets, subOffsets+lastOffset)
+		offsets.helper = append(offsets.helper, structHelper{
+			subOffsets.ptrOffset + lastOffset,
+			subOffsets.typ,
+		})
 	}
 	structOffsetsMap[name] = newStructOffsets
 }
@@ -88,11 +102,18 @@ func isDeepCopyKind(kind reflect.Kind) bool {
 
 // 会自动维护一个全局的map,用于查询
 func FindOffsetsDefault(inStruct any) (*structOffsets, error) {
-	return FindOffsets(inStruct, structOffsetsMapGlobal)
+	return findTypeOffsets(reflect.TypeOf(inStruct), structOffsetsMapGlobal)
+}
+
+func findValueOffsetsDefault(refVal reflect.Value) (*structOffsets, error) {
+	return findTypeOffsets(refVal.Type(), structOffsetsMapGlobal)
 }
 
 func FindOffsets(inStruct any, structOffsetsMap map[string]*structOffsets) (*structOffsets, error) {
-	typ := reflect.TypeOf(inStruct)
+	return findTypeOffsets(reflect.TypeOf(inStruct), structOffsetsMap)
+}
+
+func findTypeOffsets(typ reflect.Type, structOffsetsMap map[string]*structOffsets) (*structOffsets, error) {
 	if typ.Kind() != reflect.Struct {
 		return nil, errorNotStruct
 	}
@@ -101,7 +122,7 @@ func FindOffsets(inStruct any, structOffsetsMap map[string]*structOffsets) (*str
 		return storeStructOffsets, nil
 	}
 	newStructOffsets := &structOffsets{
-		ptrOffsets: make([]uintptr, 0, 0),
+		helper: make([]structHelper, 0, 0),
 	}
 	findOffsets(typ, newStructOffsets, 0, structOffsetsMap)
 	return newStructOffsets, nil

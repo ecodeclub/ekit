@@ -20,46 +20,20 @@ import (
 	"unsafe"
 )
 
-// 实际上不需要，但可以记在心里
-// const (
-//
-//	bInvalid   = 1 << 0
-//	bBool      = 1 << 1
-//	bInt       = 1 << 2
-//	bInt8      = 1 << 3
-//	bInt16     = 1 << 4
-//	bInt32     = 1 << 5
-//	bInt64     = 1 << 6
-//	bUint      = 1 << 7
-//	bUint8     = 1 << 8
-//	bUint16    = 1 << 9
-//	bUint32    = 1 << 10
-//	bUint64    = 1 << 11
-//	bUintptr   = 1 << 12
-//	bFloat32   = 1 << 13
-//	bFloat64   = 1 << 14
-//	bComplex64  = 1 << 15
-//	bComplex128  = 1 << 16
-//	bArray     = 1 << 17
-//	bChan      = 1 << 18
-//	bFunc      = 1 << 19
-//	bInterface = 1 << 20
-//	bMap       = 1 << 21
-//	bPointer   = 1 << 22
-//	bSlice     = 1 << 23
-//	bString    = 1 << 24
-//	bStruct    = 1 << 25
-//	bUnsafePointer  = 1 << 26
-//
-// )
 var errInvalidType = errors.New("only support struct")
+
+var errToDoPointer = errors.New("doesn't support inside multi-pointer yet")
 
 type structFieldMap map[string][]int
 
 var structFieldMapBuffer = make(map[string]structFieldMap)
 
-// |除Invalid外的基本数据类型| Func(一种特殊的指针，应当直接复制) | string | map | slice
-const basicKind = (1<<17 - 1) | (1 << 19) | (1 << 24) | (1 << 21) | (1 << 23)
+type structCopyFunc func(src reflect.Value, dst reflect.Value)
+
+var subOffsetMap = make(map[string][]int)
+
+// 指针处理起来很麻烦，单独列出一条
+var subPointerOffsetMap = make(map[string][]int)
 
 // ReflectCopier 基于反射的实现
 // ReflectCopier 是浅拷贝
@@ -75,7 +49,7 @@ func NewReflectCopier[Src any, Dst any]() *ReflectCopier[Src, Dst] {
 }
 
 func makeFieldMap(srcVal reflect.Value, dstVal reflect.Value) structFieldMap {
-	//只支持src和dst同时为结构体指针
+	//只支持srcVal和dstVal同时为结构体
 	if srcVal.Kind() != reflect.Struct || dstVal.Kind() != reflect.Struct {
 		return nil
 	}
@@ -90,6 +64,11 @@ func makeFieldMap(srcVal reflect.Value, dstVal reflect.Value) structFieldMap {
 		fileKey := srcVal.Type().Field(i).Name + "-" + srcVal.Field(i).Kind().String()
 		if _, ok := fieldMap[fileKey]; ok {
 			fieldMap[fileKey] = append(fieldMap[fileKey], i)
+		}
+	}
+	for key, pair := range fieldMap {
+		if len(pair) < 2 {
+			delete(fieldMap, key)
 		}
 	}
 	return fieldMap
@@ -119,10 +98,10 @@ func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst) error {
 	}
 
 	for _, pair := range r.fieldMap {
-		if len(pair) == 2 {
-			dstSettable := structOffsetValue(dstVal, pair[0])
-			srcSettable := structOffsetValue(srcVal, pair[1])
-			copyTo(srcSettable, dstSettable)
+		dstSettable := structOffsetValue(dstVal, pair[0])
+		srcSettable := structOffsetValue(srcVal, pair[1])
+		if err := copyTo(srcSettable, dstSettable); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -132,42 +111,52 @@ func structOffsetValue(value reflect.Value, index int) reflect.Value {
 	return reflect.NewAt(value.Field(index).Type(), unsafe.Pointer(uintptr(value.UnsafeAddr())+value.Type().Field(index).Offset)).Elem()
 }
 
-func copyTo(src reflect.Value, dst reflect.Value) {
-	//如果可以Set，就直接赋值
-	switch src.Kind() {
-	case reflect.Pointer, reflect.UnsafePointer:
-		if src.UnsafePointer() == nil {
-			dst.Set(src)
-		} else {
-			newPtrV := reflect.New(dst.Type().Elem())
-			dst.Set(newPtrV)
-			copyTo(src.Elem(), dst.Elem())
-		}
-		break
-	default:
-		if dst.CanSet() {
-			dst.Set(src)
-			// 对于struct字段中的指针类型额外的处理
-			// 目前只支持一级指针的深度拷贝
-			if dst.Kind() == reflect.Struct {
-				numFiled := dst.NumField()
-				for i := 0; i < numFiled; i++ {
-					value := dst.Field(i)
-					if value.Kind() == reflect.Pointer || value.Kind() == reflect.UnsafePointer {
-						//新建一个类型，并赋值到value上
-						dstNewPtr := reflect.New(value.Type().Elem())
-						value.Set(dstNewPtr)
-						copyTo(dst.Field(i).Elem(), value.Elem())
-					}
-				}
-			}
-		}
+func checkValid(srcVal reflect.Value, dstVal reflect.Value) error {
+	if srcVal.Type().Kind() != dstVal.Type().Kind() {
+		panic("srcVal 和 dstVal一定要属于相同类型")
+	}
+	if srcVal.Type().Kind() == reflect.UnsafePointer || dstVal.Type().Kind() == reflect.Pointer {
+		return errToDoPointer
 	}
 
+	if srcVal.Type().Kind() != reflect.Struct {
+		return errInvalidType
+	}
+	return nil
 }
 
-func isBasicKind(kind reflect.Kind) bool {
-	return 1<<kind&basicKind > 0
+func copyTo(srcVal reflect.Value, dstVal reflect.Value) error {
+
+	if srcVal.Type().Kind() == reflect.Pointer || srcVal.Type().Kind() == reflect.UnsafePointer {
+		subType := srcVal.Elem().Type()
+		newValue := reflect.New(subType)
+		copyTo(srcVal.Elem(), newValue.Elem())
+		dstVal.Set(newValue)
+		return nil
+	}
+
+	dstVal.Set(srcVal)
+	if srcVal.Type().Kind() == reflect.Struct {
+		structOffsets, err := findValueOffsetsDefault(srcVal)
+		if err != nil {
+			return err
+		}
+
+		srcAddr := srcVal.UnsafeAddr()
+		dstAddr := dstVal.UnsafeAddr()
+
+		for _, h := range structOffsets.helper {
+			subSrcValue := reflect.NewAt(h.typ, unsafe.Pointer(srcAddr+h.ptrOffset)).Elem()
+			subDstValue := reflect.NewAt(h.typ, unsafe.Pointer(dstAddr+h.ptrOffset)).Elem()
+			newValue := reflect.New(h.typ)
+			err = copyTo(subSrcValue.Elem(), newValue.Elem())
+			if err != nil {
+				return nil
+			}
+			subDstValue.Set(newValue)
+		}
+	}
+	return nil
 }
 
 func (r *ReflectCopier[Src, Dst]) Copy(src *Src) (*Dst, error) {
