@@ -16,12 +16,44 @@ package slice
 
 // Union 并集，只支持 comparable
 func Union[T comparable](src, dst []T) []T {
-	return nil
+	if len(src) == 0 && len(dst) == 0 {
+		return nil
+	}
+	result := src
+	srcMap := map[T]struct{}{}
+	for _, v := range src {
+		srcMap[v] = struct{}{}
+	}
+	for _, v := range dst {
+		if _, ok := srcMap[v]; !ok {
+			result = append(result, v)
+		}
+	}
+	return result
 }
 
 // UnionByFunc 并集，支持任意类型
 // 你应该优先使用 Union
 func UnionByFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
-	// 双重循环检测
-	return nil
+	if len(src) == 0 && len(dst) == 0 {
+		return nil
+	}
+	result := src
+	for _, dv := range dst {
+		var contains bool
+		for _, sv := range src {
+			isPanic, isEqual := equal.safeEqual(sv, dv)
+			if isPanic {
+				return nil
+			}
+			if isEqual {
+				contains = true
+				break
+			}
+		}
+		if !contains {
+			result = append(result, dv)
+		}
+	}
+	return result
 }

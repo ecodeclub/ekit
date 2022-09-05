@@ -14,5 +14,29 @@
 
 package slice
 
+import (
+	"fmt"
+	"log"
+	"runtime"
+)
+
 // EqualFunc 比较两个元素是否相等
 type EqualFunc[T any] func(src, dst T) bool
+
+func (e EqualFunc[any]) safeEqual(src, dst any) (isPanic bool, result bool) {
+	isPanic = true
+	defer func() {
+		if p := recover(); p != nil {
+			log.Printf("ekit [PANIC]: %v", p)
+
+			//打印调用栈信息
+			buf := make([]byte, 2048)
+			n := runtime.Stack(buf, false)
+			stackInfo := fmt.Sprintf("%s", buf[:n])
+			log.Printf("ekit: panic stack info %s", stackInfo)
+		}
+	}()
+	result = e(src, dst)
+	isPanic = false
+	return isPanic, result
+}
