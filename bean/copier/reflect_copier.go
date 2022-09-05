@@ -148,7 +148,7 @@ func copyTo(srcVal reflect.Value, dstVal reflect.Value) error {
 		for _, h := range structOffsets.helper {
 			subSrcValue := reflect.NewAt(h.typ, unsafe.Pointer(srcAddr+h.ptrOffset)).Elem()
 			subDstValue := reflect.NewAt(h.typ, unsafe.Pointer(dstAddr+h.ptrOffset)).Elem()
-			newValue := reflect.New(h.typ)
+			newValue := reflect.New(h.typ.Elem())
 			err = copyTo(subSrcValue.Elem(), newValue.Elem())
 			if err != nil {
 				return nil

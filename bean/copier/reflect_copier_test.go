@@ -145,6 +145,123 @@ func TestReflectCopier_Copy(t *testing.T) {
 				ekit.ToPtr[complex128](complex(3, 4)),
 				nil,
 			},
+		}, {
+			name: "组合,子数据结构内部全为指针",
+			copyFunc: func() (any, error) {
+				copier := NewReflectCopier[CompositeSrc1, CompositeDst1]()
+				a := 1
+				b := float32(1.0)
+				c := float64(2.0)
+				d := uint8(1)
+				e := uint32(2)
+				f := uint64(3)
+				g := int64(-1)
+				h := int32(-2)
+				i := int8(-3)
+				j := bool(false)
+				k := complex64(complex(1, 2))
+				l := complex(3, 4)
+				simpleSrc := SimplePointersSrc{
+					&a, &b, &c, &d, &e, &f, &g, &h, &i, &j, &k, &l,
+				}
+				src1 := &CompositeSrc1{
+					Simple: simpleSrc,
+					a:      1,
+					b:      1,
+				}
+				res, err := copier.Copy(src1)
+
+				a = 2
+				b = float32(2.0)
+				c = float64(3.0)
+				d = uint8(2)
+				e = uint32(4)
+				f = uint64(5)
+				g = int64(-2)
+				h = int32(-3)
+				i = int8(-4)
+				j = bool(true)
+				k = complex64(complex(2, 3))
+				l = complex(4, 5)
+
+				//修改simpleInlineSrc中的string,(更换原先src中的string，即src中的string_view是 "abc"，具体见函数)
+				return res, err
+			},
+			wantDst: &CompositeDst1{
+				a: 1,
+				Simple: SimplePointersSrc{
+					ekit.ToPtr[int](1),
+					ekit.ToPtr[float32](1.0),
+					ekit.ToPtr[float64](2.0),
+					ekit.ToPtr[uint8](1),
+					ekit.ToPtr[uint32](2),
+					ekit.ToPtr[uint64](3),
+					ekit.ToPtr[int64](-1),
+					ekit.ToPtr[int32](-2),
+					ekit.ToPtr[int8](-3),
+					ekit.ToPtr[bool](false),
+					ekit.ToPtr[complex64](complex64(complex(1, 2))),
+					ekit.ToPtr[complex128](complex(3, 4)),
+				},
+			},
+		}, {
+			name: "Composite2",
+			copyFunc: func() (any, error) {
+				copier := NewReflectCopier[CompositeSrc2, CompositeDst2]()
+				a := 1
+				b := float32(1.0)
+				c := float64(2.0)
+				d := uint8(1)
+				e := uint32(2)
+				f := uint64(3)
+				g := int64(-1)
+				h := int32(-2)
+				i := int8(-3)
+				j := bool(false)
+				k := complex64(complex(1, 2))
+				l := complex(3, 4)
+				simpleSrc := &SimplePointersSrc{
+					&a, &b, &c, &d, &e, &f, &g, &h, &i, &j, &k, &l,
+				}
+				src1 := &CompositeSrc2{
+					Simple: simpleSrc,
+					a:      1,
+					b:      1,
+				}
+				res, err := copier.Copy(src1)
+
+				a = 2
+				b = float32(2.0)
+				c = float64(3.0)
+				d = uint8(2)
+				e = uint32(4)
+				f = uint64(5)
+				g = int64(-2)
+				h = int32(-3)
+				i = int8(-4)
+				j = bool(true)
+				k = complex64(complex(2, 3))
+				l = complex(4, 5)
+				//修改simpleInlineSrc中的string,(更换原先src中的string，即src中的string_view是 "abc"，具体见函数)
+				return res, err
+			},
+			wantDst: &CompositeDst2{
+				a: 1,
+				Simple: &SimplePointersSrc{
+					ekit.ToPtr[int](1),
+					ekit.ToPtr[float32](1.0),
+					ekit.ToPtr[float64](2.0),
+					ekit.ToPtr[uint8](1),
+					ekit.ToPtr[uint32](2),
+					ekit.ToPtr[uint64](3),
+					ekit.ToPtr[int64](-1),
+					ekit.ToPtr[int32](-2),
+					ekit.ToPtr[int8](-3),
+					ekit.ToPtr[bool](false),
+					ekit.ToPtr[complex64](complex64(complex(1, 2))),
+					ekit.ToPtr[complex128](complex(3, 4)),
+				},
+			},
 		},
 		// 你还需要测试
 		// 1. Src 或者 Dst 类型非法，例如基本类型，内置类型或者接口
@@ -241,4 +358,26 @@ type SimplePointersDst struct {
 	k *complex64
 	l *complex128
 	m *unsafe.Pointer
+}
+
+type CompositeSrc1 struct {
+	Simple SimplePointersSrc
+	a      int
+	b      complex64
+}
+
+type CompositeDst1 struct {
+	Simple SimplePointersSrc
+	a      int
+}
+
+type CompositeSrc2 struct {
+	Simple *SimplePointersSrc
+	a      int
+	b      complex64
+}
+
+type CompositeDst2 struct {
+	Simple *SimplePointersSrc
+	a      int
 }
