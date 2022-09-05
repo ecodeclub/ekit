@@ -1,6 +1,7 @@
 package copier
 
 import (
+	"github.com/gotomicro/ekit"
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
@@ -36,8 +37,8 @@ func TestStructHelper(t *testing.T) {
 			inStruct: SimplePtr1{},
 			wantDst: &structOffsets{
 				helper: []structHelper{
-					{8, reflect.TypeOf(int64(1))},
-					{16, reflect.TypeOf(int32(1))},
+					{8, reflect.TypeOf(ekit.ToPtr[int64](1))},
+					{16, reflect.TypeOf(ekit.ToPtr[int32](1))},
 				},
 			},
 			wantErr: nil,
@@ -47,8 +48,8 @@ func TestStructHelper(t *testing.T) {
 			inStruct: SimplePtr2{},
 			wantDst: &structOffsets{
 				helper: []structHelper{
-					{8, reflect.TypeOf(int64(1))},
-					{16, reflect.TypeOf(int32(1))},
+					{8, reflect.TypeOf(ekit.ToPtr[int64](1))},
+					{16, reflect.TypeOf(ekit.ToPtr[int32](1))},
 				},
 			},
 			wantErr: nil,
@@ -58,8 +59,8 @@ func TestStructHelper(t *testing.T) {
 			inStruct: SimplePtr3{},
 			wantDst: &structOffsets{
 				helper: []structHelper{
-					{8, reflect.TypeOf(int64(1))},
-					{16, reflect.TypeOf(int32(1))},
+					{8, reflect.TypeOf(ekit.ToPtr[int64](1))},
+					{16, reflect.TypeOf(ekit.ToPtr[int32](1))},
 				},
 			},
 			wantErr: nil,
@@ -69,8 +70,8 @@ func TestStructHelper(t *testing.T) {
 			inStruct: Composite1{},
 			wantDst: &structOffsets{
 				helper: []structHelper{
-					{16, reflect.TypeOf(int64(1))},
-					{24, reflect.TypeOf(int32(1))},
+					{16, reflect.TypeOf(ekit.ToPtr[int64](1))},
+					{24, reflect.TypeOf(ekit.ToPtr[int32](1))},
 				},
 			},
 			wantErr: nil,
@@ -80,8 +81,8 @@ func TestStructHelper(t *testing.T) {
 			inStruct: Composite2{},
 			wantDst: &structOffsets{
 				helper: []structHelper{
-					{32, reflect.TypeOf(int64(1))},
-					{40, reflect.TypeOf(int32(1))},
+					{32, reflect.TypeOf(ekit.ToPtr[int64](1))},
+					{40, reflect.TypeOf(ekit.ToPtr[int32](1))},
 				},
 			},
 			wantErr: nil,
@@ -91,8 +92,8 @@ func TestStructHelper(t *testing.T) {
 			inStruct: Composite3{},
 			wantDst: &structOffsets{
 				helper: []structHelper{
-					{40, reflect.TypeOf(int64(1))},
-					{48, reflect.TypeOf(int32(1))},
+					{40, reflect.TypeOf(ekit.ToPtr[int64](1))},
+					{48, reflect.TypeOf(ekit.ToPtr[int32](1))},
 				},
 			},
 			wantErr: nil,

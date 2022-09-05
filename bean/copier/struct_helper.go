@@ -45,12 +45,12 @@ func findOffsets(typ reflect.Type, offsets *structOffsets, lastOffset uintptr, s
 		subType := typ.Field(i).Type
 		switch subType.Kind() {
 		case reflect.Pointer, reflect.UnsafePointer:
-			sSubType := subType.Elem()
-			//指针解下去，直到找到一个struct
 			newStructOffsets.helper = append(newStructOffsets.helper, structHelper{
 				typ.Field(i).Offset,
-				sSubType,
+				subType,
 			})
+			sSubType := subType.Elem()
+			//指针解下去，直到找到一个struct
 			for sSubType.Kind() == reflect.Pointer || sSubType.Kind() == reflect.UnsafePointer {
 				sSubType = sSubType.Elem()
 			}
