@@ -294,14 +294,11 @@ func TestIndexAll(t *testing.T) {
 }
 
 func TestIndexAllFunc(t *testing.T) {
-	f := func(x, y int) bool {
-		return x == y
-	}
 	tests := []struct {
 		name  string
 		src   []int
 		dst   int
-		equal EqualFunc[any]
+		equal EqualFunc[int]
 
 		want []int
 	}{
@@ -334,7 +331,7 @@ func TestIndexAllFunc(t *testing.T) {
 			name: "equal panic",
 			src:  []int{1, 2, 3},
 			dst:  1,
-			equal: func(x, y any) bool {
+			equal: func(x, y int) bool {
 				panic("panic test")
 			},
 
@@ -343,6 +340,12 @@ func TestIndexAllFunc(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			f := func(x, y int) bool {
+				return x == y
+			}
+			if tt.equal != nil {
+				f = tt.equal
+			}
 			res := IndexAllFunc[int](tt.src, tt.dst, f)
 			assert.Equal(t, tt.want, res)
 		})
