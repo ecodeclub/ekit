@@ -76,7 +76,7 @@ func IndexAllFunc[T any](src []T, dst T, equal EqualFunc[T]) []int {
 	for i, v := range src {
 		isPanic, result := equal.safeEqual(v, dst)
 		if isPanic {
-			return ans
+			return nil
 		}
 		if result {
 			ans = append(ans, i)

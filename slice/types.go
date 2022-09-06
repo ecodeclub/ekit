@@ -15,7 +15,6 @@
 package slice
 
 import (
-	"fmt"
 	"log"
 	"runtime"
 )
@@ -24,19 +23,17 @@ import (
 type EqualFunc[T any] func(src, dst T) bool
 
 func (e EqualFunc[any]) safeEqual(src, dst any) (isPanic bool, result bool) {
-	isPanic = true
 	defer func() {
 		if p := recover(); p != nil {
+			isPanic = true
 			log.Printf("ekit [PANIC]: %v", p)
 
-			//打印调用栈信息
+			// 打印调用栈信息
 			buf := make([]byte, 2048)
 			n := runtime.Stack(buf, false)
-			stackInfo := fmt.Sprintf("%s", buf[:n])
-			log.Printf("ekit: panic stack info %s", stackInfo)
+			log.Printf("ekit: panic stack info %s", buf[:n])
 		}
 	}()
 	result = e(src, dst)
-	isPanic = false
-	return isPanic, result
+	return
 }

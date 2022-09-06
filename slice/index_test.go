@@ -1,3 +1,17 @@
+// Copyright 2021 gotomicro
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package slice
 
 import (
@@ -32,6 +46,13 @@ func TestIndex(t *testing.T) {
 			dst:  3,
 
 			want: 2,
+		},
+		{
+			name: "src contains multiple dst",
+			src:  []int{1, 3, 4, 3},
+			dst:  3,
+
+			want: 1,
 		},
 		{
 			name: "src not contains dst",
@@ -75,6 +96,13 @@ func TestIndexFunc(t *testing.T) {
 			dst:  3,
 
 			want: 2,
+		},
+		{
+			name: "src contains multiple dst",
+			src:  []any{1, 3, 4, 3},
+			dst:  3,
+
+			want: 1,
 		},
 		{
 			name: "src not contains dst",
@@ -135,6 +163,13 @@ func TestLastIndex(t *testing.T) {
 			want: 2,
 		},
 		{
+			name: "src contains multiple dst",
+			src:  []int{1, 3, 4, 3},
+			dst:  3,
+
+			want: 3,
+		},
+		{
 			name: "src not contains dst",
 			src:  []int{1, 2, 3},
 			dst:  4,
@@ -176,6 +211,13 @@ func TestLastIndexFunc(t *testing.T) {
 			dst:  3,
 
 			want: 2,
+		},
+		{
+			name: "src contains multiple dst",
+			src:  []any{1, 3, 4, 3},
+			dst:  3,
+
+			want: 3,
 		},
 		{
 			name: "src not contains dst",
@@ -342,7 +384,7 @@ func ExampleLastIndexFunc() {
 	dst := 2
 	index := LastIndexFunc(src, dst, equal)
 	fmt.Println(index)
-	//Output: 2
+	// Output: 2
 }
 
 func ExampleIndexAll() {
@@ -350,7 +392,7 @@ func ExampleIndexAll() {
 	dst := 2
 	result := IndexAll(src, dst)
 	fmt.Println(result)
-	//	Output: [1 3 4]
+	// Output: [1 3 4]
 }
 
 func ExampleIndexAllFunc() {
@@ -361,5 +403,5 @@ func ExampleIndexAllFunc() {
 	dst := 2
 	result := IndexAllFunc(src, dst, equal)
 	fmt.Println(result)
-	//	Output: [1 3 4]
+	// Output: [1 3 4]
 }
