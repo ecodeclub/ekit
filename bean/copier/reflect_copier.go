@@ -44,24 +44,27 @@ type ReflectCopier[Src any, Dst any] struct {
 	fieldMap map[string][]int
 }
 
-func NewReflectCopier[Src any, Dst any]() *ReflectCopier[Src, Dst] {
-	return &ReflectCopier[Src, Dst]{}
+func NewReflectCopier[Src any, Dst any]() (*ReflectCopier[Src, Dst], error) {
+	return &ReflectCopier[Src, Dst]{}, nil
 }
 
-func makeFieldMap(srcVal reflect.Value, dstVal reflect.Value) structFieldMap {
+func makeFieldMap(srcVal reflect.Value, dstVal reflect.Value) (structFieldMap, error) {
 	//只支持srcVal和dstVal同时为结构体
-	if srcVal.Kind() != reflect.Struct || dstVal.Kind() != reflect.Struct {
-		return nil
+	if srcVal.Kind() != reflect.Struct {
+		return nil, newErrTypeError(srcVal.Type())
+	}
+	if dstVal.Kind() != reflect.Struct {
+		return nil, newErrTypeError(dstVal.Type())
 	}
 	fieldMap := make(structFieldMap)
 	//确定目标字段中的key，并记录其偏移量，以供后面直接操作内存
 	for i := 0; i < dstVal.NumField(); i++ {
-		fileKey := dstVal.Type().Field(i).Name + "-" + dstVal.Field(i).Kind().String()
+		fileKey := dstVal.Type().Field(i).Name + "-" + dstVal.Field(i).Type().String()
 		//r.fieldMap[fileKey] = append(r.fieldMap[fileKey], i)
 		fieldMap[fileKey] = append(fieldMap[fileKey], i)
 	}
 	for i := 0; i < srcVal.NumField(); i++ {
-		fileKey := srcVal.Type().Field(i).Name + "-" + srcVal.Field(i).Kind().String()
+		fileKey := srcVal.Type().Field(i).Name + "-" + srcVal.Field(i).Type().String()
 		if _, ok := fieldMap[fileKey]; ok {
 			fieldMap[fileKey] = append(fieldMap[fileKey], i)
 		}
@@ -71,7 +74,7 @@ func makeFieldMap(srcVal reflect.Value, dstVal reflect.Value) structFieldMap {
 			delete(fieldMap, key)
 		}
 	}
-	return fieldMap
+	return fieldMap, nil
 }
 
 // CopyTo 执行复制
@@ -90,11 +93,12 @@ func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst) error {
 	if offsetMap, ok := structFieldMapBuffer[mapName]; ok {
 		r.fieldMap = offsetMap
 	} else {
-		r.fieldMap = makeFieldMap(srcVal, dstVal)
-		structFieldMapBuffer[mapName] = r.fieldMap
-	}
-	if r.fieldMap == nil {
-		return errInvalidType
+		fieldMap, err := makeFieldMap(srcVal, dstVal)
+		if err != nil {
+			return err
+		}
+		structFieldMapBuffer[mapName] = fieldMap
+		r.fieldMap = fieldMap
 	}
 
 	for _, pair := range r.fieldMap {
@@ -128,10 +132,12 @@ func checkValid(srcVal reflect.Value, dstVal reflect.Value) error {
 func copyTo(srcVal reflect.Value, dstVal reflect.Value) error {
 
 	if srcVal.Type().Kind() == reflect.Pointer || srcVal.Type().Kind() == reflect.UnsafePointer {
-		subType := srcVal.Elem().Type()
-		newValue := reflect.New(subType)
-		copyTo(srcVal.Elem(), newValue.Elem())
-		dstVal.Set(newValue)
+		if srcVal.Pointer() != 0 {
+			subType := srcVal.Elem().Type()
+			newValue := reflect.New(subType)
+			copyTo(srcVal.Elem(), newValue.Elem())
+			dstVal.Set(newValue)
+		}
 		return nil
 	}
 
@@ -148,12 +154,16 @@ func copyTo(srcVal reflect.Value, dstVal reflect.Value) error {
 		for _, h := range structOffsets.helper {
 			subSrcValue := reflect.NewAt(h.typ, unsafe.Pointer(srcAddr+h.ptrOffset)).Elem()
 			subDstValue := reflect.NewAt(h.typ, unsafe.Pointer(dstAddr+h.ptrOffset)).Elem()
-			newValue := reflect.New(h.typ.Elem())
-			err = copyTo(subSrcValue.Elem(), newValue.Elem())
-			if err != nil {
-				return nil
+			if subSrcValue.Pointer() != 0 {
+				newValue := reflect.New(h.typ.Elem())
+				err = copyTo(subSrcValue.Elem(), newValue.Elem())
+				if err != nil {
+					return err
+				}
+				subDstValue.Set(newValue)
+			} else {
+				subDstValue.SetPointer(nil)
 			}
-			subDstValue.Set(newValue)
 		}
 	}
 	return nil
