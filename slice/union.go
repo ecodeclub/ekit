@@ -19,28 +19,44 @@ func Union[T comparable](src, dst []T) []T {
 	if len(src) == 0 && len(dst) == 0 {
 		return nil
 	}
-	result := src
-	srcMap := map[T]struct{}{}
+	result := make([]T, 0, len(src))
+	set := map[T]struct{}{}
 	for _, v := range src {
-		srcMap[v] = struct{}{}
+		if _, ok := set[v]; !ok {
+			result = append(result, v)
+			set[v] = struct{}{}
+		}
 	}
 	for _, v := range dst {
-		if _, ok := srcMap[v]; !ok {
+		if _, ok := set[v]; !ok {
 			result = append(result, v)
+			set[v] = struct{}{}
 		}
 	}
 	return result
 }
 
-// UnionByFunc 并集，支持任意类型
+// UnionByFunc 并集，支持任意类型，返回结果以 src 中的元素优先
 // 你应该优先使用 Union
 func UnionByFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
 	if len(src) == 0 && len(dst) == 0 {
 		return nil
 	}
-	result := src
+	var result []T
+	srcSet := map[any]struct{}{}
+	dstSet := map[any]struct{}{}
+	for _, v := range src {
+		if _, ok := srcSet[v]; !ok {
+			result = append(result, v)
+			srcSet[v] = struct{}{}
+		}
+	}
 	for _, dv := range dst {
 		var contains bool
+		if _, ok := dstSet[dv]; ok {
+			continue
+		}
+		dstSet[dv] = struct{}{}
 		for _, sv := range src {
 			isPanic, isEqual := equal.safeEqual(sv, dv)
 			if isPanic {

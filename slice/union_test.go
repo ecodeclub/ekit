@@ -16,6 +16,7 @@ package slice
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,6 +35,12 @@ func TestUnion(t *testing.T) {
 		{
 			name: "only src nil",
 			dst:  []int{1, 2, 3},
+
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "only dst nil",
+			src:  []int{1, 2, 3, 3},
 
 			want: []int{1, 2, 3},
 		},
@@ -66,6 +73,13 @@ func TestUnion(t *testing.T) {
 			want: []int{1, 2, 3, 4, 5, 6},
 		},
 		{
+			name: "src equal to dst",
+			src:  []int{1, 2, 3},
+			dst:  []int{1, 2, 3},
+
+			want: []int{1, 2, 3},
+		},
+		{
 			name: "src contains few dst",
 			src:  []int{1, 2, 3, 4, 5},
 			dst:  []int{4, 5, 6, 7, 8},
@@ -79,6 +93,27 @@ func TestUnion(t *testing.T) {
 
 			want: []int{1, 2, 3, 4, 5, 6},
 		},
+		{
+			name: "src with duplicates",
+			src:  []int{1, 2, 3, 3},
+			dst:  []int{4, 5},
+
+			want: []int{1, 2, 3, 4, 5},
+		},
+		{
+			name: "dst with duplicates",
+			src:  []int{1, 2, 3},
+			dst:  []int{4, 4, 5},
+
+			want: []int{1, 2, 3, 4, 5},
+		},
+		{
+			name: "both have duplicates",
+			src:  []int{1, 2, 3, 3},
+			dst:  []int{4, 4, 5},
+
+			want: []int{1, 2, 3, 4, 5},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -88,7 +123,7 @@ func TestUnion(t *testing.T) {
 	}
 }
 
-func TestUnionAny(t *testing.T) {
+func TestUnionByFunc(t *testing.T) {
 	tests := []struct {
 		name  string
 		src   []any
@@ -102,6 +137,12 @@ func TestUnionAny(t *testing.T) {
 		{
 			name: "only src nil",
 			dst:  []any{1, 2, 3},
+
+			want: []any{1, 2, 3},
+		},
+		{
+			name: "only dst nil",
+			src:  []any{1, 2, 3},
 
 			want: []any{1, 2, 3},
 		},
@@ -134,6 +175,13 @@ func TestUnionAny(t *testing.T) {
 			want: []any{1, 2, 3, 4, 5, 6},
 		},
 		{
+			name: "src equal to dst",
+			src:  []any{1, 2, 3},
+			dst:  []any{1, 2, 3},
+
+			want: []any{1, 2, 3},
+		},
+		{
 			name: "src contains few dst",
 			src:  []any{1, 2, 3, 4, 5},
 			dst:  []any{4, 5, 6, 7, 8},
@@ -146,6 +194,38 @@ func TestUnionAny(t *testing.T) {
 			dst:  []any{4, 5, 6},
 
 			want: []any{1, 2, 3, 4, 5, 6},
+		},
+		{
+			name: "src with duplicates",
+			src:  []any{1, 2, 3, 3},
+			dst:  []any{4, 5},
+
+			want: []any{1, 2, 3, 4, 5},
+		},
+		{
+			name: "dst with duplicates",
+			src:  []any{1, 2, 3},
+			dst:  []any{4, 4, 5},
+
+			want: []any{1, 2, 3, 4, 5},
+		},
+		{
+			name: "both have duplicates",
+			src:  []any{1, 2, 3, 3},
+			dst:  []any{4, 4, 5},
+
+			want: []any{1, 2, 3, 4, 5},
+		},
+		{
+			name: "src int and dst string",
+			src:  []any{1, 2, 3, 4},
+			dst:  []any{"4", "5"},
+			equal: func(x, y any) bool {
+				xVal := strconv.Itoa(x.(int))
+				return xVal == y
+			},
+
+			want: []any{1, 2, 3, 4, "5"},
 		},
 		{
 			name: "equal panic",
@@ -177,7 +257,7 @@ func ExampleUnion() {
 	dst := []int{3, 4, 5, 6, 7}
 	result := Union(src, dst)
 	fmt.Println(result)
-	//Output: [1 2 3 4 5 6 7]
+	// Output: [1 2 3 4 5 6 7]
 }
 
 func ExampleUnionByFunc() {
@@ -187,5 +267,5 @@ func ExampleUnionByFunc() {
 		return x == y
 	})
 	fmt.Println(result)
-	//Output: [1 2 3 4 5 6 7]
+	// Output: [1 2 3 4 5 6 7]
 }
