@@ -66,6 +66,18 @@ func makeFieldMap(srcVal reflect.Value, dstVal reflect.Value) (structFieldMap, e
 	for i := 0; i < srcVal.NumField(); i++ {
 		fileKey := srcVal.Type().Field(i).Name + "-" + srcVal.Field(i).Type().String()
 		if _, ok := fieldMap[fileKey]; ok {
+			switch srcVal.Type().Kind() {
+			case reflect.Map:
+				keyKind := srcVal.Type().Key().Kind()
+				valueKind := srcVal.Type().Elem().Kind()
+				if keyKind != srcVal.Type().Key().Kind() || valueKind != srcVal.Type().Elem().Kind() {
+					continue
+				}
+			case reflect.Slice:
+				if srcVal.Type().Elem().Kind() != dstVal.Type().Elem().Kind() {
+					continue
+				}
+			}
 			fieldMap[fileKey] = append(fieldMap[fileKey], i)
 		}
 	}
@@ -131,7 +143,8 @@ func checkValid(srcVal reflect.Value, dstVal reflect.Value) error {
 
 func copyTo(srcVal reflect.Value, dstVal reflect.Value) error {
 
-	if srcVal.Type().Kind() == reflect.Pointer || srcVal.Type().Kind() == reflect.UnsafePointer {
+	switch srcVal.Type().Kind() {
+	case reflect.Pointer, reflect.UnsafePointer:
 		if srcVal.Pointer() != 0 {
 			subType := srcVal.Elem().Type()
 			newValue := reflect.New(subType)
@@ -139,18 +152,18 @@ func copyTo(srcVal reflect.Value, dstVal reflect.Value) error {
 			dstVal.Set(newValue)
 		}
 		return nil
-	}
-
-	dstVal.Set(srcVal)
-	if srcVal.Type().Kind() == reflect.Struct {
+	//case reflect.Map:
+	//case reflect.Slice:
+	//case reflect.Array:
+	case reflect.Struct:
+		dstVal.Set(srcVal)
 		structOffsets, err := findValueOffsetsDefault(srcVal)
 		if err != nil {
 			return err
 		}
-
 		srcAddr := srcVal.UnsafeAddr()
 		dstAddr := dstVal.UnsafeAddr()
-
+		// 解决普通的指针结构
 		for _, h := range structOffsets.helper {
 			subSrcValue := reflect.NewAt(h.typ, unsafe.Pointer(srcAddr+h.ptrOffset)).Elem()
 			subDstValue := reflect.NewAt(h.typ, unsafe.Pointer(dstAddr+h.ptrOffset)).Elem()
@@ -165,6 +178,10 @@ func copyTo(srcVal reflect.Value, dstVal reflect.Value) error {
 				subDstValue.SetPointer(nil)
 			}
 		}
+		// 解决slice、map等特殊需要深度拷贝的结构
+
+	default:
+		dstVal.Set(srcVal)
 	}
 	return nil
 }

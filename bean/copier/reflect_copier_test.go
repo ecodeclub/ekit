@@ -791,7 +791,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 			},
 		},
 		{
-			name: "成员为结构体数组，结构体不同",
+			name: "成员为结构体数组，结构体不同，不返回错误，直接忽略该字段",
 			copyFunc: func() (any, error) {
 				copier, err := NewReflectCopier[ArraySrc, ArrayDst1]()
 				if err != nil {
@@ -812,7 +812,8 @@ func TestReflectCopier_LongYue(t *testing.T) {
 					},
 				})
 			},
-			wantErr: newErrTypeNotMatchError(reflect.TypeOf(new([]SimpleSrc)).Elem(), reflect.TypeOf(new([]SimpleDst)).Elem(), "A"),
+			wantDst: &ArrayDst1{},
+			wantErr: nil,
 		},
 		{
 			name: "成员为map结构体",
@@ -858,7 +859,8 @@ func TestReflectCopier_LongYue(t *testing.T) {
 					},
 				})
 			},
-			wantErr: newErrTypeNotMatchError(reflect.TypeOf(new(map[string]SimpleSrc)).Elem(), reflect.TypeOf(new(map[string]SimpleDst)).Elem(), "A"),
+			wantDst: &MapDst1{},
+			wantErr: nil,
 		},
 		{
 			name: "成员有别名类型",
@@ -871,7 +873,8 @@ func TestReflectCopier_LongYue(t *testing.T) {
 					A: 1,
 				})
 			},
-			wantErr: newErrTypeNotMatchError(reflect.TypeOf(new(int)).Elem(), reflect.TypeOf(new(aliasInt)).Elem(), "A"),
+			wantDst: &SpecialDst1{},
+			wantErr: nil,
 		},
 		{
 			name: "成员有别名类型1",
