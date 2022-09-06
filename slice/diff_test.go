@@ -16,7 +16,7 @@ package slice
 
 import (
 	"testing"
-
+	
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,6 +28,8 @@ func TestDiff(t *testing.T) {
 		want []int
 	}{
 		{
+			// 函数中返回的是已经分配内存的切片
+			want: make([]int, 0),
 			name: "src and dst nil",
 		},
 	}
@@ -47,6 +49,7 @@ func TestDiffAny(t *testing.T) {
 		want []int
 	}{
 		{
+			want: make([]int, 0),
 			name: "src and dst nil",
 		},
 	}

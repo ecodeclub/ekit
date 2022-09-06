@@ -18,3 +18,21 @@ package slice
 func Map[Src any, Dst any](src []Src, m func(idx int, src Src) Dst) []Dst {
 	return []Dst{}
 }
+
+// 构造map
+func setMapStruct[T comparable](src []T) map[T]struct{} {
+	var dataMap = make(map[T]struct{}, len(src))
+	for _, v := range src {
+		// 使用空结构体,减少内存消耗
+		dataMap[v] = struct{}{}
+	}
+	return dataMap
+}
+
+func setMapIndex[T comparable](src []T) map[T][]int {
+	var dataMap = make(map[T][]int, len(src))
+	for k, v := range src {
+		dataMap[v] = append(dataMap[v], k)
+	}
+	return dataMap
+}

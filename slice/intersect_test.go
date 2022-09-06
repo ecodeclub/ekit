@@ -16,7 +16,7 @@ package slice
 
 import (
 	"testing"
-
+	
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,6 +28,9 @@ func TestIntersect(t *testing.T) {
 		want []int
 	}{
 		{
+			want: []int{1, 3, 5},
+			src:  []int{1, 3, 5, 7},
+			dst:  []int{1, 2, 3, 4, 5, 6},
 			name: "src and dst nil",
 		},
 	}
@@ -47,6 +50,7 @@ func TestIntersectAny(t *testing.T) {
 		want []int
 	}{
 		{
+			want: make([]int, 0),
 			name: "src and dst nil",
 		},
 	}
