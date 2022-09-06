@@ -1,0 +1,13 @@
+goos: darwin
+goarch: arm64
+cpu: Apple M1 Pro
+
+BenchmarkReflectCopier_Copy
+BenchmarkReflectCopier_Copy-10    	 2347140	       512.2 ns/op	     216 B/op	      12 allocs/op
+PASS
+
+pkg: github.com/gotomicro/ekit/bean/copier
+BenchmarkReflectCopier_CopyComplexStruct
+BenchmarkReflectCopier_CopyComplexStruct-10    	 1309657	       910.8 ns/op	     584 B/op	      19 allocs/op
+PASS
+

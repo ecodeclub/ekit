@@ -36,7 +36,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 				simpleSrc := &SimpleSrc{}
 				return copier.Copy(&simpleSrc)
 			},
-			wantErr: errInvalidType,
+			wantErr: newErrTypeError(reflect.TypeOf(&SimpleSrc{})),
 		},
 		{
 			name: "error input int",
@@ -45,7 +45,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 				test := 1
 				return copier.Copy(&test)
 			},
-			wantErr: errInvalidType,
+			wantErr: newErrTypeError(reflect.TypeOf(int(1))),
 		},
 		// Map、Slice的复杂结构应不予以支持深度拷贝
 		// 这种"二级"且内存空间较大的引用(本质还是指针)数据结构，
@@ -549,6 +549,11 @@ func TestReflectCopier_LongYue(t *testing.T) {
 				})
 			},
 			wantDst: &ComplexDst{
+				Simple: SimpleSrcLongYue{
+					Name:    "xiaohong",
+					Age:     ekit.ToPtr[int](18),
+					Friends: []string{"ha", "ha", "le"},
+				},
 				Embed: &EmbedSrc{
 					SimpleSrcLongYue: SimpleSrcLongYue{
 						Name:    "xiaopeng",
@@ -944,7 +949,7 @@ type ComplexSrc struct {
 }
 
 type ComplexDst struct {
-	Simple SimpleDstLongYue
+	Simple SimpleSrcLongYue
 	Embed  *EmbedSrc
 	BasicSrc
 }
@@ -1048,4 +1053,51 @@ type SpecialDst1 struct {
 type aliasInt1 = int
 type SpecialDst2 struct {
 	A aliasInt1
+}
+
+func BenchmarkReflectCopier_Copy(b *testing.B) {
+	copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 1; i <= b.N; i++ {
+		_, _ = copier.Copy(&SimpleSrc{
+			Name:    "大明",
+			Age:     ekit.ToPtr[int](18),
+			Friends: []string{"Tom", "Jerry"},
+		})
+	}
+}
+
+func BenchmarkReflectCopier_CopyComplexStruct(b *testing.B) {
+	copier, err := NewReflectCopier[ComplexSrc, ComplexDst]()
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 1; i <= b.N; i++ {
+		_, _ = copier.Copy(&ComplexSrc{
+			Simple: SimpleSrcLongYue{
+				Name:    "xiaohong",
+				Age:     ekit.ToPtr[int](18),
+				Friends: []string{"ha", "ha", "le"},
+			},
+			Embed: &EmbedSrc{
+				SimpleSrcLongYue: SimpleSrcLongYue{
+					Name:    "xiaopeng",
+					Age:     ekit.ToPtr[int](88),
+					Friends: []string{"la", "ha", "le"},
+				},
+				BasicSrc: &BasicSrc{
+					Name:    "wang",
+					Age:     22,
+					CNumber: complex(2, 1),
+				},
+			},
+			BasicSrc: BasicSrc{
+				Name:    "wang11",
+				Age:     22,
+				CNumber: complex(2, 1),
+			},
+		})
+	}
 }
