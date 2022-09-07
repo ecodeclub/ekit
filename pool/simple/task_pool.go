@@ -21,8 +21,9 @@ import (
 	"sync/atomic"
 )
 
-var errTaskPoolClosed = errors.New("任务池已关闭")
-var errTaskPoolAlreadyStarted = errors.New("任务池已启动")
+var errTaskPoolClosed = errors.New("ekit: 任务池已关闭")
+var errTaskPoolClosedBeforeStart = errors.New("ekit: 任务池未开启就执行关闭")
+var errTaskPoolAlreadyStarted = errors.New("ekit: 任务池已启动")
 
 // TaskPool 任务池
 type TaskPool interface {
@@ -150,10 +151,12 @@ func (b *BlockQueueTaskPool) Shutdown() (<-chan struct{}, error) {
 	}
 	b.Closed.Store(true)
 	close(b.queue)
+	var err error
 	if !b.Started.Load().(bool) {
 		b.emptySignal <- struct{}{}
+		err = errTaskPoolClosedBeforeStart
 	}
-	return b.emptySignal, nil
+	return b.emptySignal, err
 }
 
 // ShutdownNow 立刻关闭任务池，并且返回所有剩余未执行的任务（不包含正在执行的任务）
