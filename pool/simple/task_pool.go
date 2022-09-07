@@ -98,7 +98,12 @@ func NewBlockQueueTaskPool(concurrency int, queueSize int) (*BlockQueueTaskPool,
 // 如果此时队列已满，那么将会阻塞调用者。
 // 如果因为 ctx 的原因返回，那么将会返回 ctx.Err()
 // 在调用 Start 前后都可以调用 Submit
-func (b *BlockQueueTaskPool) Submit(ctx context.Context, task Task) error {
+func (b *BlockQueueTaskPool) Submit(ctx context.Context, task Task) (err error) {
+	defer func() {
+		if recover() != nil {
+			err = b.Submit(ctx, task)
+		}
+	}()
 	if b.Closed.Load().(bool) {
 		return errTaskPoolClosed
 	}
@@ -126,14 +131,18 @@ func (b *BlockQueueTaskPool) Start() error {
 	for i := 0; i < b.concurrency; i++ {
 		go func() {
 			for {
-				task, ok := <-b.queue
-				if !ok {
-					b.emptySignalOnce.Do(func() {
-						b.emptySignal <- struct{}{}
-					})
+				select {
+				case <-b.ctx.Done():
 					return
+				case task, ok := <-b.queue:
+					if !ok {
+						b.emptySignalOnce.Do(func() {
+							b.emptySignal <- struct{}{}
+						})
+						return
+					}
+					_ = task.Run(b.ctx)
 				}
-				_ = task.Run(b.ctx)
 			}
 
 		}()
@@ -165,8 +174,8 @@ func (b *BlockQueueTaskPool) ShutdownNow() ([]Task, error) {
 		return nil, errTaskPoolClosed
 	}
 	b.Closed.Store(true)
-	close(b.queue)
 	b.cancel()
+	close(b.queue)
 	tasks := make([]Task, 0)
 	for {
 		task, ok := <-b.queue

@@ -108,13 +108,13 @@ func TestBlockQueueTaskPool_Shutdown(t *testing.T) {
 			name:        "关闭未启动的空任务池",
 			instance:    newTaskPoolWithStatus(2, 2, false, 0),
 			closeSignal: struct{}{},
-			expectedErr: nil,
+			expectedErr: errTaskPoolClosedBeforeStart,
 		},
 		{
 			name:        "关闭未启动的非空任务池",
 			instance:    newTaskPoolWithStatus(2, 2, false, 3),
 			closeSignal: struct{}{},
-			expectedErr: nil,
+			expectedErr: errTaskPoolClosedBeforeStart,
 		},
 	}
 
