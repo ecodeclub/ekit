@@ -16,10 +16,11 @@ package slice
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"math"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMap(t *testing.T) {
