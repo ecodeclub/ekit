@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pool
+package syncx
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ import (
 
 func TestPool(t *testing.T) {
 	cnt := 0
-	p := New[[]byte](func() []byte {
+	p := NewPool[[]byte](func() []byte {
 		cnt += 1
 		res := make([]byte, 1, 12)
 		res[0] = 'A'
@@ -45,7 +45,7 @@ func TestPool(t *testing.T) {
 }
 
 func ExampleNew() {
-	p := New[[]byte](func() []byte {
+	p := NewPool[[]byte](func() []byte {
 		res := make([]byte, 1, 12)
 		res[0] = 'A'
 		return res
@@ -64,7 +64,7 @@ func ExampleNew() {
 // BenchmarkPool_Get/Pool-12                9190246               130.0 ns/op             0 B/op          0 allocs/op
 // BenchmarkPool_Get/sync.Pool-12           9102818               128.6 ns/op             0 B/op          0 allocs/op
 func BenchmarkPool_Get(b *testing.B) {
-	p := New[string](func() string {
+	p := NewPool[string](func() string {
 		return ""
 	})
 
