@@ -240,7 +240,7 @@ func TestContainsAll(t *testing.T) {
 			name: "src and dst nil",
 			src:  nil,
 			dst:  nil,
-			want: false,
+			want: true,
 		},
 		{
 			name: "only src nil",
@@ -252,13 +252,13 @@ func TestContainsAll(t *testing.T) {
 			name: "only dst nil",
 			src:  []int{1, 2, 3},
 			dst:  nil,
-			want: false,
+			want: true,
 		},
 		{
 			name: "src and dst empty",
 			src:  []int{},
 			dst:  []int{},
-			want: false,
+			want: true,
 		},
 		{
 			name: "src empty",
@@ -270,7 +270,7 @@ func TestContainsAll(t *testing.T) {
 			name: "dst empty",
 			src:  []int{1, 2, 3},
 			dst:  []int{},
-			want: false,
+			want: true,
 		},
 		{
 			name: "src contains all dst",
@@ -310,7 +310,7 @@ func TestContainsAllFunc(t *testing.T) {
 			name: "src and dst nil",
 			src:  nil,
 			dst:  nil,
-			want: false,
+			want: true,
 		},
 		{
 			name: "only src nil",
@@ -322,13 +322,13 @@ func TestContainsAllFunc(t *testing.T) {
 			name: "only dst nil",
 			src:  []int{1, 2, 3},
 			dst:  nil,
-			want: false,
+			want: true,
 		},
 		{
 			name: "src and dst empty",
 			src:  []int{},
 			dst:  []int{},
-			want: false,
+			want: true,
 		},
 		{
 			name: "src empty",
@@ -340,7 +340,7 @@ func TestContainsAllFunc(t *testing.T) {
 			name: "dst empty",
 			src:  []int{1, 2, 3},
 			dst:  []int{},
-			want: false,
+			want: true,
 		},
 		{
 			name: "src contains all dst",
