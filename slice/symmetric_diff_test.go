@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUnionSet(t *testing.T) {
+func TestSymmetricDiffSet(t *testing.T) {
 	tests := []struct {
 		name string
 		src  []int
@@ -30,40 +30,42 @@ func TestUnionSet(t *testing.T) {
 		want []int
 	}{
 		{
-			src:  []int{1, 2, 3},
+			src:  []int{1, 2, 4, 3},
 			dst:  []int{4, 5, 6, 1},
-			want: []int{1, 2, 3, 4, 5, 6},
-			name: "not empty",
+			want: []int{2, 3, 5, 6},
+			name: "normal test",
+		},
+		{
+			src:  []int{1, 1, 2, 3, 4},
+			dst:  []int{4, 5, 6, 1, 7, 6},
+			want: []int{3, 6, 7, 5, 2},
+			name: "deduplicate",
 		},
 		{
 			src:  []int{},
-			dst:  []int{1, 3},
-			want: []int{1, 3},
-			name: "src is empty",
+			dst:  []int{1},
+			want: []int{1},
+			name: "src length is 0",
 		},
 		{
-
-			src:  []int{1, 3},
-			dst:  []int{},
-			want: []int{1, 3},
-			name: "dst is empty",
+			src:  []int{1, 3, 5},
+			dst:  []int{2, 4},
+			want: []int{1, 3, 2, 4, 5},
+			name: "not exist same ele",
 		},
 		{
-			src:  []int{},
-			dst:  []int{},
-			want: []int{},
-			name: "src and dst are empty",
+			name: "both nil",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := UnionSet[int](tt.src, tt.dst)
+			res := SymmetricDiffSet[int](tt.src, tt.dst)
 			assert.Equal(t, true, equal[int](res, tt.want))
 		})
 	}
 }
 
-func TestUnionSetFunc(t *testing.T) {
+func TestSymmetricDiffSetFunc(t *testing.T) {
 	tests := []struct {
 		name string
 		src  []int
@@ -71,34 +73,36 @@ func TestUnionSetFunc(t *testing.T) {
 		want []int
 	}{
 		{
-			src:  []int{1, 2, 3},
+			src:  []int{1, 2, 3, 4},
 			dst:  []int{4, 5, 6, 1},
-			want: []int{1, 2, 3, 4, 5, 6},
-			name: "not empty",
+			want: []int{2, 3, 5, 6},
+			name: "normal test",
+		},
+		{
+			src:  []int{1, 1, 2, 3, 4},
+			dst:  []int{4, 5, 6, 1, 7, 6},
+			want: []int{3, 6, 7, 5, 2},
+			name: "deduplicate",
 		},
 		{
 			src:  []int{},
-			dst:  []int{1, 3},
-			want: []int{1, 3},
-			name: "src is empty",
+			dst:  []int{1},
+			want: []int{1},
+			name: "src length is 0",
 		},
 		{
-
-			src:  []int{1, 3},
-			dst:  []int{},
-			want: []int{1, 3},
-			name: "dst is empty",
+			src:  []int{1, 3, 5},
+			dst:  []int{2, 4},
+			want: []int{1, 3, 2, 4, 5},
+			name: "not exist same ele",
 		},
 		{
-			src:  []int{},
-			dst:  []int{},
-			want: []int{},
-			name: "src and dst are empty",
+			name: "both nil",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := UnionSetFunc[int](tt.src, tt.dst, func(src, dst int) bool {
+			res := SymmetricDiffSetFunc[int](tt.src, tt.dst, func(src, dst int) bool {
 				return src == dst
 			})
 			assert.Equal(t, true, equal[int](res, tt.want))
@@ -106,20 +110,20 @@ func TestUnionSetFunc(t *testing.T) {
 	}
 }
 
-func ExampleUnionSet() {
-	res := UnionSet[int]([]int{1, 3, 4, 5}, []int{1, 4, 7})
+func ExampleSymmetricDiffSet() {
+	res := SymmetricDiffSet[int]([]int{1, 3, 4, 2}, []int{2, 5, 7, 3})
 	sort.Ints(res)
 	fmt.Println(res)
 	// Output:
-	// [1 3 4 5 7]
+	// [1 4 5 7]
 }
 
-func ExampleUnionSetFunc() {
-	res := UnionSetFunc[int]([]int{1, 3, 4, 5}, []int{1, 4, 7}, func(src, dst int) bool {
+func ExampleSymmetricDiffSetFunc() {
+	res := SymmetricDiffSetFunc[int]([]int{1, 3, 4, 2}, []int{2, 5, 7, 3}, func(src, dst int) bool {
 		return src == dst
 	})
 	sort.Ints(res)
 	fmt.Println(res)
 	// Output:
-	// [1 3 4 5 7]
+	// [1 4 5 7]
 }
