@@ -15,12 +15,15 @@
 package slice
 
 import (
+	"fmt"
+	"log"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDiff(t *testing.T) {
+func TestDiffSet(t *testing.T) {
 	tests := []struct {
 		name string
 		src  []int
@@ -28,18 +31,39 @@ func TestDiff(t *testing.T) {
 		want []int
 	}{
 		{
-			name: "src and dst nil",
+			want: []int{7},
+			src:  []int{1, 3, 5, 7},
+			dst:  []int{1, 3, 5},
+			name: "diff 1",
+		},
+		{
+			src:  []int{1, 3, 5},
+			dst:  []int{1, 3, 5, 7},
+			want: []int{},
+			name: "src less than dst",
+		},
+		{
+			src:  []int{1, 3, 5, 7, 7},
+			dst:  []int{1, 3, 5},
+			want: []int{7},
+			name: "diff deduplicate",
+		},
+		{
+			src:  []int{1, 1, 3, 5, 7},
+			dst:  []int{1, 3, 5, 5},
+			want: []int{7},
+			name: "dst duplicate ele",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := Diff[int](tt.src, tt.dst)
-			assert.Equal(t, tt.want, res)
+			res := DiffSet[int](tt.src, tt.dst)
+			assert.True(t, equal[int](res, tt.want))
 		})
 	}
 }
 
-func TestDiffAny(t *testing.T) {
+func TestDiffSetFunc(t *testing.T) {
 	tests := []struct {
 		name string
 		src  []int
@@ -47,15 +71,69 @@ func TestDiffAny(t *testing.T) {
 		want []int
 	}{
 		{
-			name: "src and dst nil",
+			want: []int{7},
+			src:  []int{1, 3, 5, 7},
+			dst:  []int{1, 3, 5},
+			name: "diff 1",
+		},
+		{
+			src:  []int{1, 3, 5},
+			dst:  []int{1, 3, 5, 7},
+			want: []int{},
+			name: "src less than dst",
+		},
+		{
+			src:  []int{1, 3, 5, 7, 7},
+			dst:  []int{1, 3, 5},
+			want: []int{7},
+			name: "diff deduplicate",
+		},
+		{
+			src:  []int{1, 1, 3, 5, 7},
+			dst:  []int{1, 3, 5, 5},
+			want: []int{7},
+			name: "dst duplicate ele",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := DiffFunc[int](tt.src, tt.dst, func(src, dst int) bool {
+			res := DiffSetFunc[int](tt.src, tt.dst, func(src, dst int) bool {
 				return src == dst
 			})
-			assert.Equal(t, tt.want, res)
+			assert.True(t, equal[int](res, tt.want))
 		})
 	}
+}
+
+func equal[T comparable](src, want []T) bool {
+	if len(src) == len(want) {
+		srcMap, wantMap := toIndexesMap[T](src), toIndexesMap[T](want)
+		for k, v := range wantMap {
+			if indexes, exist := srcMap[k]; !exist || len(indexes) != len(v) {
+				log.Printf("测试失败:\nactual:%v\nexpected:%v\n", src, want)
+				return false
+			}
+		}
+	} else {
+		log.Printf("测试失败:\nactual:%v\nexpected:%v\n", src, want)
+		return false
+	}
+	return true
+}
+
+func ExampleDiffSet() {
+	res := DiffSet[int]([]int{1, 3, 2, 2, 4}, []int{3, 4, 5, 6})
+	sort.Ints(res)
+	fmt.Println(res)
+	// Output:
+	// [1 2]
+}
+
+func ExampleDiffSetFunc() {
+	res := DiffSetFunc[int]([]int{1, 3, 2, 2, 4}, []int{3, 4, 5, 6}, func(src, dst int) bool {
+		return src == dst
+	})
+	fmt.Println(res)
+	// Output:
+	// [1 2]
 }
