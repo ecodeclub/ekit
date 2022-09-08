@@ -75,6 +75,6 @@ func ExampleMap() {
 	floats := Map(ins, func(idx int, src int) float64 {
 		return math.Sqrt(float64(src))
 	})
-	fmt.Println(ins, `开平方根运算:`, floats)
+	fmt.Println(floats)
 	// Output: [1 2 3 4 5]
 }
