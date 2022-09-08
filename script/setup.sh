@@ -18,16 +18,12 @@ SOURCE_PUSH=.github/pre-push
 TARGET_PUSH=.git/hooks/pre-push
 
 # copy pre-commit file if not exist.
-if [ ! -f $TARGET_COMMIT ]; then
-    echo "设置 git pre-commit hooks..."
-    cp $SOURCE_COMMIT $TARGET_COMMIT
-fi
+echo "设置 git pre-commit hooks..."
+cp $SOURCE_COMMIT $TARGET_COMMIT
 
 # copy pre-push file if not exist.
-if [ ! -f $TARGET_PUSH ]; then
-    echo "设置 git pre-push hooks..."
-    cp $SOURCE_PUSH $TARGET_PUSH
-fi
+echo "设置 git pre-push hooks..."
+cp $SOURCE_PUSH $TARGET_PUSH
 
 # add permission to TARGET_PUSH and TARGET_COMMIT file.
 test -x $TARGET_PUSH || chmod +x $TARGET_PUSH

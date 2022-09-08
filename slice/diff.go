@@ -14,14 +14,32 @@
 
 package slice
 
-// Diff 差集，只支持 comparable 类型
-func Diff[T comparable](src, dst []T) []T {
-	return nil
+// DiffSet 差集，只支持 comparable 类型
+// 已去重
+// 并且返回值的顺序是不确定的
+func DiffSet[T comparable](src, dst []T) []T {
+	srcMap := toMap[T](src)
+	for _, val := range dst {
+		delete(srcMap, val)
+	}
+
+	var ret = make([]T, 0, len(srcMap))
+	for key := range srcMap {
+		ret = append(ret, key)
+	}
+
+	return ret
 }
 
-// DiffFunc 差集
-// 你应该优先使用 Diff
-func DiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
-	// 双重循环检测
-	return nil
+// DiffSetFunc 差集，已去重
+// 你应该优先使用 DiffSet
+func DiffSetFunc[T any](src, dst []T, equal equalFunc[T]) []T {
+	// TODO 优化容量预估
+	var ret = make([]T, 0, len(src))
+	for _, val := range src {
+		if !ContainsFunc[T](dst, val, equal) {
+			ret = append(ret, val)
+		}
+	}
+	return deduplicateFunc[T](ret, equal)
 }
