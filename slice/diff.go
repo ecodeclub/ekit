@@ -22,10 +22,14 @@ func Diff[T comparable](src, dst []T) []T {
 	if dst == nil {
 		return src
 	}
+	dstMap := make(map[T]bool, len(src))
+	for _, d := range dst {
+		dstMap[d] = true
+	}
 
 	diff := make([]T, 0)
 	for i := 0; i < len(src); i++ {
-		if !Contains(dst, src[i]) {
+		if !dstMap[src[i]] {
 			diff = append(diff, src[i])
 		}
 	}
