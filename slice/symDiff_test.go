@@ -19,7 +19,7 @@ import (
 	"testing"
 )
 
-func TestIntersect(t *testing.T) {
+func TestSymDiff(t *testing.T) {
 	tests := []struct {
 		name string
 		src  []int
@@ -27,21 +27,21 @@ func TestIntersect(t *testing.T) {
 		want []int
 	}{
 		{
-			want: []int{1, 3, 5},
-			src:  []int{1, 3, 5, 7},
-			dst:  []int{1, 3, 5},
+			src:  []int{1, 2, 3},
+			dst:  []int{4, 5, 6, 1},
+			want: []int{2, 3, 4, 5, 6},
 			name: "src and dst nil",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := Intersect[int](tt.src, tt.dst)
+			res := SymDiff[int](tt.src, tt.dst)
 			assert.True(t, equal[int](res, tt.want), true)
 		})
 	}
 }
 
-func TestIntersectAny(t *testing.T) {
+func TestSymDiffAny(t *testing.T) {
 	tests := []struct {
 		name string
 		src  []int
@@ -49,15 +49,15 @@ func TestIntersectAny(t *testing.T) {
 		want []int
 	}{
 		{
-			want: []int{1, 3, 5},
-			src:  []int{1, 3, 5, 7},
-			dst:  []int{1, 3, 5},
+			src:  []int{1, 2, 3, 4},
+			dst:  []int{4, 5, 6, 1},
+			want: []int{2, 3, 5, 6},
 			name: "src and dst nil",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := IntersectByFunc[int](tt.src, tt.dst, func(src, dst int) bool {
+			res := SymDiffFunc[int](tt.src, tt.dst, func(src, dst int) bool {
 				return src == dst
 			})
 			assert.True(t, equal[int](res, tt.want), true)

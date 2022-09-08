@@ -15,9 +15,8 @@
 package slice
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestUnion(t *testing.T) {
@@ -28,13 +27,16 @@ func TestUnion(t *testing.T) {
 		want []int
 	}{
 		{
+			src:  []int{1, 2, 3},
+			dst:  []int{4, 5, 6, 1},
+			want: []int{1, 2, 3, 4, 5, 6},
 			name: "src and dst nil",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res := Union[int](tt.src, tt.dst)
-			assert.Equal(t, tt.want, res)
+			assert.True(t, equal[int](res, tt.want), true)
 		})
 	}
 }
@@ -47,6 +49,9 @@ func TestUnionAny(t *testing.T) {
 		want []int
 	}{
 		{
+			src:  []int{1, 2, 3},
+			dst:  []int{4, 5, 6, 1},
+			want: []int{1, 2, 3, 4, 5, 6},
 			name: "src and dst nil",
 		},
 	}
@@ -55,7 +60,7 @@ func TestUnionAny(t *testing.T) {
 			res := UnionByFunc[int](tt.src, tt.dst, func(src, dst int) bool {
 				return src == dst
 			})
-			assert.Equal(t, tt.want, res)
+			assert.True(t, equal[int](res, tt.want), true)
 		})
 	}
 }

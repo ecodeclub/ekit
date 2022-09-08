@@ -17,12 +17,29 @@ package slice
 // Intersect 取交集，只支持 comparable 类型
 // 返回值永远不为 nil
 func Intersect[T comparable](src []T, dst []T) []T {
-	return nil
+	srcMap, dstMap := setMapStruct(src), setMapStruct(dst)
+	var ret = make([]T, 0, len(src))
+	// 交集小于等于两个集合中的任意一个
+	for dstKey := range dstMap {
+		if _, exist := srcMap[dstKey]; exist {
+			ret = append(ret, dstKey)
+		}
+	}
+	return removeExist[T](ret)
 }
 
 // IntersectByFunc 支持任意类型
 // 你应该优先使用 Intersect
 func IntersectByFunc[T any](src []T, dst []T, equal EqualFunc[T]) []T {
 	// 双重循环检测
-	return nil
+	var ret = make([]T, 0, len(src))
+	for _, valSrc := range src {
+		for _, valDst := range dst {
+			if equal(valDst, valSrc) {
+				ret = append(ret, valSrc)
+				break
+			}
+		}
+	}
+	return removeExistFunc[T](ret, equal)
 }

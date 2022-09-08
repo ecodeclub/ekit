@@ -16,7 +16,7 @@ package slice
 
 import (
 	"testing"
-
+	
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,13 +28,16 @@ func TestDiff(t *testing.T) {
 		want []int
 	}{
 		{
+			want: []int{7},
+			src:  []int{1, 3, 5, 7},
+			dst:  []int{1, 3, 5},
 			name: "src and dst nil",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res := Diff[int](tt.src, tt.dst)
-			assert.Equal(t, tt.want, res)
+			assert.True(t, equal[int](res, tt.want), true)
 		})
 	}
 }
@@ -47,6 +50,9 @@ func TestDiffAny(t *testing.T) {
 		want []int
 	}{
 		{
+			want: []int{7},
+			src:  []int{1, 3, 5, 7},
+			dst:  []int{1, 3, 5},
 			name: "src and dst nil",
 		},
 	}
@@ -55,7 +61,7 @@ func TestDiffAny(t *testing.T) {
 			res := DiffFunc[int](tt.src, tt.dst, func(src, dst int) bool {
 				return src == dst
 			})
-			assert.Equal(t, tt.want, res)
+			assert.True(t, equal[int](res, tt.want), true)
 		})
 	}
 }

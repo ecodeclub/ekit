@@ -16,12 +16,29 @@ package slice
 
 // Diff 差集，只支持 comparable 类型
 func Diff[T comparable](src, dst []T) []T {
-	return nil
+	srcMap, dstMap := setMapStruct[T](src), setMapStruct[T](dst)
+	for key := range dstMap {
+		if _, exist := srcMap[key]; exist {
+			delete(srcMap, key)
+		}
+	}
+	
+	var ret = make([]T, 0, len(srcMap))
+	for key := range srcMap {
+		ret = append(ret, key)
+	}
+	
+	return ret
 }
 
 // DiffFunc 差集
 // 你应该优先使用 Diff
 func DiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
-	// 双重循环检测
-	return nil
+	var ret = make([]T, 0, len(src))
+	for _, val := range src {
+		if !ContainsFunc[T](dst, val, equal) {
+			ret = append(ret, val)
+		}
+	}
+	return removeExistFunc[T](ret, equal)
 }
