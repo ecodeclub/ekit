@@ -15,6 +15,7 @@
 package slice
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,6 +30,49 @@ func TestIntersect(t *testing.T) {
 	}{
 		{
 			name: "src and dst nil",
+			src:  nil,
+			dst:  nil,
+			want: []int{},
+		},
+		{
+			name: "src nil",
+			src:  nil,
+			want: []int{},
+		},
+		{
+			name: "dst nil",
+			dst:  nil,
+			want: []int{},
+		},
+		{
+			name: "src and dst empty",
+			src:  []int{},
+			dst:  []int{},
+			want: []int{},
+		},
+		{
+			name: "src empty",
+			src:  []int{},
+			dst:  []int{1, 2, 3},
+			want: []int{},
+		},
+		{
+			name: "dst empty",
+			src:  []int{1, 2, 3},
+			dst:  []int{},
+			want: []int{},
+		},
+		{
+			name: "src and dst have intersect element",
+			src:  []int{1, 2, 3},
+			dst:  []int{2, 3, 4},
+			want: []int{2, 3},
+		},
+		{
+			name: "src and dst not have intersect element",
+			src:  []int{1, 2, 3},
+			dst:  []int{4, 5, 6},
+			want: []int{},
 		},
 	}
 	for _, tt := range tests {
@@ -48,6 +92,49 @@ func TestIntersectAny(t *testing.T) {
 	}{
 		{
 			name: "src and dst nil",
+			src:  nil,
+			dst:  nil,
+			want: []int{},
+		},
+		{
+			name: "src nil",
+			src:  nil,
+			want: []int{},
+		},
+		{
+			name: "dst nil",
+			dst:  nil,
+			want: []int{},
+		},
+		{
+			name: "src and dst empty",
+			src:  []int{},
+			dst:  []int{},
+			want: []int{},
+		},
+		{
+			name: "src empty",
+			src:  []int{},
+			dst:  []int{1, 2, 3},
+			want: []int{},
+		},
+		{
+			name: "dst empty",
+			src:  []int{1, 2, 3},
+			dst:  []int{},
+			want: []int{},
+		},
+		{
+			name: "src and dst have intersect element",
+			src:  []int{1, 2, 3},
+			dst:  []int{2, 3, 4},
+			want: []int{2, 3},
+		},
+		{
+			name: "src and dst not have intersect element",
+			src:  []int{1, 2, 3},
+			dst:  []int{4, 5, 6},
+			want: []int{},
 		},
 	}
 	for _, tt := range tests {
@@ -58,4 +145,23 @@ func TestIntersectAny(t *testing.T) {
 			assert.Equal(t, tt.want, res)
 		})
 	}
+}
+
+func ExampleIntersect() {
+	src := []int{1, 2, 3}
+	dst := []int{2, 3, 4}
+	intersect := Intersect(src, dst)
+	fmt.Println(intersect)
+	//Output: [2 3]
+}
+
+func ExampleIntersectByFunc() {
+	src := []int{1, 2, 3}
+	dst := []int{2, 3, 4}
+	equalFunc := func(src int, dst int) bool {
+		return src == dst
+	}
+	intersect := IntersectByFunc(src, dst, equalFunc)
+	fmt.Println(intersect)
+	//Output: [2 3]
 }
