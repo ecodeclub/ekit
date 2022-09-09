@@ -16,8 +16,12 @@ package slice
 
 // Contains 判断 src 里面是否存在 dst
 func Contains[T comparable](src []T, dst T) bool {
-	_, exist := setMapStruct[T](src)[dst]
-	return exist
+	for _, v := range src {
+		if v == dst {
+			return true
+		}
+	}
+	return false
 }
 
 // ContainsFunc 判断 src 里面是否存在 dst
@@ -35,9 +39,9 @@ func ContainsFunc[T any](src []T, dst T, equal EqualFunc[T]) bool {
 // ContainsAny 判断 src 里面是否存在 dst 中的任何一个元素
 func ContainsAny[T comparable](src, dst []T) bool {
 	// 两个切片,制造两个map
-	srcMap, dstMap := setMapStruct[T](src), setMapStruct[T](dst)
-	for k := range dstMap {
-		if _, exist := srcMap[k]; exist {
+	srcMap := setMapStruct[T](src)
+	for _, v := range dst {
+		if _, exist := srcMap[v]; exist {
 			return true
 		}
 	}
@@ -59,9 +63,9 @@ func ContainsAnyFunc[T any](src, dst []T, equal EqualFunc[T]) bool {
 
 // ContainsAll 判断 src 里面是否存在 dst 中的所有元素
 func ContainsAll[T comparable](src, dst []T) bool {
-	srcMap, dstMap := setMapStruct[T](src), setMapStruct[T](dst)
-	for k := range dstMap {
-		if _, exist := srcMap[k]; !exist {
+	srcMap := setMapStruct[T](src)
+	for _, v := range dst {
+		if _, exist := srcMap[v]; !exist {
 			return false
 		}
 	}
@@ -72,10 +76,8 @@ func ContainsAll[T comparable](src, dst []T) bool {
 // 你应该优先使用 ContainsAll
 func ContainsAllFunc[T any](src, dst []T, equal EqualFunc[T]) bool {
 	for _, valDst := range dst {
-		for _, valSrc := range src {
-			if !equal(valSrc, valDst) {
-				return false
-			}
+		if !ContainsFunc[T](src, valDst, equal) {
+			return false
 		}
 	}
 	return true

@@ -15,8 +15,9 @@
 package slice
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestUnion(t *testing.T) {
@@ -32,11 +33,23 @@ func TestUnion(t *testing.T) {
 			want: []int{1, 2, 3, 4, 5, 6},
 			name: "src and dst nil",
 		},
+		{
+			src:  []int{},
+			dst:  []int{1, 3},
+			want: []int{1, 3},
+			name: "src is empty",
+		},
+		{
+			src:  []int{},
+			dst:  []int{},
+			want: []int{},
+			name: "src and dst are empty",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := Union[int](tt.src, tt.dst)
-			assert.True(t, equal[int](res, tt.want), true)
+			res := UnionSet[int](tt.src, tt.dst)
+			assert.Equal(t, true, equal[int](res, tt.want))
 		})
 	}
 }
@@ -54,13 +67,25 @@ func TestUnionAny(t *testing.T) {
 			want: []int{1, 2, 3, 4, 5, 6},
 			name: "src and dst nil",
 		},
+		{
+			src:  []int{},
+			dst:  []int{1, 3},
+			want: []int{1, 3},
+			name: "src is empty",
+		},
+		{
+			src:  []int{},
+			dst:  []int{},
+			want: []int{},
+			name: "src and dst are empty",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := UnionByFunc[int](tt.src, tt.dst, func(src, dst int) bool {
+			res := UnionSetByFunc[int](tt.src, tt.dst, func(src, dst int) bool {
 				return src == dst
 			})
-			assert.True(t, equal[int](res, tt.want), true)
+			assert.Equal(t, true, equal[int](res, tt.want))
 		})
 	}
 }

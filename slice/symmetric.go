@@ -14,17 +14,16 @@
 
 package slice
 
-func SymDiff[T comparable](src, dst []T) []T {
+func SymmetricDiff[T comparable](src, dst []T) []T {
 	srcMap, dstMap := setMapStruct[T](src), setMapStruct[T](dst)
 	for dstKey := range dstMap {
 		if _, exist := srcMap[dstKey]; exist {
 			// 删除共同元素,两者剩余的并集即为对称差
 			delete(dstMap, dstKey)
 			delete(srcMap, dstKey)
-			break
 		}
 	}
-	
+
 	var ret = make([]T, 0, len(srcMap)+len(dstMap))
 	for k := range srcMap {
 		ret = append(ret, k)
@@ -32,11 +31,11 @@ func SymDiff[T comparable](src, dst []T) []T {
 	for k := range dstMap {
 		ret = append(ret, k)
 	}
-	
+
 	return ret
 }
 
-func SymDiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
+func SymmetricDiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
 	// 双重循环检测
 	var interSection = make([]T, 0, min(len(src), len(dst)))
 	for _, valSrc := range src {
@@ -47,7 +46,7 @@ func SymDiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
 			}
 		}
 	}
-	
+
 	ret := make([]T, 0, len(src)+len(dst)-len(interSection)*2)
 	for _, v := range src {
 		if !ContainsFunc[T](interSection, v, equal) {
@@ -59,7 +58,7 @@ func SymDiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
 			ret = append(ret, v)
 		}
 	}
-	
+
 	return ret
 }
 

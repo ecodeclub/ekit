@@ -17,10 +17,10 @@ package slice
 // Index 返回和 dst 相等的第一个元素下标
 // -1 表示没找到
 func Index[T comparable](src []T, dst T) int {
-	srcMap := setMapIndex[T](src)
-	if index, exist := srcMap[dst]; exist {
+	srcMap := setMapIndexes[T](src)
+	if indexes, exist := srcMap[dst]; exist {
 		// 下标最小 则最先出现
-		return index[0]
+		return indexes[0]
 	}
 	return -1
 }
@@ -29,9 +29,9 @@ func Index[T comparable](src []T, dst T) int {
 // -1 表示没找到
 // 你应该优先使用 Index
 func IndexFunc[T any](src []T, dst T, equal EqualFunc[T]) int {
-	for i := 0; i < len(src); i++ {
-		if equal(dst, src[i]) {
-			return i
+	for k, v := range src {
+		if equal(v, dst) {
+			return k
 		}
 	}
 	return -1
@@ -40,9 +40,9 @@ func IndexFunc[T any](src []T, dst T, equal EqualFunc[T]) int {
 // LastIndex 返回和 dst 相等的最后一个元素下标
 // -1 表示没找到
 func LastIndex[T comparable](src []T, dst T) int {
-	srcMap := setMapIndex[T](src)
-	if index, exist := srcMap[dst]; exist {
-		return index[len(index)-1]
+	srcMap := setMapIndexes[T](src)
+	if indexes, exist := srcMap[dst]; exist {
+		return indexes[len(indexes)-1]
 	}
 	return -1
 }
@@ -51,7 +51,7 @@ func LastIndex[T comparable](src []T, dst T) int {
 // -1 表示没找到
 // 你应该优先使用 LastIndex
 func LastIndexFunc[T any](src []T, dst T, equal EqualFunc[T]) int {
-	for i := len(src) - 1; i >= 0; i++ {
+	for i := len(src) - 1; i >= 0; i-- {
 		if equal(dst, src[i]) {
 			return i
 		}
@@ -61,9 +61,9 @@ func LastIndexFunc[T any](src []T, dst T, equal EqualFunc[T]) int {
 
 // IndexAll 返回和 dst 相等的所有元素的下标
 func IndexAll[T comparable](src []T, dst T) []int {
-	srcMap := setMapIndex[T](src)
-	if index, exist := srcMap[dst]; exist {
-		return index
+	srcMap := setMapIndexes[T](src)
+	if indexes, exist := srcMap[dst]; exist {
+		return indexes
 	}
 	return nil
 }

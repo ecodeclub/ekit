@@ -14,13 +14,6 @@
 
 package slice
 
-import "log"
-
-// Map 将一个切片转化为另外一个切片
-func Map[Src any, Dst any](src []Src, m func(idx int, src Src) Dst) []Dst {
-	return []Dst{}
-}
-
 // 构造map
 func setMapStruct[T comparable](src []T) map[T]struct{} {
 	var dataMap = make(map[T]struct{}, len(src))
@@ -31,7 +24,7 @@ func setMapStruct[T comparable](src []T) map[T]struct{} {
 	return dataMap
 }
 
-func setMapIndex[T comparable](src []T) map[T][]int {
+func setMapIndexes[T comparable](src []T) map[T][]int {
 	var dataMap = make(map[T][]int, len(src))
 	for k, v := range src {
 		dataMap[v] = append(dataMap[v], k)
@@ -39,7 +32,7 @@ func setMapIndex[T comparable](src []T) map[T][]int {
 	return dataMap
 }
 
-func removeExistFunc[T any](data []T, equal EqualFunc[T]) []T {
+func deduplicateFunc[T any](data []T, equal EqualFunc[T]) []T {
 	var newData = make([]T, 0, len(data))
 	for k, v := range data {
 		if !ContainsFunc[T](data[k+1:], v, equal) {
@@ -49,27 +42,11 @@ func removeExistFunc[T any](data []T, equal EqualFunc[T]) []T {
 	return newData
 }
 
-func removeExist[T comparable](data []T) []T {
+func deduplicateExist[T comparable](data []T) []T {
 	dataMap := setMapStruct[T](data)
 	var newData = make([]T, 0, len(dataMap))
 	for key := range dataMap {
 		newData = append(newData, key)
 	}
 	return newData
-}
-
-func equal[T comparable](src, want []T) bool {
-	if len(src) == len(want) {
-		srcMap, wantMap := setMapIndex[T](src), setMapIndex[T](want)
-		for k, v := range wantMap {
-			if indexes, exist := srcMap[k]; !exist || len(indexes) != len(v) {
-				log.Printf("测试失败:\nactual:%v\nexpected:%v\n", src, want)
-				return false
-			}
-		}
-	} else {
-		log.Printf("测试失败:\nactual:%v\nexpected:%v\n", src, want)
-		return false
-	}
-	return true
 }
