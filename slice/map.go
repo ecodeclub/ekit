@@ -16,5 +16,9 @@ package slice
 
 // Map 将一个切片转化为另外一个切片
 func Map[Src any, Dst any](src []Src, m func(idx int, src Src) Dst) []Dst {
-	return []Dst{}
+	dst := make([]Dst, len(src))
+	for i, s := range src {
+		dst[i] = m(i, s)
+	}
+	return dst
 }
