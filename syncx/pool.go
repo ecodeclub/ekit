@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pool
+package syncx
 
 import "sync"
 
 // Pool 是对 sync.Pool 的简单封装
 // 会有一些性能损耗，但是基本可以忽略不计。担忧性能问题的可以参考
 type Pool[T any] struct {
-	p *sync.Pool
+	p sync.Pool
 }
 
-// New 创建一个 Pool 实例
+// NewPool 创建一个 Pool 实例
 // factory 必须返回 T 类型的值，并且不能返回 nil
-func New[T any](factory func() T) *Pool[T] {
+func NewPool[T any](factory func() T) *Pool[T] {
 	return &Pool[T]{
-		p: &sync.Pool{
+		p: sync.Pool{
 			New: func() any {
 				return factory()
 			},
