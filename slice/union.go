@@ -18,19 +18,17 @@ package slice
 func Union[T comparable](src, dst []T) []T {
 	union := make([]T, 0)
 	if len(src) > 0 || len(dst) > 0 {
-		usedMap := make(map[T]bool, len(src))
+		usedMap := make(map[T]struct{}, len(src))
 		for _, s := range src {
 			if _, ok := usedMap[s]; !ok {
-				usedMap[s] = false
+				usedMap[s] = struct{}{}
 				union = append(union, s)
 			}
 		}
 		for _, d := range dst {
-			if used, ok := usedMap[d]; !ok {
-				if !used {
-					union = append(union, d)
-					usedMap[d] = true
-				}
+			if _, ok := usedMap[d]; !ok {
+				union = append(union, d)
+				usedMap[d] = struct{}{}
 			}
 		}
 	}

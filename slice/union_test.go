@@ -73,7 +73,7 @@ func TestUnion(t *testing.T) {
 		{
 			name: "src and dst repeat",
 			src:  []int{1, 2, 2, 3},
-			dst:  []int{2, 3, 3, 4},
+			dst:  []int{2, 3, 3, 4, 4},
 			want: []int{1, 2, 3, 4},
 		},
 	}
