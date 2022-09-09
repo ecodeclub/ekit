@@ -19,14 +19,17 @@ package slice
 func Intersect[T comparable](src []T, dst []T) []T {
 	intersect := make([]T, 0)
 	if len(src) > 0 && len(dst) > 0 {
-		dstMap := make(map[T]bool, len(dst))
+		usedMap := make(map[T]bool, len(dst))
 		for _, d := range dst {
-			dstMap[d] = true
+			usedMap[d] = false
 		}
 
 		for _, s := range src {
-			if dstMap[s] {
-				intersect = append(intersect, s)
+			if used, ok := usedMap[s]; ok {
+				if !used {
+					intersect = append(intersect, s)
+					usedMap[s] = true
+				}
 			}
 		}
 	}
@@ -40,7 +43,7 @@ func IntersectByFunc[T any](src []T, dst []T, equal EqualFunc[T]) []T {
 	intersect := make([]T, 0)
 	if len(src) > 0 && len(dst) > 0 {
 		for _, s := range src {
-			if ContainsFunc(dst, s, equal) {
+			if ContainsFunc(dst, s, equal) && !ContainsFunc(intersect, s, equal) {
 				intersect = append(intersect, s)
 			}
 		}

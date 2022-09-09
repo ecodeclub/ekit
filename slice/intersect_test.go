@@ -69,6 +69,12 @@ func TestIntersect(t *testing.T) {
 			want: []int{2, 3},
 		},
 		{
+			name: "src and dst have repeat intersect element",
+			src:  []int{1, 2, 2, 3},
+			dst:  []int{2, 2, 3, 4},
+			want: []int{2, 3},
+		},
+		{
 			name: "src and dst not have intersect element",
 			src:  []int{1, 2, 3},
 			dst:  []int{4, 5, 6},
@@ -128,6 +134,12 @@ func TestIntersectAny(t *testing.T) {
 			name: "src and dst have intersect element",
 			src:  []int{1, 2, 3},
 			dst:  []int{2, 3, 4},
+			want: []int{2, 3},
+		},
+		{
+			name: "src and dst have repeat intersect element",
+			src:  []int{1, 2, 2, 3},
+			dst:  []int{2, 2, 3, 4},
 			want: []int{2, 3},
 		},
 		{
