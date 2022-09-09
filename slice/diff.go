@@ -22,17 +22,19 @@ func Diff[T comparable](src, dst []T) []T {
 	if dst == nil {
 		return src
 	}
-	dstMap := make(map[T]bool, len(dst))
+	mp := make(map[T]struct{}, len(dst))
 	for _, d := range dst {
-		dstMap[d] = true
+		mp[d] = struct{}{}
 	}
 
 	diff := make([]T, 0)
 	for i := 0; i < len(src); i++ {
-		if !dstMap[src[i]] {
+		if _, ok := mp[src[i]]; !ok {
 			diff = append(diff, src[i])
+			mp[src[i]] = struct{}{}
 		}
 	}
+
 	return diff
 }
 
@@ -48,7 +50,7 @@ func DiffFunc[T any](src, dst []T, equal EqualFunc[T]) []T {
 
 	diff := make([]T, 0)
 	for i := 0; i < len(src); i++ {
-		if !ContainsFunc(dst, src[i], equal) {
+		if !ContainsFunc(dst, src[i], equal) && !ContainsFunc(diff, src[i], equal) {
 			diff = append(diff, src[i])
 		}
 	}

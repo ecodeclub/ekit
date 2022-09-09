@@ -71,6 +71,12 @@ func TestDiff(t *testing.T) {
 			want: []int{4},
 		},
 		{
+			name: "src have repeat diff element",
+			src:  []int{1, 2, 3, 4, 4, 5},
+			dst:  []int{1, 2, 3, 5},
+			want: []int{4},
+		},
+		{
 			name: "src not have diff element",
 			src:  []int{1, 2, 3, 5},
 			dst:  []int{1, 2, 3, 4, 5},
@@ -221,6 +227,12 @@ func TestSymmetricDiff(t *testing.T) {
 		{
 			name: "src have diff element",
 			src:  []int{1, 2, 3, 4, 5},
+			dst:  []int{1, 2, 3, 5},
+			want: []int{4},
+		},
+		{
+			name: "src have repeat diff element",
+			src:  []int{1, 2, 3, 4, 4, 5},
 			dst:  []int{1, 2, 3, 5},
 			want: []int{4},
 		},
