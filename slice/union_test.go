@@ -15,6 +15,7 @@
 package slice
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,6 +30,51 @@ func TestUnion(t *testing.T) {
 	}{
 		{
 			name: "src and dst nil",
+			src:  nil,
+			dst:  nil,
+			want: []int{},
+		},
+		{
+			name: "only src nil",
+			src:  nil,
+			dst:  []int{1, 2, 3},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "only dst nil",
+			src:  []int{1, 2, 3},
+			dst:  nil,
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "src and dst empty",
+			src:  []int{},
+			dst:  []int{},
+			want: []int{},
+		},
+		{
+			name: "only src empty",
+			src:  []int{},
+			dst:  []int{1, 2, 3},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "only dst empty",
+			src:  []int{1, 2, 3},
+			dst:  []int{},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "src and dst not empty",
+			src:  []int{1, 2, 3},
+			dst:  []int{2, 3, 4},
+			want: []int{1, 2, 3, 4},
+		},
+		{
+			name: "src and dst repeat",
+			src:  []int{1, 2, 2, 3},
+			dst:  []int{2, 3, 3, 4},
+			want: []int{1, 2, 3, 4},
 		},
 	}
 	for _, tt := range tests {
@@ -48,6 +94,51 @@ func TestUnionAny(t *testing.T) {
 	}{
 		{
 			name: "src and dst nil",
+			src:  nil,
+			dst:  nil,
+			want: []int{},
+		},
+		{
+			name: "only src nil",
+			src:  nil,
+			dst:  []int{1, 2, 3},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "only dst nil",
+			src:  []int{1, 2, 3},
+			dst:  nil,
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "src and dst empty",
+			src:  []int{},
+			dst:  []int{},
+			want: []int{},
+		},
+		{
+			name: "only src empty",
+			src:  []int{},
+			dst:  []int{1, 2, 3},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "only dst empty",
+			src:  []int{1, 2, 3},
+			dst:  []int{},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "src and dst not empty",
+			src:  []int{1, 2, 3},
+			dst:  []int{2, 3, 4},
+			want: []int{1, 2, 3, 4},
+		},
+		{
+			name: "src and dst repeat",
+			src:  []int{1, 2, 2, 3},
+			dst:  []int{2, 3, 3, 4},
+			want: []int{1, 2, 3, 4},
 		},
 	}
 	for _, tt := range tests {
@@ -58,4 +149,23 @@ func TestUnionAny(t *testing.T) {
 			assert.Equal(t, tt.want, res)
 		})
 	}
+}
+
+func ExampleUnion() {
+	src := []int{1, 2, 3}
+	dst := []int{2, 3, 4}
+	union := Union(src, dst)
+	fmt.Println(union)
+	//Output: [1 2 3 4]
+}
+
+func ExampleUnionByFunc() {
+	src := []int{1, 2, 3}
+	dst := []int{2, 3, 4}
+	equalFunc := func(src int, dst int) bool {
+		return src == dst
+	}
+	union := UnionByFunc(src, dst, equalFunc)
+	fmt.Println(union)
+	//Output: [1 2 3 4]
 }
