@@ -231,7 +231,7 @@ func TestIndexAll(t *testing.T) {
 	}
 	for _, test := range tests {
 		res := IndexAll[int](test.src, test.dst)
-		assert.Equal(t, true, equal[int](res, test.want))
+		assert.ElementsMatch(t, test.want, res)
 	}
 }
 
@@ -271,7 +271,7 @@ func TestIndexAllFunc(t *testing.T) {
 		res := IndexAllFunc[int](test.src, test.dst, func(src, dst int) bool {
 			return src == dst
 		})
-		assert.Equal(t, true, equal[int](res, test.want))
+		assert.ElementsMatch(t, test.want, res)
 	}
 }
 
@@ -321,4 +321,28 @@ func ExampleIndexAllFunc() {
 	// Output:
 	// [2 5]
 	// []
+}
+
+// BenchmarkIndex 主要是为了验证即便我们在 Index 这种方法里面直接调用 IndexFunc
+// 性能损失几乎没有。
+func BenchmarkIndex(b *testing.B) {
+	b.Run("loop directly", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			IndexByLoop[int]([]int{1, 2, 3, 4, 5, 6}, 5)
+		}
+	})
+	b.Run("delegate to IndexFunc", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			Index[int]([]int{1, 2, 3, 4, 5, 6}, 5)
+		}
+	})
+}
+
+func IndexByLoop[T comparable](src []T, dst T) int {
+	for i, val := range src {
+		if val == dst {
+			return i
+		}
+	}
+	return -1
 }

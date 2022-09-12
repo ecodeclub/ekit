@@ -17,12 +17,9 @@ package slice
 // Index 返回和 dst 相等的第一个元素下标
 // -1 表示没找到
 func Index[T comparable](src []T, dst T) int {
-	for i, val := range src {
-		if val == dst {
-			return i
-		}
-	}
-	return -1
+	return IndexFunc[T](src, dst, func(src, dst T) bool {
+		return src == dst
+	})
 }
 
 // IndexFunc 返回和 dst 相等的第一个元素下标
@@ -40,12 +37,9 @@ func IndexFunc[T any](src []T, dst T, equal equalFunc[T]) int {
 // LastIndex 返回和 dst 相等的最后一个元素下标
 // -1 表示没找到
 func LastIndex[T comparable](src []T, dst T) int {
-	for i := len(src) - 1; i >= 0; i-- {
-		if src[i] == dst {
-			return i
-		}
-	}
-	return -1
+	return LastIndexFunc[T](src, dst, func(src, dst T) bool {
+		return src == dst
+	})
 }
 
 // LastIndexFunc 返回和 dst 相等的最后一个元素下标
@@ -62,12 +56,9 @@ func LastIndexFunc[T any](src []T, dst T, equal equalFunc[T]) int {
 
 // IndexAll 返回和 dst 相等的所有元素的下标
 func IndexAll[T comparable](src []T, dst T) []int {
-	srcMap := toIndexesMap[T](src)
-	if indexes, exist := srcMap[dst]; exist {
-		return indexes
-	}
-	// 和 IndexAllFunc 保持语义
-	return []int{}
+	return IndexAllFunc[T](src, dst, func(src, dst T) bool {
+		return src == dst
+	})
 }
 
 // IndexAllFunc 返回和 dst 相等的所有元素的下标

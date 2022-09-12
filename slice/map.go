@@ -32,14 +32,6 @@ func toMap[T comparable](src []T) map[T]struct{} {
 	return dataMap
 }
 
-func toIndexesMap[T comparable](src []T) map[T][]int {
-	var dataMap = make(map[T][]int, len(src))
-	for k, v := range src {
-		dataMap[v] = append(dataMap[v], k)
-	}
-	return dataMap
-}
-
 func deduplicateFunc[T any](data []T, equal equalFunc[T]) []T {
 	var newData = make([]T, 0, len(data))
 	for k, v := range data {
