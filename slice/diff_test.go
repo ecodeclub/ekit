@@ -16,7 +16,6 @@ package slice
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"testing"
 
@@ -58,7 +57,7 @@ func TestDiffSet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res := DiffSet[int](tt.src, tt.dst)
-			assert.True(t, equal[int](res, tt.want))
+			assert.ElementsMatch(t, tt.want, res)
 		})
 	}
 }
@@ -100,25 +99,9 @@ func TestDiffSetFunc(t *testing.T) {
 			res := DiffSetFunc[int](tt.src, tt.dst, func(src, dst int) bool {
 				return src == dst
 			})
-			assert.True(t, equal[int](res, tt.want))
+			assert.ElementsMatch(t, tt.want, res)
 		})
 	}
-}
-
-func equal[T comparable](src, want []T) bool {
-	if len(src) == len(want) {
-		srcMap, wantMap := toIndexesMap[T](src), toIndexesMap[T](want)
-		for k, v := range wantMap {
-			if indexes, exist := srcMap[k]; !exist || len(indexes) != len(v) {
-				log.Printf("测试失败:\nactual:%v\nexpected:%v\n", src, want)
-				return false
-			}
-		}
-	} else {
-		log.Printf("测试失败:\nactual:%v\nexpected:%v\n", src, want)
-		return false
-	}
-	return true
 }
 
 func ExampleDiffSet() {

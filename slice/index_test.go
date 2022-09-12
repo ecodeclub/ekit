@@ -231,7 +231,7 @@ func TestIndexAll(t *testing.T) {
 	}
 	for _, test := range tests {
 		res := IndexAll[int](test.src, test.dst)
-		assert.Equal(t, true, equal[int](res, test.want))
+		assert.ElementsMatch(t, test.want, res)
 	}
 }
 
@@ -271,7 +271,7 @@ func TestIndexAllFunc(t *testing.T) {
 		res := IndexAllFunc[int](test.src, test.dst, func(src, dst int) bool {
 			return src == dst
 		})
-		assert.Equal(t, true, equal[int](res, test.want))
+		assert.ElementsMatch(t, test.want, res)
 	}
 }
 
