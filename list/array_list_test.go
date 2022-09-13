@@ -318,6 +318,14 @@ func TestArrayList_Delete_Shrink(t *testing.T) {
 			wantCap: 2048,
 		},
 
+		// cap <= 64，但不满足缩容条件的例子
+		{
+			name:    "cap <= 64",
+			cap:     64,
+			loop:    2,
+			wantCap: 64,
+		},
+
 		// ----- #阶段二 边界测试# -----
 		// 测试用例边界
 		// ps:测试时：
@@ -329,14 +337,14 @@ func TestArrayList_Delete_Shrink(t *testing.T) {
 			name:    "case 6",
 			cap:     65,
 			loop:    2,
-			wantCap: 64,
+			wantCap: 32,
 		},
 		// case 6-2:  cap65,loop为16
 		{
 			name:    "case 6-2",
 			cap:     65,
 			loop:    16,
-			wantCap: 64,
+			wantCap: 32,
 		},
 		// case 6-3:  cap130,loop为34，删除一个元素后为33，刚好不满足四分之一
 		{
