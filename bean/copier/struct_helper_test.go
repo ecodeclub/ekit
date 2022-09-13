@@ -120,9 +120,10 @@ func TestStructHelper(t *testing.T) {
 		},
 	}
 
+	helperMap := make(map[string]*structOffsets)
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			res, err := FindOffsetsDefault(tc.inStruct)
+			res, err := FindOffsets(tc.inStruct, helperMap)
 			if res != nil {
 				assert.Equal(t, tc.wantDst, res)
 			}

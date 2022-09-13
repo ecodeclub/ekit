@@ -28,13 +28,6 @@ type structFieldMap map[string][]int
 
 var structFieldMapBuffer = make(map[string]structFieldMap)
 
-type structCopyFunc func(src reflect.Value, dst reflect.Value)
-
-var subOffsetMap = make(map[string][]int)
-
-// 指针处理起来很麻烦，单独列出一条
-var subPointerOffsetMap = make(map[string][]int)
-
 // ReflectCopier 基于反射的实现
 // ReflectCopier 是浅拷贝
 type ReflectCopier[Src any, Dst any] struct {
@@ -42,10 +35,14 @@ type ReflectCopier[Src any, Dst any] struct {
 	// 其中 key 是 Src 中字段下标使用连字符 - 连接起来
 	// 不在 fieldMap 中字段则意味着被忽略
 	fieldMap map[string][]int
+
+	structHelperMap map[string]*structOffsets
 }
 
-func NewReflectCopier[Src any, Dst any]() (*ReflectCopier[Src, Dst], error) {
-	return &ReflectCopier[Src, Dst]{}, nil
+func NewReflectCopier[Src any, Dst any](structHelpMap map[string]*structOffsets) (*ReflectCopier[Src, Dst], error) {
+	return &ReflectCopier[Src, Dst]{
+		structHelperMap: structHelpMap,
+	}, nil
 }
 
 func makeFieldMap(srcVal reflect.Value, dstVal reflect.Value) (structFieldMap, error) {
@@ -116,7 +113,7 @@ func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst) error {
 	for _, pair := range r.fieldMap {
 		dstSettable := structOffsetValue(dstVal, pair[0])
 		srcSettable := structOffsetValue(srcVal, pair[1])
-		if err := copyTo(srcSettable, dstSettable); err != nil {
+		if err := r.copyTo(srcSettable, dstSettable); err != nil {
 			return err
 		}
 	}
@@ -141,14 +138,14 @@ func checkValid(srcVal reflect.Value, dstVal reflect.Value) error {
 	return nil
 }
 
-func copyTo(srcVal reflect.Value, dstVal reflect.Value) error {
+func (r *ReflectCopier[Src, Dst]) copyTo(srcVal reflect.Value, dstVal reflect.Value) error {
 
 	switch srcVal.Type().Kind() {
 	case reflect.Pointer, reflect.UnsafePointer:
 		if srcVal.Pointer() != 0 {
 			subType := srcVal.Elem().Type()
 			newValue := reflect.New(subType)
-			copyTo(srcVal.Elem(), newValue.Elem())
+			r.copyTo(srcVal.Elem(), newValue.Elem())
 			dstVal.Set(newValue)
 		}
 		return nil
@@ -157,7 +154,7 @@ func copyTo(srcVal reflect.Value, dstVal reflect.Value) error {
 	//case reflect.Array:
 	case reflect.Struct:
 		dstVal.Set(srcVal)
-		structOffsets, err := findValueOffsetsDefault(srcVal)
+		structOffsets, err := findTypeOffsets(srcVal.Type(), r.structHelperMap)
 		if err != nil {
 			return err
 		}
@@ -169,7 +166,7 @@ func copyTo(srcVal reflect.Value, dstVal reflect.Value) error {
 			subDstValue := reflect.NewAt(h.typ, unsafe.Pointer(dstAddr+h.ptrOffset)).Elem()
 			if subSrcValue.Pointer() != 0 {
 				newValue := reflect.New(h.typ.Elem())
-				err = copyTo(subSrcValue.Elem(), newValue.Elem())
+				err = r.copyTo(subSrcValue.Elem(), newValue.Elem())
 				if err != nil {
 					return err
 				}

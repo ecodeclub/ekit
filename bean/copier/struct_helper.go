@@ -16,8 +16,6 @@ type structOffsets struct {
 	deepCopyOffsets map[reflect.Kind][]uintptr
 }
 
-var structOffsetsMapGlobal = make(map[string]*structOffsets)
-
 var errorNotStruct = errors.New("the input must be struct")
 
 func findOffsets(typ reflect.Type, offsets *structOffsets, lastOffset uintptr, structOffsetsMap map[string]*structOffsets) {
@@ -98,15 +96,6 @@ const deepCopyKind = (1 << 17) | (1 << 18) | (1 << 21) | (1 << 23)
 
 func isDeepCopyKind(kind reflect.Kind) bool {
 	return 1<<kind&deepCopyKind > 0
-}
-
-// 会自动维护一个全局的map,用于查询
-func FindOffsetsDefault(inStruct any) (*structOffsets, error) {
-	return findTypeOffsets(reflect.TypeOf(inStruct), structOffsetsMapGlobal)
-}
-
-func findValueOffsetsDefault(refVal reflect.Value) (*structOffsets, error) {
-	return findTypeOffsets(refVal.Type(), structOffsetsMapGlobal)
 }
 
 func FindOffsets(inStruct any, structOffsetsMap map[string]*structOffsets) (*structOffsets, error) {

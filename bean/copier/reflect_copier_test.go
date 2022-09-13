@@ -23,6 +23,7 @@ import (
 )
 
 func TestReflectCopier_Copy(t *testing.T) {
+	structHelperMap := make(map[string]*structOffsets)
 	testCases := []struct {
 		name     string
 		copyFunc func() (any, error)
@@ -32,7 +33,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 		{
 			name: "error input",
 			copyFunc: func() (any, error) {
-				copier, _ := NewReflectCopier[*SimpleSrc, SimpleDst]()
+				copier, _ := NewReflectCopier[*SimpleSrc, SimpleDst](structHelperMap)
 				simpleSrc := &SimpleSrc{}
 				return copier.Copy(&simpleSrc)
 			},
@@ -41,7 +42,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 		{
 			name: "error input int",
 			copyFunc: func() (any, error) {
-				copier, _ := NewReflectCopier[int, SimpleDst]()
+				copier, _ := NewReflectCopier[int, SimpleDst](structHelperMap)
 				test := 1
 				return copier.Copy(&test)
 			},
@@ -57,7 +58,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 		{
 			name: "simple struct",
 			copyFunc: func() (any, error) {
-				copier, _ := NewReflectCopier[SimpleInlineSrc, SimpleInlineDst]()
+				copier, _ := NewReflectCopier[SimpleInlineSrc, SimpleInlineDst](structHelperMap)
 				initSimpleStructParam()
 				res, err := copier.Copy(simpleInlineSrc)
 				//修改simpleInlineSrc中的string,(更换原先src中的string，即src中的string_view是 "abc"，具体见函数)
@@ -74,7 +75,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 		{
 			name: "simple struct demo",
 			copyFunc: func() (any, error) {
-				copier, _ := NewReflectCopier[SimpleSrc, SimpleDst]()
+				copier, _ := NewReflectCopier[SimpleSrc, SimpleDst](structHelperMap)
 				age := 18
 				simpleSrc := &SimpleSrc{
 					Name:    "大明大聪明",
@@ -97,7 +98,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 		{
 			name: "pointer struct",
 			copyFunc: func() (any, error) {
-				copier, _ := NewReflectCopier[SimplePointersSrc, SimplePointersDst]()
+				copier, _ := NewReflectCopier[SimplePointersSrc, SimplePointersDst](structHelperMap)
 				a := 1
 				b := float32(1.0)
 				c := float64(2.0)
@@ -149,7 +150,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 		}, {
 			name: "组合,子数据结构内部全为指针",
 			copyFunc: func() (any, error) {
-				copier, _ := NewReflectCopier[CompositeSrc1, CompositeDst1]()
+				copier, _ := NewReflectCopier[CompositeSrc1, CompositeDst1](structHelperMap)
 				a := 1
 				b := float32(1.0)
 				c := float64(2.0)
@@ -208,7 +209,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 		}, {
 			name: "Composite2",
 			copyFunc: func() (any, error) {
-				copier, _ := NewReflectCopier[CompositeSrc2, CompositeDst2]()
+				copier, _ := NewReflectCopier[CompositeSrc2, CompositeDst2](structHelperMap)
 				a := 1
 				b := float32(1.0)
 				c := float64(2.0)
@@ -384,6 +385,7 @@ type CompositeDst2 struct {
 }
 
 func TestReflectCopier_LongYue(t *testing.T) {
+	structHelperMap := make(map[string]*structOffsets)
 	testCases := []struct {
 		name     string
 		copyFunc func() (any, error)
@@ -393,7 +395,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "simple struct",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()
+				copier, err := NewReflectCopier[SimpleSrc, SimpleDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -412,7 +414,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "基础类型的 struct",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[BasicSrc, BasicDst]()
+				copier, err := NewReflectCopier[BasicSrc, BasicDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -431,7 +433,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "src 是基础类型",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[int, int]()
+				copier, err := NewReflectCopier[int, int](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -443,7 +445,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "dst 是基础类型",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[SimpleSrc, string]()
+				copier, err := NewReflectCopier[SimpleSrc, string](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -458,7 +460,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "接口类型",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[InterfaceSrc, InterfaceDst]()
+				copier, err := NewReflectCopier[InterfaceSrc, InterfaceDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -470,7 +472,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "simple struct 空切片, 空指针",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[SimpleSrcLongYue, SimpleDstLongYue]()
+				copier, err := NewReflectCopier[SimpleSrcLongYue, SimpleDstLongYue](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -485,7 +487,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "组合 struct ",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[EmbedSrc, EmbedDst]()
+				copier, err := NewReflectCopier[EmbedSrc, EmbedDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -519,7 +521,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "复杂 Struct",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[ComplexSrc, ComplexDst]()
+				copier, err := NewReflectCopier[ComplexSrc, ComplexDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -576,7 +578,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "特殊类型",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[SpecialSrc, SpecialDst]()
+				copier, err := NewReflectCopier[SpecialSrc, SpecialDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -599,7 +601,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "复杂 Struct 不匹配",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[NotMatchSrc, NotMatchDst]()
+				copier, err := NewReflectCopier[NotMatchSrc, NotMatchDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -653,7 +655,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "支持多重指针",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[MultiPtrSrc, MultiPtrDst]()
+				copier, err := NewReflectCopier[MultiPtrSrc, MultiPtrDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -673,7 +675,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "src 有额外字段",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[DiffSrc, DiffDst]()
+				copier, err := NewReflectCopier[DiffSrc, DiffDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -701,7 +703,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "dst 有额外字段",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[DiffSrc, DiffDst]()
+				copier, err := NewReflectCopier[DiffSrc, DiffDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -750,7 +752,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "跨层级别匹配",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[SimpleSrc, SimpleEmbedDst]()
+				copier, err := NewReflectCopier[SimpleSrc, SimpleEmbedDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -761,7 +763,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "成员为结构体数组，目前仅为浅拷贝，其实这儿的测试用例没啥意义",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[ArraySrc, ArrayDst]()
+				copier, err := NewReflectCopier[ArraySrc, ArrayDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -798,7 +800,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "成员为结构体数组，结构体不同，不返回错误，直接忽略该字段",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[ArraySrc, ArrayDst1]()
+				copier, err := NewReflectCopier[ArraySrc, ArrayDst1](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -823,7 +825,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "成员为map结构体",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[MapSrc, MapDst]()
+				copier, err := NewReflectCopier[MapSrc, MapDst](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -850,7 +852,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "成员为不同的map结构体",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[MapSrc, MapDst1]()
+				copier, err := NewReflectCopier[MapSrc, MapDst1](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -870,7 +872,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "成员有别名类型",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[SpecialSrc1, SpecialDst1]()
+				copier, err := NewReflectCopier[SpecialSrc1, SpecialDst1](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -884,7 +886,7 @@ func TestReflectCopier_LongYue(t *testing.T) {
 		{
 			name: "成员有别名类型1",
 			copyFunc: func() (any, error) {
-				copier, err := NewReflectCopier[SpecialSrc1, SpecialDst2]()
+				copier, err := NewReflectCopier[SpecialSrc1, SpecialDst2](structHelperMap)
 				if err != nil {
 					return nil, err
 				}
@@ -1056,7 +1058,8 @@ type SpecialDst2 struct {
 }
 
 func BenchmarkReflectCopier_Copy(b *testing.B) {
-	copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()
+	structHelperMap := make(map[string]*structOffsets)
+	copier, err := NewReflectCopier[SimpleSrc, SimpleDst](structHelperMap)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1069,12 +1072,62 @@ func BenchmarkReflectCopier_Copy(b *testing.B) {
 	}
 }
 
+func BenchmarkReflectCopier_Copy_Only_One_Time(b *testing.B) {
+	for i := 1; i <= b.N; i++ {
+		structHelperMap := make(map[string]*structOffsets)
+		copier, err := NewReflectCopier[SimpleSrc, SimpleDst](structHelperMap)
+		if err != nil {
+			b.Fatal(err)
+		}
+		_, _ = copier.Copy(&SimpleSrc{
+			Name:    "大明",
+			Age:     ekit.ToPtr[int](18),
+			Friends: []string{"Tom", "Jerry"},
+		})
+	}
+}
+
 func BenchmarkReflectCopier_CopyComplexStruct(b *testing.B) {
-	copier, err := NewReflectCopier[ComplexSrc, ComplexDst]()
+	structHelperMap := make(map[string]*structOffsets)
+	copier, err := NewReflectCopier[ComplexSrc, ComplexDst](structHelperMap)
 	if err != nil {
 		b.Fatal(err)
 	}
 	for i := 1; i <= b.N; i++ {
+		_, _ = copier.Copy(&ComplexSrc{
+			Simple: SimpleSrcLongYue{
+				Name:    "xiaohong",
+				Age:     ekit.ToPtr[int](18),
+				Friends: []string{"ha", "ha", "le"},
+			},
+			Embed: &EmbedSrc{
+				SimpleSrcLongYue: SimpleSrcLongYue{
+					Name:    "xiaopeng",
+					Age:     ekit.ToPtr[int](88),
+					Friends: []string{"la", "ha", "le"},
+				},
+				BasicSrc: &BasicSrc{
+					Name:    "wang",
+					Age:     22,
+					CNumber: complex(2, 1),
+				},
+			},
+			BasicSrc: BasicSrc{
+				Name:    "wang11",
+				Age:     22,
+				CNumber: complex(2, 1),
+			},
+		})
+	}
+}
+
+func BenchmarkReflectCopier_CopyComplexStruct_Only_One_Time(b *testing.B) {
+	for i := 1; i <= b.N; i++ {
+		structHelperMap := make(map[string]*structOffsets)
+		copier, err := NewReflectCopier[ComplexSrc, ComplexDst](structHelperMap)
+		if err != nil {
+			b.Fatal(err)
+		}
 		_, _ = copier.Copy(&ComplexSrc{
 			Simple: SimpleSrcLongYue{
 				Name:    "xiaohong",
