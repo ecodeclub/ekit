@@ -103,7 +103,7 @@ func (a *ArrayList[T]) shrink() {
 	}
 	if c > 2048 && (c/l >= 2) {
 		newCap = int(float32(c) * float32(0.625))
-	} else if c <= 2048 && c > 64 && (c/l >= 4) {
+	} else if c <= 2048 && (c/l >= 4) {
 		newCap = c / 2
 	} else {
 		// 不满足缩容
