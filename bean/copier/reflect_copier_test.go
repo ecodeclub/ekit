@@ -33,18 +33,16 @@ func TestReflectCopier_Copy(t *testing.T) {
 		{
 			name: "error input",
 			copyFunc: func() (any, error) {
-				copier, _ := NewReflectCopier[*SimpleSrc, SimpleDst](structHelperMap)
-				simpleSrc := &SimpleSrc{}
-				return copier.Copy(&simpleSrc)
+				_, err := NewReflectCopier[*SimpleSrc, SimpleDst](structHelperMap)
+				return nil, err
 			},
 			wantErr: newErrTypeError(reflect.TypeOf(&SimpleSrc{})),
 		},
 		{
 			name: "error input int",
 			copyFunc: func() (any, error) {
-				copier, _ := NewReflectCopier[int, SimpleDst](structHelperMap)
-				test := 1
-				return copier.Copy(&test)
+				_, err := NewReflectCopier[int, SimpleDst](structHelperMap)
+				return nil, err
 			},
 			wantErr: newErrTypeError(reflect.TypeOf(int(1))),
 		},

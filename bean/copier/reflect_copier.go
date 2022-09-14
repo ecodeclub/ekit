@@ -21,12 +21,9 @@ import (
 )
 
 var errInvalidType = errors.New("only support struct")
-
 var errToDoPointer = errors.New("doesn't support inside multi-pointer yet")
 
 type structFieldMap map[string][]int
-
-var structFieldMapBuffer = make(map[string]structFieldMap)
 
 // ReflectCopier 基于反射的实现
 // ReflectCopier 是浅拷贝
@@ -40,38 +37,44 @@ type ReflectCopier[Src any, Dst any] struct {
 }
 
 func NewReflectCopier[Src any, Dst any](structHelpMap map[string]*structOffsets) (*ReflectCopier[Src, Dst], error) {
+	src := new(Src)
+	dst := new(Dst)
+	fieldMap, err := makeFieldMap(reflect.TypeOf(src).Elem(), reflect.TypeOf(dst).Elem())
+	if err != nil {
+		return nil, err
+	}
 	return &ReflectCopier[Src, Dst]{
+		fieldMap:        fieldMap,
 		structHelperMap: structHelpMap,
 	}, nil
 }
 
-func makeFieldMap(srcVal reflect.Value, dstVal reflect.Value) (structFieldMap, error) {
+func makeFieldMap(srcType reflect.Type, dstType reflect.Type) (structFieldMap, error) {
 	//只支持srcVal和dstVal同时为结构体
-	if srcVal.Kind() != reflect.Struct {
-		return nil, newErrTypeError(srcVal.Type())
+	if srcType.Kind() != reflect.Struct {
+		return nil, newErrTypeError(srcType)
 	}
-	if dstVal.Kind() != reflect.Struct {
-		return nil, newErrTypeError(dstVal.Type())
+	if dstType.Kind() != reflect.Struct {
+		return nil, newErrTypeError(dstType)
 	}
 	fieldMap := make(structFieldMap)
 	//确定目标字段中的key，并记录其偏移量，以供后面直接操作内存
-	for i := 0; i < dstVal.NumField(); i++ {
-		fileKey := dstVal.Type().Field(i).Name + "-" + dstVal.Field(i).Type().String()
-		//r.fieldMap[fileKey] = append(r.fieldMap[fileKey], i)
+	for i := 0; i < dstType.NumField(); i++ {
+		fileKey := dstType.Field(i).Name + "-" + dstType.Field(i).Type.String()
 		fieldMap[fileKey] = append(fieldMap[fileKey], i)
 	}
-	for i := 0; i < srcVal.NumField(); i++ {
-		fileKey := srcVal.Type().Field(i).Name + "-" + srcVal.Field(i).Type().String()
+	for i := 0; i < srcType.NumField(); i++ {
+		fileKey := srcType.Field(i).Name + "-" + srcType.Field(i).Type.String()
 		if _, ok := fieldMap[fileKey]; ok {
-			switch srcVal.Type().Kind() {
+			switch srcType.Kind() {
 			case reflect.Map:
-				keyKind := srcVal.Type().Key().Kind()
-				valueKind := srcVal.Type().Elem().Kind()
-				if keyKind != srcVal.Type().Key().Kind() || valueKind != srcVal.Type().Elem().Kind() {
+				keyKind := srcType.Key().Kind()
+				valueKind := srcType.Elem().Kind()
+				if keyKind != srcType.Key().Kind() || valueKind != srcType.Elem().Kind() {
 					continue
 				}
 			case reflect.Slice:
-				if srcVal.Type().Elem().Kind() != dstVal.Type().Elem().Kind() {
+				if srcType.Elem().Kind() != dstType.Elem().Kind() {
 					continue
 				}
 			}
@@ -98,18 +101,6 @@ func makeFieldMap(srcVal reflect.Value, dstVal reflect.Value) (structFieldMap, e
 func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst) error {
 	srcVal := reflect.ValueOf(src).Elem()
 	dstVal := reflect.ValueOf(dst).Elem()
-	mapName := srcVal.Type().Name() + "-" + dstVal.Type().Name()
-	if offsetMap, ok := structFieldMapBuffer[mapName]; ok {
-		r.fieldMap = offsetMap
-	} else {
-		fieldMap, err := makeFieldMap(srcVal, dstVal)
-		if err != nil {
-			return err
-		}
-		structFieldMapBuffer[mapName] = fieldMap
-		r.fieldMap = fieldMap
-	}
-
 	for _, pair := range r.fieldMap {
 		dstSettable := structOffsetValue(dstVal, pair[0])
 		srcSettable := structOffsetValue(srcVal, pair[1])

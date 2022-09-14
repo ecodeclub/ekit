@@ -1,9 +1,9 @@
 goos: darwin
 goarch: arm64
 pkg: github.com/gotomicro/ekit/bean/copier
-BenchmarkReflectCopier_Copy-10                               	 2291926	       518.9 ns/op	     216 B/op	      12 allocs/op
-BenchmarkReflectCopier_Copy_Only_One_Time-10                 	 2279343	       525.5 ns/op	     216 B/op	      12 allocs/op
-BenchmarkReflectCopier_CopyComplexStruct-10                  	 1305994	       922.2 ns/op	     584 B/op	      19 allocs/op
-BenchmarkReflectCopier_CopyComplexStruct_Only_One_Time-10    	  556054	      2210 ns/op	    1757 B/op	      49 allocs/op
+BenchmarkReflectCopier_Copy-10                               	 2602375	       460.0 ns/op	     192 B/op	      11 allocs/op
+BenchmarkReflectCopier_Copy_Only_One_Time-10                 	  734889	      1661 ns/op	    1000 B/op	      41 allocs/op
+BenchmarkReflectCopier_CopyComplexStruct-10                  	 1394278	       877.5 ns/op	     560 B/op	      18 allocs/op
+BenchmarkReflectCopier_CopyComplexStruct_Only_One_Time-10    	  381406	      3128 ns/op	    2925 B/op	      79 allocs/op
 PASS
-ok  	github.com/gotomicro/ekit/bean/copier	6.927s
+ok  	github.com/gotomicro/ekit/bean/copier	6.529s
