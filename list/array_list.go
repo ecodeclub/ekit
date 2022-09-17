@@ -14,6 +14,11 @@
 
 package list
 
+import (
+	"github.com/gotomicro/ekit/internal/errs"
+	"github.com/gotomicro/ekit/internal/slice"
+)
+
 var (
 	_ List[any] = &ArrayList[any]{}
 )
@@ -38,7 +43,7 @@ func NewArrayListOf[T any](ts []T) *ArrayList[T] {
 func (a *ArrayList[T]) Get(index int) (t T, e error) {
 	l := a.Len()
 	if index < 0 || index >= l {
-		return t, newErrIndexOutOfRange(l, index)
+		return t, errs.NewErrIndexOutOfRange(l, index)
 	}
 	return a.vals[index], e
 }
@@ -53,7 +58,7 @@ func (a *ArrayList[T]) Append(ts ...T) error {
 // 当index等于ArrayList长度等同于append
 func (a *ArrayList[T]) Add(index int, t T) error {
 	if index < 0 || index > len(a.vals) {
-		return newErrIndexOutOfRange(len(a.vals), index)
+		return errs.NewErrIndexOutOfRange(len(a.vals), index)
 	}
 	a.vals = append(a.vals, t)
 	copy(a.vals[index+1:], a.vals[index:])
@@ -65,7 +70,7 @@ func (a *ArrayList[T]) Add(index int, t T) error {
 func (a *ArrayList[T]) Set(index int, t T) error {
 	length := len(a.vals)
 	if index >= length || index < 0 {
-		return newErrIndexOutOfRange(length, index)
+		return errs.NewErrIndexOutOfRange(length, index)
 	}
 	a.vals[index] = t
 	return nil
@@ -76,22 +81,13 @@ func (a *ArrayList[T]) Set(index int, t T) error {
 // - 如果容量 (64, 2048]，如果长度是容量的 1/4，那么就会缩容为原本的一半
 // - 如果此时容量 <= 64，那么我们将不会执行缩容。在容量很小的情况下，浪费的内存很少，所以没必要消耗 CPU去执行缩容
 func (a *ArrayList[T]) Delete(index int) (T, error) {
-	length := len(a.vals)
-	if index < 0 || index >= length {
-		var zero T
-		return zero, newErrIndexOutOfRange(length, index)
+	res, t, err := slice.Delete(a.vals, index)
+	if err != nil {
+		return t, err
 	}
-	j := 0
-	res := a.vals[index]
-	for i, v := range a.vals {
-		if i != index {
-			a.vals[j] = v
-			j++
-		}
-	}
-	a.vals = a.vals[:j]
+	a.vals = res
 	a.shrink()
-	return res, nil
+	return t, nil
 }
 
 // shrink 数组缩容
@@ -115,9 +111,6 @@ func (a *ArrayList[T]) shrink() {
 }
 
 func (a *ArrayList[T]) Len() int {
-	if a == nil {
-		return 0
-	}
 	return len(a.vals)
 }
 
@@ -136,7 +129,7 @@ func (a *ArrayList[T]) Range(fn func(index int, t T) error) error {
 }
 
 func (a *ArrayList[T]) AsSlice() []T {
-	slice := make([]T, len(a.vals))
-	copy(slice, a.vals)
-	return slice
+	res := make([]T, len(a.vals))
+	copy(res, a.vals)
+	return res
 }

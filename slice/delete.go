@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package list
+package slice
 
-import "fmt"
+import "github.com/gotomicro/ekit/internal/slice"
 
-// newErrIndexOutOfRange 创建一个代表
-func newErrIndexOutOfRange(length int, index int) error {
-	return fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", length, index)
+// Delete 删除 index 处的元素
+func Delete[Src any](src []Src, index int) ([]Src, error) {
+	res, _, err := slice.Delete[Src](src, index)
+	return res, err
 }

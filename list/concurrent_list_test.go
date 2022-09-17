@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gotomicro/ekit/internal/errs"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -208,13 +210,13 @@ func TestConcurrentList_Delete(t *testing.T) {
 			name:    "index out of range",
 			list:    newConcurrentListOfSlice([]int{123, 100}),
 			index:   12,
-			wantErr: newErrIndexOutOfRange(2, 12),
+			wantErr: errs.NewErrIndexOutOfRange(2, 12),
 		},
 		{
 			name:    "index less than 0",
 			list:    newConcurrentListOfSlice([]int{123, 100}),
 			index:   -1,
-			wantErr: newErrIndexOutOfRange(2, -1),
+			wantErr: errs.NewErrIndexOutOfRange(2, -1),
 		},
 		{
 			name:      "index last",
