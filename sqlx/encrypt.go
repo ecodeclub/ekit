@@ -15,7 +15,14 @@
 package sqlx
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"database/sql/driver"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"reflect"
 )
 
 // EncryptColumn 代表一个加密的列
@@ -29,17 +36,166 @@ type EncryptColumn[T any] struct {
 	Valid bool
 }
 
-// Value 返回加密后的值
-// 如果 T 是基本类型，那么会对 T 进行直接加密
-// 否则，将 T 按照 JSON 序列化之后进行加密，返回加密后的数据
-func (e EncryptColumn[T]) Value() (driver.Value, error) {
-	//TODO implement me
-	panic("implement me")
+func (e EncryptColumn[T]) Value(key []byte) (driver.Value, error) {
+	relValue := reflect.ValueOf(&e.Val).Elem()
+	buffer := new(bytes.Buffer)
+	switch relValue.Kind() {
+	case reflect.Bool, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32,
+		reflect.Float64, reflect.Complex64, reflect.Complex128:
+		err := binary.Write(buffer, binary.BigEndian, e.Val)
+		if err != nil {
+			return nil, err
+		}
+		return aesEncrypt(buffer.Bytes(), key)
+	case reflect.Uint:
+		val := relValue.Uint()
+		err := binary.Write(buffer, binary.BigEndian, val)
+		if err != nil {
+			return nil, err
+		}
+		return aesEncrypt(buffer.Bytes(), key)
+	case reflect.Int:
+		val := relValue.Int()
+		err := binary.Write(buffer, binary.BigEndian, val)
+		if err != nil {
+			return nil, err
+		}
+		return aesEncrypt(buffer.Bytes(), key)
+	case reflect.Struct:
+		jsonColumn := &JsonColumn[T]{
+			Val:   e.Val,
+			Valid: true,
+		}
+		jsonByte, err := jsonColumn.Value()
+		if err != nil {
+			return nil, err
+		}
+		jsonVal := reflect.ValueOf(jsonByte)
+		return aesEncrypt(jsonVal.Bytes(), key)
+	case reflect.String:
+		return aesEncrypt([]byte(relValue.String()), key)
+	default:
+		return nil, fmt.Errorf("ekit：EncryptColumn.Value 不支持 src 类型 %v", relValue.Kind())
+	}
 }
 
 // Scan 方法会把写入的数据转化进行解密，
 // 并将解密后的数据进行反序列化，构造 T
-func (e *EncryptColumn[T]) Scan(src any) error {
-	//TODO implement me
-	panic("implement me")
+func (e *EncryptColumn[T]) Scan(src any, key []byte) error {
+	switch value := src.(type) {
+	case []byte:
+		decrBytes, err := aesDecrypt(value, key)
+		if err != nil {
+			return nil
+		}
+		reader := bytes.NewReader(decrBytes)
+		relValue := reflect.ValueOf(&e.Val).Elem()
+		switch relValue.Kind() {
+		case reflect.Int:
+			tmp := int64(0)
+			err = binary.Read(reader, binary.BigEndian, &tmp)
+			if err != nil {
+				return err
+			}
+			relValue.SetInt(tmp)
+		case reflect.Uint:
+			tmp := uint64(0)
+			err = binary.Read(reader, binary.BigEndian, &tmp)
+			if err != nil {
+				return err
+			}
+			relValue.SetUint(tmp)
+		case reflect.Struct:
+			json := &JsonColumn[T]{}
+			err = json.Scan(decrBytes)
+			if err != nil {
+				return err
+			}
+			e.Val = json.Val
+		case reflect.String:
+			relValue.SetString(string(decrBytes))
+		default:
+			err = binary.Read(reader, binary.BigEndian, &e.Val)
+			if err != nil {
+				return err
+			}
+		}
+	default:
+		return fmt.Errorf("ekit：EncryptColumn.Scan 不支持 src 类型 %v", src)
+	}
+	e.Valid = true
+	return nil
+}
+
+//加密过程：
+//  1、处理数据，对数据进行填充，采用PKCS7（当密钥长度不够时，缺几位补几个几）的方式。
+//  2、对数据进行加密，采用AES加密方法中CBC加密模式
+//  3、对得到的加密数据，进行base64加密，得到字符串
+// 解密过程相反
+
+// 16,24,32位字符串的话，分别对应AES-128，AES-192，AES-256 加密方法
+// key不能泄露
+
+// pkcs7Padding 填充
+func pkcs7Padding(data []byte, blockSize int) []byte {
+	//判断缺少几位长度。最少1，最多 blockSize
+	padding := blockSize - len(data)%blockSize
+	//补足位数。把切片[]byte{byte(padding)}复制padding个
+	padText := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(data, padText...)
+}
+
+// pkcs7UnPadding 填充的反向操作
+func pkcs7UnPadding(data []byte) ([]byte, error) {
+	length := len(data)
+	if length == 0 {
+		return nil, errors.New("加密字符串错误！")
+	}
+	//获取填充的个数
+	unPadding := int(data[length-1])
+	return data[:(length - unPadding)], nil
+}
+
+// AesEncrypt 加密
+func aesEncrypt(data []byte, key []byte) ([]byte, error) {
+	//创建加密实例
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	//判断加密快的大小
+	blockSize := block.BlockSize()
+	//填充
+	encryptBytes := pkcs7Padding(data, blockSize)
+	//初始化加密数据接收切片
+	crypted := make([]byte, len(encryptBytes))
+	//使用cbc加密模式
+	blockMode := cipher.NewCBCEncrypter(block, key[:blockSize])
+	//执行加密
+	blockMode.CryptBlocks(crypted, encryptBytes)
+	return crypted, nil
+}
+
+// AesDecrypt 解密
+func aesDecrypt(data []byte, key []byte) ([]byte, error) {
+	//创建实例
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	//获取块的大小
+	blockSize := block.BlockSize()
+	//使用cbc
+	blockMode := cipher.NewCBCDecrypter(block, key[:blockSize])
+	//初始化解密数据接收切片
+	crypted := make([]byte, len(data))
+	//执行解密
+	blockMode.CryptBlocks(crypted, data)
+	//去除填充
+	crypted, err = pkcs7UnPadding(crypted)
+	if err != nil {
+		return nil, err
+	}
+	return crypted, nil
 }
