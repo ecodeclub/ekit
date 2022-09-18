@@ -14,6 +14,8 @@
 
 package list
 
+import "github.com/gotomicro/ekit/internal/errs"
+
 var (
 	_ List[any] = &LinkedList[any]{}
 )
@@ -72,7 +74,7 @@ func (l *LinkedList[T]) findNode(index int) *node[T] {
 func (l *LinkedList[T]) Get(index int) (T, error) {
 	if !l.checkIndex(index) {
 		var zeroValue T
-		return zeroValue, newErrIndexOutOfRange(l.Len(), index)
+		return zeroValue, errs.NewErrIndexOutOfRange(l.Len(), index)
 	}
 	n := l.findNode(index)
 	return n.val, nil
@@ -96,7 +98,7 @@ func (l *LinkedList[T]) Append(ts ...T) error {
 // 当 index 等于 LinkedList 长度等同于 Append
 func (l *LinkedList[T]) Add(index int, t T) error {
 	if index < 0 || index > l.length {
-		return newErrIndexOutOfRange(l.length, index)
+		return errs.NewErrIndexOutOfRange(l.length, index)
 	}
 	if index == l.length {
 		return l.Append(t)
@@ -111,7 +113,7 @@ func (l *LinkedList[T]) Add(index int, t T) error {
 // Set 设置链表中index索引处的值为t
 func (l *LinkedList[T]) Set(index int, t T) error {
 	if !l.checkIndex(index) {
-		return newErrIndexOutOfRange(l.Len(), index)
+		return errs.NewErrIndexOutOfRange(l.Len(), index)
 	}
 	node := l.findNode(index)
 	node.val = t
@@ -122,7 +124,7 @@ func (l *LinkedList[T]) Set(index int, t T) error {
 func (l *LinkedList[T]) Delete(index int) (T, error) {
 	if !l.checkIndex(index) {
 		var zeroValue T
-		return zeroValue, newErrIndexOutOfRange(l.Len(), index)
+		return zeroValue, errs.NewErrIndexOutOfRange(l.Len(), index)
 	}
 	node := l.findNode(index)
 	node.prev.next = node.next
