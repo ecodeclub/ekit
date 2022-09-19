@@ -451,7 +451,7 @@ func testExtendNumGoFromInitGoToCoreGoAtOnce(t *testing.T, concurrency int32, qu
 		assert.Equal(t, coreGo, pool.numOfGo())
 	}
 	opts = append(opts, WithCoreGo(coreGo), WithMaxIdleTime(maxIdleTime))
-	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, concurrency, queueSize, coreGo, coreGo, maxIdleTime, extendToCoreGoAtOnce, nil, opts...)
+	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, concurrency, queueSize, coreGo, coreGo, extendToCoreGoAtOnce, nil, opts...)
 }
 
 func testExtendNumGoFromInitGoToCoreGoStepByStep(t *testing.T, concurrency int32, queueSize int, coreGo int32, maxIdleTime time.Duration, opts ...option.Option[OnDemandBlockTaskPool]) {
@@ -459,7 +459,7 @@ func testExtendNumGoFromInitGoToCoreGoStepByStep(t *testing.T, concurrency int32
 		assert.Equal(t, i, pool.numOfGo())
 	}
 	opts = append(opts, WithCoreGo(coreGo), WithMaxIdleTime(maxIdleTime))
-	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, concurrency, queueSize, coreGo, coreGo, maxIdleTime, extendToCoreGoAtOnce, nil, opts...)
+	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, concurrency, queueSize, coreGo, coreGo, extendToCoreGoAtOnce, nil, opts...)
 }
 
 func testExtendNumGoFromInitGoToCoreGoAndMaxGoAtOnce(t *testing.T, concurrency int32, queueSize int, coreGo int32, maxGo int32, maxIdleTime time.Duration, opts ...option.Option[OnDemandBlockTaskPool]) {
@@ -470,7 +470,7 @@ func testExtendNumGoFromInitGoToCoreGoAndMaxGoAtOnce(t *testing.T, concurrency i
 		assert.Equal(t, maxGo, pool.numOfGo())
 	}
 	opts = append(opts, WithCoreGo(coreGo), WithMaxGo(maxGo), WithMaxIdleTime(maxIdleTime))
-	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, concurrency, queueSize, coreGo, maxGo, maxIdleTime, extendToCoreGoAtOnce, extendToMaxGoAtOnce, opts...)
+	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, concurrency, queueSize, coreGo, maxGo, extendToCoreGoAtOnce, extendToMaxGoAtOnce, opts...)
 }
 
 func testExtendNumGoFromInitGoToCoreGoAndMaxGoStepByStep(t *testing.T, concurrency int32, queueSize int, coreGo, maxGo int32, maxIdleTime time.Duration, opts ...option.Option[OnDemandBlockTaskPool]) {
@@ -478,10 +478,10 @@ func testExtendNumGoFromInitGoToCoreGoAndMaxGoStepByStep(t *testing.T, concurren
 		assert.Equal(t, i, pool.numOfGo())
 	}
 	opts = append(opts, WithCoreGo(coreGo), WithMaxGo(maxGo), WithMaxIdleTime(maxIdleTime))
-	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, concurrency, queueSize, coreGo, maxGo, maxIdleTime, extendStepByStep, extendStepByStep, opts...)
+	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, concurrency, queueSize, coreGo, maxGo, extendStepByStep, extendStepByStep, opts...)
 }
 
-func testExtendNumGoFromInitGoToCoreGoAndMaxGo(t *testing.T, initGo int32, queueSize int, coreGo, maxGo int32, maxIdleTime time.Duration, duringExtendToCoreGo extendStrategyCheckFunc, duringExtendToMaxGo extendStrategyCheckFunc, opts ...option.Option[OnDemandBlockTaskPool]) {
+func testExtendNumGoFromInitGoToCoreGoAndMaxGo(t *testing.T, initGo int32, queueSize int, coreGo, maxGo int32, duringExtendToCoreGo extendStrategyCheckFunc, duringExtendToMaxGo extendStrategyCheckFunc, opts ...option.Option[OnDemandBlockTaskPool]) {
 
 	pool := testNewRunningStateTaskPool(t, int(initGo), queueSize, opts...)
 	// waitTime := (maxIdleTime + 1) * 330
