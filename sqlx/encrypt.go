@@ -45,19 +45,12 @@ func NewEncryptColumn[T any](key []byte) (*EncryptColumn[T], error) {
 		return nil, err
 	}
 	e := &EncryptColumn[T]{}
-	//获取块的大小
 	e.blockSize = block.BlockSize()
-	//使用cbc
 	e.decrypt = cipher.NewCBCDecrypter(block, key[:e.blockSize])
 	e.encrypt = cipher.NewCBCEncrypter(block, key[:e.blockSize])
 	return e, nil
 }
 
-// EncryptColumn 代表一个加密的列
-// 一般来说加密可以选择依赖于数据库进行加密
-// EncryptColumn 并不打算使用极其难破解的加密算法
-// 而是选择使用 AES GCM 模式。
-// 如果你觉得安全性不够，那么你可以考虑自己实现类似的结构体.
 func (e *EncryptColumn[T]) Value() (driver.Value, error) {
 	relValue := reflect.ValueOf(&e.Val).Elem()
 	data, err := valueToBytes(relValue, &e.Val)
@@ -72,7 +65,7 @@ func (e *EncryptColumn[T]) Scan(src any) error {
 	var decrBytes []byte
 	switch value := src.(type) {
 	case []byte:
-		tmpBytes, err := aesDecryptWithSizeAndMode(value, e.blockSize, e.decrypt)
+		tmpBytes, err := aesDecryptWithSizeAndMode(value, e.decrypt)
 		if err != nil {
 			return nil
 		}
@@ -168,16 +161,6 @@ func setVal[T any](relValue reflect.Value, reader io.Reader, deData []byte, val 
 	return nil
 }
 
-// 加密过程：
-//
-//	1、处理数据，对数据进行填充，采用PKCS7（当密钥长度不够时，缺几位补几个几）的方式。
-//	2、对数据进行加密，采用AES加密方法中CBC加密模式
-//	3、对得到的加密数据，进行base64加密，得到字符串
-//
-// 解密过程相反
-// 16,24,32位字符串的话，分别对应AES-128，AES-192，AES-256 加密方法
-// key不能泄露
-// pkcs7Padding 填充
 func pkcs7Padding(data []byte, blockSize int) []byte {
 	padding := blockSize - len(data)%blockSize
 	padText := bytes.Repeat([]byte{byte(padding)}, padding)
@@ -201,7 +184,7 @@ func aesEncryptWithSizeAndMode(data []byte, blockSize int, encrypt cipher.BlockM
 	return crypted, nil
 }
 
-func aesDecryptWithSizeAndMode(data []byte, blockSize int, decrypt cipher.BlockMode) ([]byte, error) {
+func aesDecryptWithSizeAndMode(data []byte, decrypt cipher.BlockMode) ([]byte, error) {
 	crypted := make([]byte, len(data))
 	decrypt.CryptBlocks(crypted, data)
 	crypted, err := pkcs7UnPadding(crypted)

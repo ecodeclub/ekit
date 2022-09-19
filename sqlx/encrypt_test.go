@@ -65,18 +65,18 @@ func TestEncryptColumn_Basic(t *testing.T) {
 
 	for _, ts := range testIntCases {
 		t.Run(ts.name, func(t *testing.T) {
-			cryptIntE, err := NewEncryptColumn[int](ts.key)
-			cryptIntD, err := NewEncryptColumn[int](ts.key)
-			cryptUint8E, err := NewEncryptColumn[uint8](ts.key)
-			cryptUint8D, err := NewEncryptColumn[uint8](ts.key)
-			cryptUint16E, err := NewEncryptColumn[uint16](ts.key)
-			cryptUint16D, err := NewEncryptColumn[uint16](ts.key)
-			cryptUint32E, err := NewEncryptColumn[uint32](ts.key)
-			cryptUint32D, err := NewEncryptColumn[uint32](ts.key)
-			cryptUint64E, err := NewEncryptColumn[uint64](ts.key)
-			cryptUint64D, err := NewEncryptColumn[uint64](ts.key)
-			cryptUIntE, err := NewEncryptColumn[uint](ts.key)
-			cryptUIntD, err := NewEncryptColumn[uint](ts.key)
+			cryptIntE, _ := NewEncryptColumn[int](ts.key)
+			cryptIntD, _ := NewEncryptColumn[int](ts.key)
+			cryptUint8E, _ := NewEncryptColumn[uint8](ts.key)
+			cryptUint8D, _ := NewEncryptColumn[uint8](ts.key)
+			cryptUint16E, _ := NewEncryptColumn[uint16](ts.key)
+			cryptUint16D, _ := NewEncryptColumn[uint16](ts.key)
+			cryptUint32E, _ := NewEncryptColumn[uint32](ts.key)
+			cryptUint32D, _ := NewEncryptColumn[uint32](ts.key)
+			cryptUint64E, _ := NewEncryptColumn[uint64](ts.key)
+			cryptUint64D, _ := NewEncryptColumn[uint64](ts.key)
+			cryptUIntE, _ := NewEncryptColumn[uint](ts.key)
+			cryptUIntD, _ := NewEncryptColumn[uint](ts.key)
 
 			cryptIntE.Val = int(ts.intVal)
 			intVal, err := cryptIntE.Value()
@@ -241,7 +241,7 @@ type Composite struct {
 }
 
 func TestEncryptColumn_Error(t *testing.T) {
-
+	//TODO
 }
 
 func BenchmarkEncryptColumn_ScanStructNoCopy(b *testing.B) {
