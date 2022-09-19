@@ -1,0 +1,7 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/gotomicro/ekit/sqlx
+BenchmarkEncryptColumn_ScanStructNoCopy-10    	 4397191	       272.6 ns/op	     184 B/op	       7 allocs/op
+BenchmarkEncryptColumn_ScanStructCopy-10      	 2072082	       578.6 ns/op	     920 B/op	      18 allocs/op
+PASS
+ok  	github.com/gotomicro/ekit/sqlx	3.629s
