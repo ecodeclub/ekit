@@ -251,8 +251,6 @@ func BenchmarkEncryptColumn_ScanStructNoCopy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, _ = cryptSimple.Value()
 	}
-
-	//fmt.Println(string(reflect.ValueOf(val).Bytes()))
 }
 
 func BenchmarkEncryptColumn_ScanStructCopy(b *testing.B) {
@@ -261,6 +259,4 @@ func BenchmarkEncryptColumn_ScanStructCopy(b *testing.B) {
 		cryptSimple, _ := NewEncryptColumn[Simple](key)
 		_, _ = cryptSimple.Value()
 	}
-
-	//fmt.Println(string(reflect.ValueOf(val).Bytes()))
 }
