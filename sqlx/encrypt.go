@@ -18,11 +18,13 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"database/sql/driver"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"unsafe"
 )
@@ -33,23 +35,16 @@ import (
 // 而是选择使用 AES GCM 模式。
 // 如果你觉得安全性不够，那么你可以考虑自己实现类似的结构体.
 type EncryptColumn[T any] struct {
-	blockSize int
-	decrypt   cipher.BlockMode
-	encrypt   cipher.BlockMode
-	Val       T
-	Valid     bool
+	Val   T
+	Valid bool
+	Key   string
 }
 
-func NewEncryptColumn[T any](key []byte) (*EncryptColumn[T], error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
+func NewEncryptColumn[T any](key string) *EncryptColumn[T] {
+	return &EncryptColumn[T]{
+		Key:   key,
+		Valid: true,
 	}
-	e := &EncryptColumn[T]{}
-	e.blockSize = block.BlockSize()
-	e.decrypt = cipher.NewCBCDecrypter(block, key[:e.blockSize])
-	e.encrypt = cipher.NewCBCEncrypter(block, key[:e.blockSize])
-	return e, nil
 }
 
 var notSpecifyInt = errors.New("ekit 请明确int/uint的长度，如int32/uint32，int8/uint8")
@@ -71,9 +66,9 @@ func (e *EncryptColumn[T]) Value() (driver.Value, error) {
 	var val any = e.Val
 	switch valT := val.(type) {
 	case string:
-		return aesEncryptWithSizeAndMode([]byte(valT), e.blockSize, e.encrypt)
+		return e.aesEncrypt([]byte(valT))
 	case []byte:
-		return aesEncryptWithSizeAndMode(valT, e.blockSize, e.encrypt)
+		return e.aesEncrypt(valT)
 	case map[any]any, []any, *any, uintptr:
 		return nil, notSupportType(val)
 	case int8, int16, int32, int64, uint8, uint16, uint32, uint64,
@@ -83,7 +78,7 @@ func (e *EncryptColumn[T]) Value() (driver.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		return aesEncryptWithSizeAndMode(buffer.Bytes(), e.blockSize, e.encrypt)
+		return e.aesEncrypt(buffer.Bytes())
 	case int, uint:
 		return nil, notSpecifyInt
 	default:
@@ -91,18 +86,31 @@ func (e *EncryptColumn[T]) Value() (driver.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		return aesEncryptWithSizeAndMode(marshal, e.blockSize, e.encrypt)
+		return e.aesEncrypt(marshal)
 	}
 }
 
 func (e *EncryptColumn[T]) Scan(src any) error {
 	switch value := src.(type) {
 	case []byte:
-		decrBytes, err := aesDecryptWithSizeAndMode(value, e.decrypt)
+		decrBytes, err := e.aesDecrypt(value)
 		if err != nil {
 			return nil
 		}
 		return e.setVal(decrBytes)
+	case *[]byte:
+		decrBytes, err := e.aesDecrypt(*value)
+		if err != nil {
+			return nil
+		}
+		return e.setVal(decrBytes)
+	case string:
+		decrBytes, err := e.aesDecrypt([]byte(value))
+		if err != nil {
+			return nil
+		}
+		return e.setVal(decrBytes)
+
 	default:
 		return fmt.Errorf("ekit：EncryptColumn.Scan 不支持 src 类型 %v", src)
 	}
@@ -143,35 +151,32 @@ func (e *EncryptColumn[T]) setVal(deEncrypt []byte) error {
 	return nil
 }
 
-func pkcs7Padding(data []byte, blockSize int) []byte {
-	padding := blockSize - len(data)%blockSize
-	padText := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(data, padText...)
-}
-
-// pkcs7UnPadding 填充的反向操作
-func pkcs7UnPadding(data []byte) ([]byte, error) {
-	length := len(data)
-	if length == 0 {
-		return nil, errors.New("加密字符串错误！")
-	}
-	unPadding := int(data[length-1])
-	return data[:(length - unPadding)], nil
-}
-
-func aesEncryptWithSizeAndMode(data []byte, blockSize int, encrypt cipher.BlockMode) ([]byte, error) {
-	encryptBytes := pkcs7Padding(data, blockSize)
-	crypted := make([]byte, len(encryptBytes))
-	encrypt.CryptBlocks(crypted, encryptBytes)
-	return crypted, nil
-}
-
-func aesDecryptWithSizeAndMode(data []byte, decrypt cipher.BlockMode) ([]byte, error) {
-	crypted := make([]byte, len(data))
-	decrypt.CryptBlocks(crypted, data)
-	crypted, err := pkcs7UnPadding(crypted)
+func (e *EncryptColumn[T]) aesEncrypt(data []byte) ([]byte, error) {
+	newCipher, err := aes.NewCipher([]byte(e.Key))
 	if err != nil {
 		return nil, err
 	}
-	return crypted, nil
+	gcm, err := cipher.NewGCM(newCipher)
+	if err != nil {
+		return nil, err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+	encrypted := gcm.Seal(nonce, nonce, data, nil)
+	return encrypted, nil
+}
+
+func (e *EncryptColumn[T]) aesDecrypt(data []byte) ([]byte, error) {
+	newCipher, err := aes.NewCipher([]byte(e.Key))
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(newCipher)
+	if err != nil {
+		return nil, err
+	}
+	nonce, cipherData := data[:gcm.NonceSize()], data[gcm.NonceSize():]
+	return gcm.Open(nil, nonce, cipherData, nil)
 }
