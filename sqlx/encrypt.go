@@ -62,6 +62,7 @@ func notSupportType(s any) error {
 	}
 }
 
+// Value 返回加密后的值
 func (e *EncryptColumn[T]) Value() (driver.Value, error) {
 	var val any = e.Val
 	switch valT := val.(type) {
