@@ -71,76 +71,76 @@ func TestOnDemandBlockTaskPool_In_Created_State(t *testing.T) {
 		t.Run("With Options", func(t *testing.T) {
 			t.Parallel()
 
-			concurrency := 10
-			pool, err := NewOnDemandBlockTaskPool(concurrency, 10)
+			initGo := 10
+			pool, err := NewOnDemandBlockTaskPool(initGo, 10)
 			assert.NoError(t, err)
 
-			assert.Equal(t, int32(concurrency), pool.initGo)
-			assert.Equal(t, int32(concurrency), pool.coreGo)
-			assert.Equal(t, int32(concurrency), pool.maxGo)
+			assert.Equal(t, int32(initGo), pool.initGo)
+			assert.Equal(t, int32(initGo), pool.coreGo)
+			assert.Equal(t, int32(initGo), pool.maxGo)
 			assert.Equal(t, defaultMaxIdleTime, pool.maxIdleTime)
 
 			coreGo, maxGo, maxIdleTime := int32(20), int32(30), 10*time.Second
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithCoreGo(coreGo), WithMaxGo(maxGo), WithMaxIdleTime(maxIdleTime))
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithCoreGo(coreGo), WithMaxGo(maxGo), WithMaxIdleTime(maxIdleTime))
 			assert.NoError(t, err)
 
-			assert.Equal(t, int32(concurrency), pool.initGo)
+			assert.Equal(t, int32(initGo), pool.initGo)
 			assert.Equal(t, coreGo, pool.coreGo)
 			assert.Equal(t, maxGo, pool.maxGo)
 			assert.Equal(t, maxIdleTime, pool.maxIdleTime)
 
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithCoreGo(coreGo))
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithCoreGo(coreGo))
 			assert.NoError(t, err)
 			assert.Equal(t, pool.coreGo, pool.maxGo)
 
-			concurrency, coreGo = 30, 20
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithCoreGo(coreGo))
+			initGo, coreGo = 30, 20
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithCoreGo(coreGo))
 			assert.Nil(t, pool)
 			assert.ErrorIs(t, err, errInvalidArgument)
 
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithMaxGo(maxGo))
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithMaxGo(maxGo))
 			assert.NoError(t, err)
 			assert.Equal(t, pool.maxGo, pool.coreGo)
 
-			concurrency, maxGo = 30, 10
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithMaxGo(maxGo))
+			initGo, maxGo = 30, 10
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithMaxGo(maxGo))
 			assert.Nil(t, pool)
 			assert.ErrorIs(t, err, errInvalidArgument)
 
-			concurrency, coreGo, maxGo = 30, 20, 10
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithCoreGo(coreGo), WithMaxGo(maxGo))
+			initGo, coreGo, maxGo = 30, 20, 10
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithCoreGo(coreGo), WithMaxGo(maxGo))
 			assert.Nil(t, pool)
 			assert.ErrorIs(t, err, errInvalidArgument)
 
-			concurrency, coreGo, maxGo = 30, 10, 20
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithCoreGo(coreGo), WithMaxGo(maxGo))
+			initGo, coreGo, maxGo = 30, 10, 20
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithCoreGo(coreGo), WithMaxGo(maxGo))
 			assert.Nil(t, pool)
 			assert.ErrorIs(t, err, errInvalidArgument)
 
-			concurrency, coreGo, maxGo = 20, 10, 30
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithCoreGo(coreGo), WithMaxGo(maxGo))
+			initGo, coreGo, maxGo = 20, 10, 30
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithCoreGo(coreGo), WithMaxGo(maxGo))
 			assert.Nil(t, pool)
 			assert.ErrorIs(t, err, errInvalidArgument)
 
-			concurrency, coreGo, maxGo = 20, 30, 10
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithCoreGo(coreGo), WithMaxGo(maxGo))
+			initGo, coreGo, maxGo = 20, 30, 10
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithCoreGo(coreGo), WithMaxGo(maxGo))
 			assert.Nil(t, pool)
 			assert.ErrorIs(t, err, errInvalidArgument)
 
-			concurrency, coreGo, maxGo = 10, 30, 20
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithCoreGo(coreGo), WithMaxGo(maxGo))
+			initGo, coreGo, maxGo = 10, 30, 20
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithCoreGo(coreGo), WithMaxGo(maxGo))
 			assert.Nil(t, pool)
 			assert.ErrorIs(t, err, errInvalidArgument)
 
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithQueueBacklogRate(-0.1))
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithQueueBacklogRate(-0.1))
 			assert.Nil(t, pool)
 			assert.ErrorIs(t, err, errInvalidArgument)
 
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithQueueBacklogRate(1.0))
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithQueueBacklogRate(1.0))
 			assert.NotNil(t, pool)
 			assert.NoError(t, err)
 
-			pool, err = NewOnDemandBlockTaskPool(concurrency, 10, WithQueueBacklogRate(1.1))
+			pool, err = NewOnDemandBlockTaskPool(initGo, 10, WithQueueBacklogRate(1.1))
 			assert.Nil(t, pool)
 			assert.ErrorIs(t, err, errInvalidArgument)
 
@@ -272,8 +272,8 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 		t.Run("保持在初始数不变", func(t *testing.T) {
 			t.Parallel()
 
-			concurrency, queueSize := 1, 3
-			pool := testNewRunningStateTaskPool(t, concurrency, queueSize)
+			initGo, queueSize := 1, 3
+			pool := testNewRunningStateTaskPool(t, initGo, queueSize)
 
 			n := queueSize
 			done1 := make(chan struct{}, n)
@@ -289,22 +289,22 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			// concurrency个tasks在运行中
-			for i := 0; i < concurrency; i++ {
+			// initGo个tasks在运行中
+			for i := 0; i < initGo; i++ {
 				<-wait
 			}
 
-			assert.Equal(t, int32(concurrency), pool.numOfGo())
+			assert.Equal(t, int32(initGo), pool.numOfGo())
 
 			// 使运行中的tasks结束
-			for i := 0; i < concurrency; i++ {
+			for i := 0; i < initGo; i++ {
 				done1 <- struct{}{}
 			}
 
 			// 积压在队列中的任务开始运行
-			for i := 0; i < n-concurrency; i++ {
+			for i := 0; i < n-initGo; i++ {
 				<-wait
-				assert.Equal(t, int32(concurrency), pool.numOfGo())
+				assert.Equal(t, int32(initGo), pool.numOfGo())
 				done1 <- struct{}{}
 			}
 
@@ -319,17 +319,17 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 				t.Run("核心数比初始数多1个", func(t *testing.T) {
 					t.Parallel()
 
-					concurrency, coreGo, maxIdleTime := int32(1), int32(2), 3*time.Millisecond
+					initGo, coreGo, maxIdleTime := int32(1), int32(2), 3*time.Millisecond
 					queueSize := int(coreGo)
-					testExtendNumGoFromInitGoToCoreGoAtOnce(t, concurrency, queueSize, coreGo, maxIdleTime)
+					testExtendNumGoFromInitGoToCoreGoAtOnce(t, initGo, queueSize, coreGo, maxIdleTime)
 				})
 
 				t.Run("核心数比初始数多n个", func(t *testing.T) {
 					t.Parallel()
 
-					concurrency, coreGo, maxIdleTime := int32(1), int32(3), 3*time.Millisecond
+					initGo, coreGo, maxIdleTime := int32(1), int32(3), 3*time.Millisecond
 					queueSize := int(coreGo)
-					testExtendNumGoFromInitGoToCoreGoAtOnce(t, concurrency, queueSize, coreGo, maxIdleTime)
+					testExtendNumGoFromInitGoToCoreGoAtOnce(t, initGo, queueSize, coreGo, maxIdleTime)
 				})
 			})
 
@@ -337,17 +337,17 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 				t.Parallel()
 
 				t.Run("核心数比初始数多1个", func(t *testing.T) {
-					concurrency, coreGo, maxIdleTime, queueBacklogRate := int32(2), int32(3), 3*time.Millisecond, 0.1
+					initGo, coreGo, maxIdleTime, queueBacklogRate := int32(2), int32(3), 3*time.Millisecond, 0.1
 					queueSize := int(coreGo)
-					testExtendNumGoFromInitGoToCoreGoStepByStep(t, concurrency, queueSize, coreGo, maxIdleTime, WithQueueBacklogRate(queueBacklogRate))
+					testExtendNumGoFromInitGoToCoreGoStepByStep(t, initGo, queueSize, coreGo, maxIdleTime, WithQueueBacklogRate(queueBacklogRate))
 				})
 
 				t.Run("核心数比初始数多n个", func(t *testing.T) {
 					t.Parallel()
 
-					concurrency, coreGo, maxIdleTime, queueBacklogRate := int32(2), int32(5), 3*time.Millisecond, 0.1
+					initGo, coreGo, maxIdleTime, queueBacklogRate := int32(2), int32(5), 3*time.Millisecond, 0.1
 					queueSize := int(coreGo)
-					testExtendNumGoFromInitGoToCoreGoStepByStep(t, concurrency, queueSize, coreGo, maxIdleTime, WithQueueBacklogRate(queueBacklogRate))
+					testExtendNumGoFromInitGoToCoreGoStepByStep(t, initGo, queueSize, coreGo, maxIdleTime, WithQueueBacklogRate(queueBacklogRate))
 
 				})
 			})
@@ -355,10 +355,10 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 			t.Run("在(初始数,核心数]区间的协程运行完任务后，在等待退出期间再次抢到任务", func(t *testing.T) {
 				t.Parallel()
 
-				concurrency, coreGo, maxIdleTime := int32(1), int32(6), 100*time.Millisecond
+				initGo, coreGo, maxIdleTime := int32(1), int32(6), 100*time.Millisecond
 				queueSize := int(coreGo)
 
-				pool := testNewRunningStateTaskPool(t, int(concurrency), queueSize, WithCoreGo(coreGo), WithMaxIdleTime(maxIdleTime))
+				pool := testNewRunningStateTaskPool(t, int(initGo), queueSize, WithCoreGo(coreGo), WithMaxIdleTime(maxIdleTime))
 				done := make(chan struct{}, queueSize)
 				wait := make(chan struct{}, queueSize)
 
@@ -388,11 +388,11 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 				assert.NoError(t, err)
 
 				// <-time.After(maxIdleTime * 100)
-				for pool.numOfGo() > concurrency {
+				for pool.numOfGo() > initGo {
 					// t.Log("loop", "numOfGo", pool.numOfGo(), "timeoutGroup", pool.timeoutGroup.size())
 					time.Sleep(maxIdleTime)
 				}
-				assert.Equal(t, concurrency, pool.numOfGo())
+				assert.Equal(t, initGo, pool.numOfGo())
 			})
 		})
 
@@ -405,17 +405,17 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 				t.Run("最大数比核心数多1个", func(t *testing.T) {
 					t.Parallel()
 
-					concurrency, coreGo, maxGo, maxIdleTime := int32(2), int32(4), int32(5), 3*time.Millisecond
+					initGo, coreGo, maxGo, maxIdleTime := int32(2), int32(4), int32(5), 3*time.Millisecond
 					queueSize := int(maxGo)
-					testExtendNumGoFromInitGoToCoreGoAndMaxGoAtOnce(t, concurrency, queueSize, coreGo, maxGo, maxIdleTime)
+					testExtendNumGoFromInitGoToCoreGoAndMaxGoAtOnce(t, initGo, queueSize, coreGo, maxGo, maxIdleTime)
 				})
 
 				t.Run("最大数比核心数多n个", func(t *testing.T) {
 					t.Parallel()
 
-					concurrency, coreGo, maxGo, maxIdleTime := int32(2), int32(3), int32(5), 3*time.Millisecond
+					initGo, coreGo, maxGo, maxIdleTime := int32(2), int32(3), int32(5), 3*time.Millisecond
 					queueSize := int(maxGo)
-					testExtendNumGoFromInitGoToCoreGoAndMaxGoAtOnce(t, concurrency, queueSize, coreGo, maxGo, maxIdleTime)
+					testExtendNumGoFromInitGoToCoreGoAndMaxGoAtOnce(t, initGo, queueSize, coreGo, maxGo, maxIdleTime)
 				})
 
 			})
@@ -426,17 +426,17 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 				t.Run("最大数比核心数多1个", func(t *testing.T) {
 					t.Parallel()
 
-					concurrency, coreGo, maxGo, maxIdleTime, queueBacklogRate := int32(2), int32(4), int32(5), 3*time.Millisecond, 0.1
+					initGo, coreGo, maxGo, maxIdleTime, queueBacklogRate := int32(2), int32(4), int32(5), 3*time.Millisecond, 0.1
 					queueSize := int(maxGo)
-					testExtendNumGoFromInitGoToCoreGoAndMaxGoStepByStep(t, concurrency, queueSize, coreGo, maxGo, maxIdleTime, WithQueueBacklogRate(queueBacklogRate))
+					testExtendNumGoFromInitGoToCoreGoAndMaxGoStepByStep(t, initGo, queueSize, coreGo, maxGo, maxIdleTime, WithQueueBacklogRate(queueBacklogRate))
 				})
 
 				t.Run("最大数比核心数多n个", func(t *testing.T) {
 					t.Parallel()
 
-					concurrency, coreGo, maxGo, maxIdleTime, queueBacklogRate := int32(1), int32(3), int32(6), 3*time.Millisecond, 0.1
+					initGo, coreGo, maxGo, maxIdleTime, queueBacklogRate := int32(1), int32(3), int32(6), 3*time.Millisecond, 0.1
 					queueSize := int(maxGo)
-					testExtendNumGoFromInitGoToCoreGoAndMaxGoStepByStep(t, concurrency, queueSize, coreGo, maxGo, maxIdleTime, WithQueueBacklogRate(queueBacklogRate))
+					testExtendNumGoFromInitGoToCoreGoAndMaxGoStepByStep(t, initGo, queueSize, coreGo, maxGo, maxIdleTime, WithQueueBacklogRate(queueBacklogRate))
 				})
 			})
 		})
@@ -446,23 +446,23 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 
 type extendStrategyCheckFunc func(t *testing.T, i int32, pool *OnDemandBlockTaskPool)
 
-func testExtendNumGoFromInitGoToCoreGoAtOnce(t *testing.T, concurrency int32, queueSize int, coreGo int32, maxIdleTime time.Duration, opts ...option.Option[OnDemandBlockTaskPool]) {
+func testExtendNumGoFromInitGoToCoreGoAtOnce(t *testing.T, initGo int32, queueSize int, coreGo int32, maxIdleTime time.Duration, opts ...option.Option[OnDemandBlockTaskPool]) {
 	extendToCoreGoAtOnce := func(t *testing.T, i int32, pool *OnDemandBlockTaskPool) {
 		assert.Equal(t, coreGo, pool.numOfGo())
 	}
 	opts = append(opts, WithCoreGo(coreGo), WithMaxIdleTime(maxIdleTime))
-	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, concurrency, queueSize, coreGo, coreGo, extendToCoreGoAtOnce, nil, opts...)
+	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, initGo, queueSize, coreGo, coreGo, extendToCoreGoAtOnce, nil, opts...)
 }
 
-func testExtendNumGoFromInitGoToCoreGoStepByStep(t *testing.T, concurrency int32, queueSize int, coreGo int32, maxIdleTime time.Duration, opts ...option.Option[OnDemandBlockTaskPool]) {
+func testExtendNumGoFromInitGoToCoreGoStepByStep(t *testing.T, initGo int32, queueSize int, coreGo int32, maxIdleTime time.Duration, opts ...option.Option[OnDemandBlockTaskPool]) {
 	extendToCoreGoAtOnce := func(t *testing.T, i int32, pool *OnDemandBlockTaskPool) {
 		assert.Equal(t, i, pool.numOfGo())
 	}
 	opts = append(opts, WithCoreGo(coreGo), WithMaxIdleTime(maxIdleTime))
-	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, concurrency, queueSize, coreGo, coreGo, extendToCoreGoAtOnce, nil, opts...)
+	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, initGo, queueSize, coreGo, coreGo, extendToCoreGoAtOnce, nil, opts...)
 }
 
-func testExtendNumGoFromInitGoToCoreGoAndMaxGoAtOnce(t *testing.T, concurrency int32, queueSize int, coreGo int32, maxGo int32, maxIdleTime time.Duration, opts ...option.Option[OnDemandBlockTaskPool]) {
+func testExtendNumGoFromInitGoToCoreGoAndMaxGoAtOnce(t *testing.T, initGo int32, queueSize int, coreGo int32, maxGo int32, maxIdleTime time.Duration, opts ...option.Option[OnDemandBlockTaskPool]) {
 	extendToCoreGoAtOnce := func(t *testing.T, i int32, pool *OnDemandBlockTaskPool) {
 		assert.Equal(t, coreGo, pool.numOfGo())
 	}
@@ -470,21 +470,20 @@ func testExtendNumGoFromInitGoToCoreGoAndMaxGoAtOnce(t *testing.T, concurrency i
 		assert.Equal(t, maxGo, pool.numOfGo())
 	}
 	opts = append(opts, WithCoreGo(coreGo), WithMaxGo(maxGo), WithMaxIdleTime(maxIdleTime))
-	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, concurrency, queueSize, coreGo, maxGo, extendToCoreGoAtOnce, extendToMaxGoAtOnce, opts...)
+	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, initGo, queueSize, coreGo, maxGo, extendToCoreGoAtOnce, extendToMaxGoAtOnce, opts...)
 }
 
-func testExtendNumGoFromInitGoToCoreGoAndMaxGoStepByStep(t *testing.T, concurrency int32, queueSize int, coreGo, maxGo int32, maxIdleTime time.Duration, opts ...option.Option[OnDemandBlockTaskPool]) {
+func testExtendNumGoFromInitGoToCoreGoAndMaxGoStepByStep(t *testing.T, initGo int32, queueSize int, coreGo, maxGo int32, maxIdleTime time.Duration, opts ...option.Option[OnDemandBlockTaskPool]) {
 	extendStepByStep := func(t *testing.T, i int32, pool *OnDemandBlockTaskPool) {
 		assert.Equal(t, i, pool.numOfGo())
 	}
 	opts = append(opts, WithCoreGo(coreGo), WithMaxGo(maxGo), WithMaxIdleTime(maxIdleTime))
-	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, concurrency, queueSize, coreGo, maxGo, extendStepByStep, extendStepByStep, opts...)
+	testExtendNumGoFromInitGoToCoreGoAndMaxGo(t, initGo, queueSize, coreGo, maxGo, extendStepByStep, extendStepByStep, opts...)
 }
 
 func testExtendNumGoFromInitGoToCoreGoAndMaxGo(t *testing.T, initGo int32, queueSize int, coreGo, maxGo int32, duringExtendToCoreGo extendStrategyCheckFunc, duringExtendToMaxGo extendStrategyCheckFunc, opts ...option.Option[OnDemandBlockTaskPool]) {
 
 	pool := testNewRunningStateTaskPool(t, int(initGo), queueSize, opts...)
-	// waitTime := (maxIdleTime + 1) * 330
 
 	assert.LessOrEqual(t, initGo, coreGo)
 	assert.LessOrEqual(t, coreGo, maxGo)
@@ -492,7 +491,7 @@ func testExtendNumGoFromInitGoToCoreGoAndMaxGo(t *testing.T, initGo int32, queue
 	done := make(chan struct{})
 	wait := make(chan struct{}, maxGo)
 
-	// 稳定在concurrency
+	// 稳定在initGo
 	for i := int32(0); i < initGo; i++ {
 		err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
 			wait <- struct{}{}
@@ -561,11 +560,11 @@ func TestOnDemandBlockTaskPool_In_Closing_State(t *testing.T) {
 	t.Run("Shutdown —— 使TaskPool状态由Running变为Closing", func(t *testing.T) {
 		t.Parallel()
 
-		concurrency, queueSize := 2, 4
-		pool := testNewRunningStateTaskPool(t, concurrency, queueSize)
+		initGo, queueSize := 2, 4
+		pool := testNewRunningStateTaskPool(t, initGo, queueSize)
 
 		// 模拟阻塞提交
-		n := concurrency + queueSize*2
+		n := initGo + queueSize*2
 		eg := new(errgroup.Group)
 		waitChan := make(chan struct{}, n)
 		taskDone := make(chan struct{})
@@ -578,7 +577,7 @@ func TestOnDemandBlockTaskPool_In_Closing_State(t *testing.T) {
 				}))
 			})
 		}
-		for i := 0; i < concurrency; i++ {
+		for i := 0; i < initGo; i++ {
 			<-waitChan
 		}
 		done, err := pool.Shutdown()
@@ -592,7 +591,7 @@ func TestOnDemandBlockTaskPool_In_Closing_State(t *testing.T) {
 		assert.ErrorIs(t, err2, errTaskPoolIsClosing)
 		assert.Equal(t, stateClosing, pool.internalState())
 
-		assert.Equal(t, int32(concurrency), pool.numOfGo())
+		assert.Equal(t, int32(initGo), pool.numOfGo())
 
 		close(taskDone)
 		<-done
@@ -608,11 +607,11 @@ func TestOnDemandBlockTaskPool_In_Closing_State(t *testing.T) {
 	t.Run("Shutdown —— 协程数仍能按需扩展，调度循环也能自然退出", func(t *testing.T) {
 		t.Parallel()
 
-		concurrency, coreGo, maxGo, maxIdleTime, queueBacklogRate := int32(1), int32(3), int32(5), 10*time.Millisecond, 0.1
+		initGo, coreGo, maxGo, maxIdleTime, queueBacklogRate := int32(1), int32(3), int32(5), 10*time.Millisecond, 0.1
 		queueSize := int(maxGo)
-		pool := testNewRunningStateTaskPool(t, int(concurrency), queueSize, WithCoreGo(coreGo), WithMaxGo(maxGo), WithMaxIdleTime(maxIdleTime), WithQueueBacklogRate(queueBacklogRate))
+		pool := testNewRunningStateTaskPool(t, int(initGo), queueSize, WithCoreGo(coreGo), WithMaxGo(maxGo), WithMaxIdleTime(maxIdleTime), WithQueueBacklogRate(queueBacklogRate))
 
-		assert.LessOrEqual(t, concurrency, coreGo)
+		assert.LessOrEqual(t, initGo, coreGo)
 		assert.LessOrEqual(t, coreGo, maxGo)
 
 		taskDone := make(chan struct{})
@@ -700,8 +699,8 @@ func TestOnDemandBlockTaskPool_In_Stopped_State(t *testing.T) {
 	t.Run("ShutdownNow —— 使TaskPool状态由Running变为Stopped", func(t *testing.T) {
 		t.Parallel()
 
-		concurrency, queueSize := 2, 4
-		pool, wait := testNewRunningStateTaskPoolWithQueueFullFilled(t, concurrency, queueSize)
+		initGo, queueSize := 2, 4
+		pool, wait := testNewRunningStateTaskPoolWithQueueFullFilled(t, initGo, queueSize)
 
 		// 模拟阻塞提交
 		eg := new(errgroup.Group)
@@ -740,11 +739,11 @@ func TestOnDemandBlockTaskPool_In_Stopped_State(t *testing.T) {
 	t.Run("ShutdownNow —— 工作协程数不再扩展，调度循环立即退出", func(t *testing.T) {
 		t.Parallel()
 
-		concurrency, coreGo, maxGo, maxIdleTime, queueBacklogRate := int32(1), int32(3), int32(5), 10*time.Millisecond, 0.1
+		initGo, coreGo, maxGo, maxIdleTime, queueBacklogRate := int32(1), int32(3), int32(5), 10*time.Millisecond, 0.1
 		queueSize := int(maxGo)
-		pool := testNewRunningStateTaskPool(t, int(concurrency), queueSize, WithCoreGo(coreGo), WithMaxGo(maxGo), WithMaxIdleTime(maxIdleTime), WithQueueBacklogRate(queueBacklogRate))
+		pool := testNewRunningStateTaskPool(t, int(initGo), queueSize, WithCoreGo(coreGo), WithMaxGo(maxGo), WithMaxIdleTime(maxIdleTime), WithQueueBacklogRate(queueBacklogRate))
 
-		assert.LessOrEqual(t, concurrency, coreGo)
+		assert.LessOrEqual(t, initGo, coreGo)
 		assert.LessOrEqual(t, coreGo, maxGo)
 
 		taskDone := make(chan struct{})
@@ -857,16 +856,16 @@ type ShutdownNowResult struct {
 	err   error
 }
 
-func testNewRunningStateTaskPool(t *testing.T, concurrency int, queueSize int, opts ...option.Option[OnDemandBlockTaskPool]) *OnDemandBlockTaskPool {
-	pool, _ := NewOnDemandBlockTaskPool(concurrency, queueSize, opts...)
+func testNewRunningStateTaskPool(t *testing.T, initGo int, queueSize int, opts ...option.Option[OnDemandBlockTaskPool]) *OnDemandBlockTaskPool {
+	pool, _ := NewOnDemandBlockTaskPool(initGo, queueSize, opts...)
 	assert.Equal(t, stateCreated, pool.internalState())
 	assert.NoError(t, pool.Start())
 	assert.Equal(t, stateRunning, pool.internalState())
 	return pool
 }
 
-func testNewStoppedStateTaskPool(t *testing.T, concurrency int, queueSize int) *OnDemandBlockTaskPool {
-	pool := testNewRunningStateTaskPool(t, concurrency, queueSize)
+func testNewStoppedStateTaskPool(t *testing.T, initGo int, queueSize int) *OnDemandBlockTaskPool {
+	pool := testNewRunningStateTaskPool(t, initGo, queueSize)
 	tasks, err := pool.ShutdownNow()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(tasks))
@@ -874,10 +873,10 @@ func testNewStoppedStateTaskPool(t *testing.T, concurrency int, queueSize int) *
 	return pool
 }
 
-func testNewRunningStateTaskPoolWithQueueFullFilled(t *testing.T, concurrency int, queueSize int) (*OnDemandBlockTaskPool, chan struct{}) {
-	pool := testNewRunningStateTaskPool(t, concurrency, queueSize)
+func testNewRunningStateTaskPoolWithQueueFullFilled(t *testing.T, initGo int, queueSize int) (*OnDemandBlockTaskPool, chan struct{}) {
+	pool := testNewRunningStateTaskPool(t, initGo, queueSize)
 	wait := make(chan struct{})
-	for i := 0; i < concurrency+queueSize; i++ {
+	for i := 0; i < initGo+queueSize; i++ {
 		func() {
 			err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
 				<-wait

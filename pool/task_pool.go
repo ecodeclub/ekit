@@ -151,8 +151,8 @@ type OnDemandBlockTaskPool struct {
 	queue             chan Task
 	numGoRunningTasks int32
 
-	totalNumOfGo int32
-	mutex        sync.RWMutex
+	totalGo int32
+	mutex   sync.RWMutex
 
 	// 初始协程数
 	initGo int32
@@ -176,11 +176,11 @@ type OnDemandBlockTaskPool struct {
 }
 
 // NewOnDemandBlockTaskPool 创建一个新的 OnDemandBlockTaskPool
-// concurrency 是并发数
+// initGo 是初始协程数
 // queueSize 是队列大小，即最多有多少个任务在等待调度
-func NewOnDemandBlockTaskPool(concurrency int, queueSize int, opts ...option.Option[OnDemandBlockTaskPool]) (*OnDemandBlockTaskPool, error) {
-	if concurrency < 1 {
-		return nil, fmt.Errorf("%w：concurrency应该大于0", errInvalidArgument)
+func NewOnDemandBlockTaskPool(initGo int, queueSize int, opts ...option.Option[OnDemandBlockTaskPool]) (*OnDemandBlockTaskPool, error) {
+	if initGo < 1 {
+		return nil, fmt.Errorf("%w：initGo应该大于0", errInvalidArgument)
 	}
 	if queueSize < 0 {
 		return nil, fmt.Errorf("%w：queueSize应该大于等于0", errInvalidArgument)
@@ -188,9 +188,9 @@ func NewOnDemandBlockTaskPool(concurrency int, queueSize int, opts ...option.Opt
 	b := &OnDemandBlockTaskPool{
 		queue:        make(chan Task, queueSize),
 		shutdownDone: make(chan struct{}, 1),
-		initGo:       int32(concurrency),
-		coreGo:       int32(concurrency),
-		maxGo:        int32(concurrency),
+		initGo:       int32(initGo),
+		coreGo:       int32(initGo),
+		maxGo:        int32(initGo),
 		maxIdleTime:  defaultMaxIdleTime,
 	}
 
@@ -199,13 +199,13 @@ func NewOnDemandBlockTaskPool(concurrency int, queueSize int, opts ...option.Opt
 
 	option.Apply(b, opts...)
 
-	if b.coreGo != int32(concurrency) && b.maxGo == int32(concurrency) {
+	if b.coreGo != b.initGo && b.maxGo == b.initGo {
 		b.maxGo = b.coreGo
-	} else if b.coreGo == int32(concurrency) && b.maxGo != int32(concurrency) {
+	} else if b.coreGo == b.initGo && b.maxGo != b.initGo {
 		b.coreGo = b.maxGo
 	}
 	if !(b.initGo <= b.coreGo && b.coreGo <= b.maxGo) {
-		return nil, fmt.Errorf("%w : 需要满足concurrency <= coreGo <= maxGo条件", errInvalidArgument)
+		return nil, fmt.Errorf("%w : 需要满足initGo <= coreGo <= maxGo条件", errInvalidArgument)
 	}
 
 	b.timeoutGroup = &group{mp: make(map[int]int)}
@@ -323,7 +323,7 @@ func (b *OnDemandBlockTaskPool) scheduling() {
 
 	id := 0
 
-	b.increaseTotalNumOfGo(b.initGo)
+	b.increaseTotalGo(b.initGo)
 	for i := int32(0); i < b.initGo; i++ {
 		go b.goroutine(id)
 		id++
@@ -342,12 +342,12 @@ func (b *OnDemandBlockTaskPool) scheduling() {
 
 			b.mutex.RLock()
 
-			if b.totalNumOfGo == b.maxGo {
+			if b.totalGo == b.maxGo {
 				b.mutex.RUnlock()
 				continue
 			}
 
-			allGoShouldBeBusy := atomic.LoadInt32(&b.numGoRunningTasks) == b.totalNumOfGo
+			allGoShouldBeBusy := atomic.LoadInt32(&b.numGoRunningTasks) == b.totalGo
 			if !allGoShouldBeBusy {
 				b.mutex.RUnlock()
 				continue
@@ -361,7 +361,7 @@ func (b *OnDemandBlockTaskPool) scheduling() {
 			}
 
 			// time.Sleep(time.Second)
-			// log.Println("totalNumOfGo", b.totalNumOfGo)
+			// log.Println("totalGo", b.totalGo)
 
 			var n int32
 
@@ -370,16 +370,16 @@ func (b *OnDemandBlockTaskPool) scheduling() {
 			// 当b.queueBacklogRate在(0, 1]区间时，每次开一个
 			if 0 < b.queueBacklogRate && b.queueBacklogRate <= 1 {
 				n = 1
-			} else if b.initGo <= b.totalNumOfGo && b.totalNumOfGo < b.coreGo {
-				n = b.coreGo - b.totalNumOfGo
-			} else if b.coreGo <= b.totalNumOfGo && b.totalNumOfGo < b.maxGo {
-				n = b.maxGo - b.totalNumOfGo
+			} else if b.initGo <= b.totalGo && b.totalGo < b.coreGo {
+				n = b.coreGo - b.totalGo
+			} else if b.coreGo <= b.totalGo && b.totalGo < b.maxGo {
+				n = b.maxGo - b.totalGo
 			}
 
-			// log.Println("开协程", n, "max-id", id+int(n-1), "totalNumOfGo", b.totalNumOfGo+n)
+			// log.Println("开协程", n, "max-id", id+int(n-1), "totalGo", b.totalGo+n)
 			b.mutex.RUnlock()
 
-			b.increaseTotalNumOfGo(n)
+			b.increaseTotalGo(n)
 			for i := int32(0); i < n; i++ {
 				go b.goroutine(id)
 				id++
@@ -402,11 +402,11 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 		select {
 		case <-b.shutdownNowCtx.Done():
 			// log.Printf("id %d shutdownNow, timeoutGroup.Size=%d left\n", id, b.timeoutGroup.size())
-			b.decreaseTotalNumOfGo(1)
+			b.decreaseTotalGo(1)
 			return
 		case <-idleTimer.C:
 			b.mutex.Lock()
-			b.totalNumOfGo--
+			b.totalGo--
 			b.timeoutGroup.delete(id)
 			// log.Printf("id %d timeout, timeoutGroup.Size=%d left\n", id, b.timeoutGroup.size())
 			b.mutex.Unlock()
@@ -440,13 +440,13 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 						close(b.shutdownDone)
 					})
 
-					b.decreaseTotalNumOfGo(1)
+					b.decreaseTotalGo(1)
 					return
 				}
 
 				// 有其他协程运行task中，自己退出就好。
 				atomic.AddInt32(&b.numGoRunningTasks, -1)
-				b.decreaseTotalNumOfGo(1)
+				b.decreaseTotalGo(1)
 				return
 			}
 
@@ -455,19 +455,19 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 			atomic.AddInt32(&b.numGoRunningTasks, -1)
 
 			b.mutex.Lock()
-			// log.Println("id", id, "totalNumOfGo-mem", b.totalNumOfGo-b.timeoutGroup.size(), "totalNumOfGo", b.totalNumOfGo, "mem", b.timeoutGroup.size())
-			if b.coreGo < b.totalNumOfGo && (len(b.queue) == 0 || int32(len(b.queue)) < b.totalNumOfGo) {
+			// log.Println("id", id, "totalGo-mem", b.totalGo-b.timeoutGroup.size(), "totalGo", b.totalGo, "mem", b.timeoutGroup.size())
+			if b.coreGo < b.totalGo && (len(b.queue) == 0 || int32(len(b.queue)) < b.totalGo) {
 				// 协程在(核心,最大]区间
 				// 如果没有任务可以执行，或者被判定为可能抢不到任务的协程直接退出
 				// 一定要在此处减1才能让此刻等待在mutex上的其他协程被正确地分区
-				b.totalNumOfGo--
+				b.totalGo--
 				// log.Println("id", id, "exits....")
 				b.mutex.Unlock()
 				return
 			}
 
-			if b.initGo < b.totalNumOfGo-b.timeoutGroup.size() /* && len(b.queue) == 0 */ {
-				// log.Println("id", id, "initGo", b.initGo, "totalNumOfGo-mem", b.totalNumOfGo-b.timeoutGroup.size(), "totalNumOfGo", b.totalNumOfGo)
+			if b.initGo < b.totalGo-b.timeoutGroup.size() /* && len(b.queue) == 0 */ {
+				// log.Println("id", id, "initGo", b.initGo, "totalGo-mem", b.totalGo-b.timeoutGroup.size(), "totalGo", b.totalGo)
 				// 协程在(初始，核心]区间，如果没有任务可以执行，重置计时器
 				// 当len(b.queue) != 0时，即便协程属于(核心,最大]区间，其实也要给一个定时器
 				// 因为现在看队列中有任务，等真去拿的时候可能恰好没任务，那么此时常驻协程（初始协程数/initGo）就会暂时增加
@@ -482,15 +482,15 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 	}
 }
 
-func (b *OnDemandBlockTaskPool) increaseTotalNumOfGo(n int32) {
+func (b *OnDemandBlockTaskPool) increaseTotalGo(n int32) {
 	b.mutex.Lock()
-	b.totalNumOfGo += n
+	b.totalGo += n
 	b.mutex.Unlock()
 }
 
-func (b *OnDemandBlockTaskPool) decreaseTotalNumOfGo(n int32) {
+func (b *OnDemandBlockTaskPool) decreaseTotalGo(n int32) {
 	b.mutex.Lock()
-	b.totalNumOfGo -= n
+	b.totalGo -= n
 	b.mutex.Unlock()
 }
 
@@ -576,7 +576,7 @@ func (b *OnDemandBlockTaskPool) internalState() int32 {
 func (b *OnDemandBlockTaskPool) numOfGo() int32 {
 	var n int32
 	b.mutex.RLock()
-	n = b.totalNumOfGo
+	n = b.totalGo
 	b.mutex.RUnlock()
 	return n
 }
