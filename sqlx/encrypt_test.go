@@ -242,7 +242,6 @@ type Composite struct {
 }
 
 func TestEncryptColumn_Error(t *testing.T) {
-	//TODO
 	key := []byte("ABCDABCDABCDABCdasdfD")
 	_, err := NewEncryptColumn[Simple](key)
 	assert.Equal(t, aes.KeySizeError(len(key)), err)
