@@ -40,14 +40,8 @@ type EncryptColumn[T any] struct {
 	Key   string
 }
 
-func NewEncryptColumn[T any](key string) *EncryptColumn[T] {
-	return &EncryptColumn[T]{
-		Key:   key,
-		Valid: true,
-	}
-}
-
 var notSpecifyInt = errors.New("ekit 请明确int/uint的长度，如int32/uint32，int8/uint8")
+var errInvalid = errors.New("ekit EncryptColumn无效")
 
 func notSupportType(s any) error {
 	switch s.(type) {
@@ -66,14 +60,15 @@ func notSupportType(s any) error {
 // 如果 T 是基本类型，那么会对 T 进行直接加密
 // 否则，将 T 按照 JSON 序列化之后进行加密，返回加密后的数据
 func (e *EncryptColumn[T]) Value() (driver.Value, error) {
+	if !e.Valid {
+		return nil, errInvalid
+	}
 	var val any = e.Val
 	switch valT := val.(type) {
 	case string:
 		return e.aesEncrypt([]byte(valT))
 	case []byte:
 		return e.aesEncrypt(valT)
-	case map[any]any, []any, *any, uintptr:
-		return nil, notSupportType(val)
 	case int8, int16, int32, int64, uint8, uint16, uint32, uint64,
 		float32, float64, complex64, complex128:
 		buffer := new(bytes.Buffer)
@@ -99,12 +94,6 @@ func (e *EncryptColumn[T]) Scan(src any) error {
 	switch value := src.(type) {
 	case []byte:
 		decrBytes, err := e.aesDecrypt(value)
-		if err != nil {
-			return nil
-		}
-		return e.setVal(decrBytes)
-	case *[]byte:
-		decrBytes, err := e.aesDecrypt(*value)
 		if err != nil {
 			return nil
 		}
