@@ -247,7 +247,7 @@ func TestEncryptColumn_Error(t *testing.T) {
 	assert.Equal(t, aes.KeySizeError(len(key)), err)
 }
 
-func BenchmarkEncryptColumn_ScanStructNoCopy(b *testing.B) {
+func BenchmarkEncryptColumn_ValueStructNoCopy(b *testing.B) {
 	key := []byte("ABCDABCDABCDABCD")
 	cryptSimple, _ := NewEncryptColumn[Simple](key)
 
@@ -256,10 +256,32 @@ func BenchmarkEncryptColumn_ScanStructNoCopy(b *testing.B) {
 	}
 }
 
-func BenchmarkEncryptColumn_ScanStructCopy(b *testing.B) {
+func BenchmarkEncryptColumn_ValueStructCopy(b *testing.B) {
 	key := []byte("ABCDABCDABCDABCD")
 	for i := 0; i < b.N; i++ {
 		cryptSimple, _ := NewEncryptColumn[Simple](key)
 		_, _ = cryptSimple.Value()
+	}
+}
+
+func BenchmarkEncryptColumn_ScanStructNoCopy(b *testing.B) {
+	key := []byte("ABCDABCDABCDABCD")
+	cryptSimple, _ := NewEncryptColumn[Simple](key)
+	cBytes, _ := cryptSimple.Value()
+
+	decryptSimple, _ := NewEncryptColumn[Simple](key)
+	for i := 0; i < b.N; i++ {
+		decryptSimple.Scan(cBytes)
+	}
+}
+
+func BenchmarkEncryptColumn_ScanStructCopy(b *testing.B) {
+	key := []byte("ABCDABCDABCDABCD")
+	cryptSimple, _ := NewEncryptColumn[Simple](key)
+	cBytes, _ := cryptSimple.Value()
+
+	for i := 0; i < b.N; i++ {
+		decryptSimple, _ := NewEncryptColumn[Simple](key)
+		decryptSimple.Scan(cBytes)
 	}
 }
