@@ -63,6 +63,8 @@ func notSupportType(s any) error {
 }
 
 // Value 返回加密后的值
+// 如果 T 是基本类型，那么会对 T 进行直接加密
+// 否则，将 T 按照 JSON 序列化之后进行加密，返回加密后的数据
 func (e *EncryptColumn[T]) Value() (driver.Value, error) {
 	var val any = e.Val
 	switch valT := val.(type) {
@@ -91,6 +93,8 @@ func (e *EncryptColumn[T]) Value() (driver.Value, error) {
 	}
 }
 
+// Scan 方法会把写入的数据转化进行解密，
+// 并将解密后的数据进行反序列化，构造 T
 func (e *EncryptColumn[T]) Scan(src any) error {
 	switch value := src.(type) {
 	case []byte:
