@@ -81,8 +81,8 @@ func TestEncryptColumn_Basic(t *testing.T) {
 
 			cryptIntE.Val = int(ts.intVal)
 			intVal, err := cryptIntE.Value()
-			assert.Equal(t, ts.wantEncryptErr, err)
-			if ts.wantEncryptErr == nil {
+			assert.Equal(t, notSpecifyInt, err)
+			if err == nil {
 				err = cryptIntD.Scan(intVal)
 				assert.Equal(t, ts.wantDecryptErr, err)
 				assert.Equal(t, int(ts.intVal), cryptIntD.Val)
@@ -126,8 +126,8 @@ func TestEncryptColumn_Basic(t *testing.T) {
 
 			cryptUIntE.Val = uint(ts.intVal)
 			uintVal, err := cryptUIntE.Value()
-			assert.Equal(t, ts.wantEncryptErr, err)
-			if ts.wantEncryptErr == nil {
+			assert.Equal(t, notSpecifyInt, err)
+			if err == nil {
 				err = cryptUIntD.Scan(uintVal)
 				assert.Equal(t, ts.wantDecryptErr, err)
 				assert.Equal(t, uint(ts.intVal), cryptUIntD.Val)
