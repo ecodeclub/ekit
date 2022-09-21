@@ -99,16 +99,29 @@ func (e *EncryptColumn[T]) Scan(src any) error {
 		return fmt.Errorf("ekit：EncryptColumn.Scan 不支持 src 类型 %v", src)
 	}
 	if err != nil {
+		e.Valid = false
 		return err
 	}
-	err = e.setVal(b)
+	err = e.setValAfterDecrypt(b)
 	if err == nil {
 		e.Valid = true
+	} else {
+		e.Valid = false
 	}
 	return err
 }
 
-func (e *EncryptColumn[T]) setVal(deEncrypt []byte) error {
+// 内部测试用，不然太痛苦了
+func (e *EncryptColumn[T]) getVal() T {
+	return e.Val
+}
+
+// 内部测试用，不然太痛苦了
+func (e *EncryptColumn[T]) setVal(val T) {
+	e.Val = val
+}
+
+func (e *EncryptColumn[T]) setValAfterDecrypt(deEncrypt []byte) error {
 	var val any = e.Val
 	var err error
 	switch val.(type) {
@@ -127,23 +140,17 @@ func (e *EncryptColumn[T]) setVal(deEncrypt []byte) error {
 		reader := bytes.NewReader(deEncrypt)
 		err = binary.Read(reader, binary.BigEndian, &e.Val)
 	case int:
-		tmp := new(uint64)
+		tmp := new(int64)
 		reader := bytes.NewReader(deEncrypt)
 		err = binary.Read(reader, binary.BigEndian, tmp)
 		valT := (*int)(unsafe.Pointer(&e.Val))
 		*valT = int(*tmp)
-		if uint64(*valT) != *tmp {
-			err = fmt.Errorf("ekit EncryptColumn[int] Scan 解析 int 溢出")
-		}
 	case uint:
 		tmp := new(uint64)
 		reader := bytes.NewReader(deEncrypt)
 		err = binary.Read(reader, binary.BigEndian, tmp)
 		valT := (*uint)(unsafe.Pointer(&e.Val))
 		*valT = uint(*tmp)
-		if uint64(*valT) != *tmp {
-			err = fmt.Errorf("ekit EncryptColumn[uint] Scan 解析 uint 溢出")
-		}
 	default:
 		err = json.Unmarshal(deEncrypt, &e.Val)
 	}
