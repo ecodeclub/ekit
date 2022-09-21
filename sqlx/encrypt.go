@@ -111,16 +111,6 @@ func (e *EncryptColumn[T]) Scan(src any) error {
 	return err
 }
 
-// 内部测试用，不然太痛苦了
-func (e *EncryptColumn[T]) getVal() T {
-	return e.Val
-}
-
-// 内部测试用，不然太痛苦了
-func (e *EncryptColumn[T]) setVal(val T) {
-	e.Val = val
-}
-
 func (e *EncryptColumn[T]) setValAfterDecrypt(deEncrypt []byte) error {
 	var val any = e.Val
 	var err error
