@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -168,6 +169,9 @@ type OnDemandBlockTaskPool struct {
 	queueBacklogRate float64
 	shutdownOnce     sync.Once
 
+	// 协程id方便调试程序
+	id int32
+
 	// 外部信号
 	shutdownDone chan struct{}
 	// 内部中断信号
@@ -285,6 +289,12 @@ func (b *OnDemandBlockTaskPool) trySubmit(ctx context.Context, task Task, state 
 		case <-ctx.Done():
 			return false, fmt.Errorf("%w", ctx.Err())
 		case b.queue <- task:
+			if state == stateRunning && b.allowToCreateGoroutine() {
+				b.increaseTotalGo(1)
+				go b.goroutine(int(atomic.LoadInt32(&b.id)))
+				newId := atomic.AddInt32(&b.id, 1)
+				log.Println("create go ", newId-1)
+			}
 			return true, nil
 		default:
 			// 不能阻塞在临界区,要给Shutdown和ShutdownNow机会
@@ -292,6 +302,30 @@ func (b *OnDemandBlockTaskPool) trySubmit(ctx context.Context, task Task, state 
 		}
 	}
 	return false, nil
+}
+
+func (b *OnDemandBlockTaskPool) allowToCreateGoroutine() bool {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+
+	if b.totalGo == b.maxGo {
+		return false
+	}
+
+	// 这个判断可能太苛刻了，经常导致开协程失败，先注释掉
+	// allGoShouldBeBusy := atomic.LoadInt32(&b.numGoRunningTasks) == b.totalGo
+	// if !allGoShouldBeBusy {
+	// 	return false
+	// }
+
+	rate := float64(len(b.queue)) / float64(cap(b.queue))
+	if rate == 0 || rate < b.queueBacklogRate {
+		log.Println("rate == 0", rate == 0, "rate", rate, " < ", b.queueBacklogRate)
+		return false
+	}
+
+	// b.totalGo < b.maxGo && rate != 0 && rate >= b.queueBacklogRate
+	return true
 }
 
 // Start 开始调度任务执行
@@ -312,79 +346,27 @@ func (b *OnDemandBlockTaskPool) Start() error {
 			return fmt.Errorf("%w", errTaskPoolIsStarted)
 		}
 
-		if atomic.CompareAndSwapInt32(&b.state, stateCreated, stateRunning) {
-			go b.scheduling()
-			return nil
-		}
-	}
-}
+		if atomic.CompareAndSwapInt32(&b.state, stateCreated, stateLocked) {
 
-func (b *OnDemandBlockTaskPool) scheduling() {
+			n := b.initGo
 
-	id := 0
-
-	b.increaseTotalGo(b.initGo)
-	for i := int32(0); i < b.initGo; i++ {
-		go b.goroutine(id)
-		id++
-	}
-
-	for {
-
-		select {
-		case <-b.shutdownNowCtx.Done():
-			// log.Println("Loop ShudownNow")
-			return
-		case <-b.shutdownDone:
-			// log.Println("Loop Shudown")
-			return
-		default:
-
-			b.mutex.RLock()
-
-			if b.totalGo == b.maxGo {
-				b.mutex.RUnlock()
-				continue
+			allowGo := b.maxGo - b.initGo
+			needGo := int32(len(b.queue)) - b.initGo
+			if needGo > 0 {
+				if needGo <= allowGo {
+					n += needGo
+				} else {
+					n += allowGo
+				}
 			}
-
-			allGoShouldBeBusy := atomic.LoadInt32(&b.numGoRunningTasks) == b.totalGo
-			if !allGoShouldBeBusy {
-				b.mutex.RUnlock()
-				continue
-			}
-
-			rate := float64(len(b.queue)) / float64(cap(b.queue))
-			if rate == 0 || rate < b.queueBacklogRate {
-				// log.Println("rate == 0", rate == 0, "rate", rate, " < ", b.queueBacklogRate)
-				b.mutex.RUnlock()
-				continue
-			}
-
-			// time.Sleep(time.Second)
-			// log.Println("totalGo", b.totalGo)
-
-			var n int32
-
-			// b.queueBacklogRate合法范围[0,1]
-			// 当b.queueBacklogRate = 0时，直接开n个
-			// 当b.queueBacklogRate在(0, 1]区间时，每次开一个
-			if 0 < b.queueBacklogRate && b.queueBacklogRate <= 1 {
-				n = 1
-			} else if b.initGo <= b.totalGo && b.totalGo < b.coreGo {
-				n = b.coreGo - b.totalGo
-			} else if b.coreGo <= b.totalGo && b.totalGo < b.maxGo {
-				n = b.maxGo - b.totalGo
-			}
-
-			// log.Println("开协程", n, "max-id", id+int(n-1), "totalGo", b.totalGo+n)
-			b.mutex.RUnlock()
 
 			b.increaseTotalGo(n)
 			for i := int32(0); i < n; i++ {
-				go b.goroutine(id)
-				id++
+				go b.goroutine(int(atomic.LoadInt32(&b.id)))
+				atomic.AddInt32(&b.id, 1)
 			}
-
+			atomic.CompareAndSwapInt32(&b.state, stateLocked, stateRunning)
+			return nil
 		}
 	}
 }
