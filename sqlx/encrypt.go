@@ -40,7 +40,6 @@ type EncryptColumn[T any] struct {
 	Key   string
 }
 
-var notSpecifyInt = errors.New("ekit 请明确int/uint的长度，如int32/uint32，int8/uint8")
 var errInvalid = errors.New("ekit EncryptColumn无效")
 
 // Value 返回加密后的值
