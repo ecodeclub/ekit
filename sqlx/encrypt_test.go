@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"github.com/stretchr/testify/assert"
+	"reflect"
 	"testing"
 )
 
@@ -18,13 +19,18 @@ func TestEncryptColumn_Basic(t *testing.T) {
 	}{
 		{
 			name:   "int",
-			input:  &EncryptColumn[int32]{Key: "ABCDABCDABCDABCD", Val: 123, Valid: true},
-			output: &EncryptColumn[int32]{Key: "ABCDABCDABCDABCD", Val: 123, Valid: true},
+			input:  EncryptColumn[int32]{Key: "ABCDABCDABCDABCD", Val: 123, Valid: true},
+			output: &EncryptColumn[int32]{Key: "ABCDABCDABCDABCD"},
 		},
 		{
 			name:   "int",
-			input:  &EncryptColumn[int]{Key: "ABCDABCDABCDABCD", Val: 123, Valid: true},
-			output: &EncryptColumn[int]{Key: "ABCDABCDABCDABCD", Val: 123, Valid: true},
+			input:  EncryptColumn[int]{Key: "ABCDABCDABCDABCD", Val: 123, Valid: true},
+			output: &EncryptColumn[int]{Key: "ABCDABCDABCDABCD"},
+		},
+		{
+			name:   "string",
+			input:  EncryptColumn[string]{Key: "ABCDABCDABCDABCD", Val: "adsnfjkenfjkndjsknfjenjfknsadnfkjejfn", Valid: true},
+			output: &EncryptColumn[string]{Key: "ABCDABCDABCDABCD"},
 		},
 	}
 
@@ -34,7 +40,7 @@ func TestEncryptColumn_Basic(t *testing.T) {
 			assert.Equal(t, tc.wantEnErr, err)
 			err = tc.output.(sql.Scanner).Scan(encrypt)
 			assert.Equal(t, tc.wantDeErr, err)
-			assert.Equal(t, tc.input, tc.output)
+			assert.Equal(t, reflect.ValueOf(tc.input).FieldByName("Val"), reflect.ValueOf(tc.output).Elem().FieldByName("Val"))
 		})
 	}
 }

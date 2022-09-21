@@ -43,106 +43,111 @@ type EncryptColumn[T any] struct {
 var notSpecifyInt = errors.New("ekit 请明确int/uint的长度，如int32/uint32，int8/uint8")
 var errInvalid = errors.New("ekit EncryptColumn无效")
 
-func notSupportType(s any) error {
-	switch s.(type) {
-	case map[any]any:
-		return fmt.Errorf("ekit EncryptColumn不支持map类型")
-	case []any:
-		return fmt.Errorf("ekit EncryptColumn不支持slice类型")
-	case *any, uintptr:
-		return fmt.Errorf("ekit EncryptColumn不支持指针类型")
-	default:
-		return nil
-	}
-}
-
 // Value 返回加密后的值
 // 如果 T 是基本类型，那么会对 T 进行直接加密
 // 否则，将 T 按照 JSON 序列化之后进行加密，返回加密后的数据
-func (e *EncryptColumn[T]) Value() (driver.Value, error) {
+func (e EncryptColumn[T]) Value() (driver.Value, error) {
 	if !e.Valid {
 		return nil, errInvalid
 	}
 	var val any = e.Val
+	var err error
+	var b []byte
 	switch valT := val.(type) {
 	case string:
-		return e.aesEncrypt([]byte(valT))
+		b = []byte(valT)
 	case []byte:
-		return e.aesEncrypt(valT)
+		b = valT
 	case int8, int16, int32, int64, uint8, uint16, uint32, uint64,
 		float32, float64, complex64, complex128:
 		buffer := new(bytes.Buffer)
-		err := binary.Write(buffer, binary.BigEndian, val)
-		if err != nil {
-			return nil, err
-		}
-		return e.aesEncrypt(buffer.Bytes())
-	case int, uint:
-		return nil, notSpecifyInt
+		err = binary.Write(buffer, binary.BigEndian, val)
+		b = buffer.Bytes()
+	case int:
+		tmp := uint64(valT)
+		buffer := new(bytes.Buffer)
+		err = binary.Write(buffer, binary.BigEndian, tmp)
+		b = buffer.Bytes()
+	case uint:
+		tmp := uint64(valT)
+		buffer := new(bytes.Buffer)
+		err = binary.Write(buffer, binary.BigEndian, tmp)
+		b = buffer.Bytes()
 	default:
-		marshal, err := json.Marshal(e.Val)
-		if err != nil {
-			return nil, err
-		}
-		return e.aesEncrypt(marshal)
+		b, err = json.Marshal(e.Val)
 	}
+	if err != nil {
+		return nil, err
+	}
+	return e.aesEncrypt(b)
 }
 
 // Scan 方法会把写入的数据转化进行解密，
 // 并将解密后的数据进行反序列化，构造 T
 func (e *EncryptColumn[T]) Scan(src any) error {
+	var err error
+	var b []byte
 	switch value := src.(type) {
 	case []byte:
-		decrBytes, err := e.aesDecrypt(value)
-		if err != nil {
-			return nil
-		}
-		return e.setVal(decrBytes)
+		b, err = e.aesDecrypt(value)
 	case string:
-		decrBytes, err := e.aesDecrypt([]byte(value))
+		b, err = e.aesDecrypt([]byte(value))
 		if err != nil {
 			return nil
 		}
-		return e.setVal(decrBytes)
-
 	default:
 		return fmt.Errorf("ekit：EncryptColumn.Scan 不支持 src 类型 %v", src)
 	}
+	if err != nil {
+		return err
+	}
+	err = e.setVal(b)
+	if err == nil {
+		e.Valid = true
+	}
+	return err
 }
 
 func (e *EncryptColumn[T]) setVal(deEncrypt []byte) error {
 	var val any = e.Val
+	var err error
 	switch val.(type) {
 	case string:
 		header := (*reflect.StringHeader)(unsafe.Pointer(&e.Val))
 		s := string(deEncrypt)
 		header.Len = (*reflect.StringHeader)(unsafe.Pointer(&s)).Len
 		header.Data = (*reflect.StringHeader)(unsafe.Pointer(&s)).Data
-		return nil
 	case []byte:
 		header := (*reflect.SliceHeader)(unsafe.Pointer(&e.Val))
 		header.Len = (*reflect.SliceHeader)(unsafe.Pointer(&deEncrypt)).Len
 		header.Data = (*reflect.SliceHeader)(unsafe.Pointer(&deEncrypt)).Data
 		header.Cap = (*reflect.SliceHeader)(unsafe.Pointer(&deEncrypt)).Cap
-		return nil
-	case map[any]any, []any, *any, uintptr:
-		return notSupportType(val)
 	case int8, int16, int32, int64, uint8, uint16, uint32, uint64,
-		float32, float64, complex64, complex128:
+		float32, float64:
 		reader := bytes.NewReader(deEncrypt)
-		err := binary.Read(reader, binary.BigEndian, &e.Val)
-		if err != nil {
-			return err
+		err = binary.Read(reader, binary.BigEndian, &e.Val)
+	case int:
+		tmp := new(uint64)
+		reader := bytes.NewReader(deEncrypt)
+		err = binary.Read(reader, binary.BigEndian, tmp)
+		valT := (*int)(unsafe.Pointer(&e.Val))
+		*valT = int(*tmp)
+		if uint64(*valT) != *tmp {
+			err = fmt.Errorf("ekit EncryptColumn[int] Scan 解析 int 溢出")
 		}
-	case int, uint:
-		return notSpecifyInt
+	case uint:
+		tmp := new(uint64)
+		reader := bytes.NewReader(deEncrypt)
+		err = binary.Read(reader, binary.BigEndian, tmp)
+		valT := (*uint)(unsafe.Pointer(&e.Val))
+		*valT = uint(*tmp)
+		if uint64(*valT) != *tmp {
+			err = fmt.Errorf("ekit EncryptColumn[uint] Scan 解析 uint 溢出")
+		}
 	default:
-		err := json.Unmarshal(deEncrypt, &e.Val)
-		if err != nil {
-			return err
-		}
+		err = json.Unmarshal(deEncrypt, &e.Val)
 	}
-	return nil
+	return err
 }
 
 func (e *EncryptColumn[T]) aesEncrypt(data []byte) ([]byte, error) {
