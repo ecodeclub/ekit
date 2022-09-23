@@ -3,9 +3,10 @@ package sqlx
 import (
 	"database/sql"
 	"database/sql/driver"
+	"testing"
+
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestEncryptColumn_Basic(t *testing.T) {
@@ -100,12 +101,12 @@ func TestEncryptColumn_Sql(t *testing.T) {
 		},
 		{
 			name:    "bool",
-			encrypt: &EncryptColumn[bool]{Val: true, Valid: true, Key: key}, //虽然结构体不完全相等，但在数值上是一样的
+			encrypt: &EncryptColumn[bool]{Val: true, Valid: true, Key: key},
 			decrypt: &EncryptColumn[bool]{Key: key},
 		},
 		{
 			name:    "struct",
-			encrypt: &EncryptColumn[Simple]{Val: Simple{"大明", 99}, Valid: true, Key: key}, //虽然结构体不完全相等，但在数值上是一样的
+			encrypt: &EncryptColumn[Simple]{Val: Simple{"大明", 99}, Valid: true, Key: key},
 			decrypt: &EncryptColumn[Simple]{Key: key},
 		},
 	}
