@@ -25,8 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"reflect"
-	"unsafe"
 )
 
 // EncryptColumn 代表一个加密的列
@@ -111,34 +109,26 @@ func (e *EncryptColumn[T]) Scan(src any) error {
 }
 
 func (e *EncryptColumn[T]) setValAfterDecrypt(deEncrypt []byte) error {
-	var val any = e.Val
+	var val any = &e.Val
 	var err error
-	switch val.(type) {
-	case string:
-		header := (*reflect.StringHeader)(unsafe.Pointer(&e.Val))
-		s := string(deEncrypt)
-		header.Len = (*reflect.StringHeader)(unsafe.Pointer(&s)).Len
-		header.Data = (*reflect.StringHeader)(unsafe.Pointer(&s)).Data
-	case []byte:
-		header := (*reflect.SliceHeader)(unsafe.Pointer(&e.Val))
-		header.Len = (*reflect.SliceHeader)(unsafe.Pointer(&deEncrypt)).Len
-		header.Data = (*reflect.SliceHeader)(unsafe.Pointer(&deEncrypt)).Data
-		header.Cap = (*reflect.SliceHeader)(unsafe.Pointer(&deEncrypt)).Cap
-	case int8, int16, int32, int64, uint8, uint16, uint32, uint64,
-		float32, float64:
+	switch valT := val.(type) {
+	case *string:
+		*valT = string(deEncrypt)
+	case *[]byte:
+		*valT = deEncrypt
+	case *int8, *int16, *int32, *int64, *uint8, *uint16, *uint32, *uint64,
+		*float32, *float64:
 		reader := bytes.NewReader(deEncrypt)
-		err = binary.Read(reader, binary.BigEndian, &e.Val)
-	case int:
+		err = binary.Read(reader, binary.BigEndian, valT)
+	case *int:
 		tmp := new(int64)
 		reader := bytes.NewReader(deEncrypt)
 		err = binary.Read(reader, binary.BigEndian, tmp)
-		valT := (*int)(unsafe.Pointer(&e.Val))
 		*valT = int(*tmp)
-	case uint:
+	case *uint:
 		tmp := new(uint64)
 		reader := bytes.NewReader(deEncrypt)
 		err = binary.Read(reader, binary.BigEndian, tmp)
-		valT := (*uint)(unsafe.Pointer(&e.Val))
 		*valT = uint(*tmp)
 	default:
 		err = json.Unmarshal(deEncrypt, &e.Val)

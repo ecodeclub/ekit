@@ -99,26 +99,6 @@ func TestEncryptColumn_Sql(t *testing.T) {
 			decrypt: &EncryptColumn[int]{Key: key},
 		},
 		{
-			name:    "int mid ",
-			encrypt: &EncryptColumn[int64]{Val: 1<<32 + 1, Valid: true, Key: key}, //虽然结构体不完全相等，但在数值上是一样的
-			decrypt: &EncryptColumn[int]{Key: key},
-		},
-		{
-			name:    "int big",
-			encrypt: &EncryptColumn[int64]{Val: 1<<63 - 1, Valid: true, Key: key}, //虽然结构体不完全相等，但在数值上是一样的
-			decrypt: &EncryptColumn[int]{Key: key},
-		},
-		{
-			name:    "int huge",
-			encrypt: &EncryptColumn[int64]{Val: 1<<63 - 1, Valid: true, Key: key}, //虽然结构体不完全相等，但在数值上是一样的
-			decrypt: &EncryptColumn[int]{Key: key},
-		},
-		{
-			name:    "int huge",
-			encrypt: &EncryptColumn[int64]{Val: 1<<63 - 1, Valid: true, Key: key}, //虽然结构体不完全相等，但在数值上是一样的
-			decrypt: &EncryptColumn[int]{Key: key},
-		},
-		{
 			name:    "bool",
 			encrypt: &EncryptColumn[bool]{Val: true, Valid: true, Key: key}, //虽然结构体不完全相等，但在数值上是一样的
 			decrypt: &EncryptColumn[bool]{Key: key},
