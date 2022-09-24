@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -142,9 +141,6 @@ func (g *group) size() int32 {
 }
 
 // OnDemandBlockTaskPool 按需创建goroutine的并发阻塞的任务池
-// 任务池使用的 goroutine 是按需创建，并且可以确保不会超过 concurrency 所规定的数量
-// 每一个任务都会使用新的 goroutine 来处理，并且任务池本身处理了 panic 的场景
-// 如果当前 goroutine 数量已经达到了 concurrency，那么任务会被缓存在队列中
 type OnDemandBlockTaskPool struct {
 	// TaskPool内部状态
 	state int32
@@ -182,6 +178,7 @@ type OnDemandBlockTaskPool struct {
 // NewOnDemandBlockTaskPool 创建一个新的 OnDemandBlockTaskPool
 // initGo 是初始协程数
 // queueSize 是队列大小，即最多有多少个任务在等待调度
+// 使用相应的Option选项可以动态扩展协程数
 func NewOnDemandBlockTaskPool(initGo int, queueSize int, opts ...option.Option[OnDemandBlockTaskPool]) (*OnDemandBlockTaskPool, error) {
 	if initGo < 1 {
 		return nil, fmt.Errorf("%w：initGo应该大于0", errInvalidArgument)
@@ -291,9 +288,10 @@ func (b *OnDemandBlockTaskPool) trySubmit(ctx context.Context, task Task, state 
 		case b.queue <- task:
 			if state == stateRunning && b.allowToCreateGoroutine() {
 				b.increaseTotalGo(1)
-				go b.goroutine(int(atomic.LoadInt32(&b.id)))
-				newId := atomic.AddInt32(&b.id, 1)
-				log.Println("create go ", newId-1)
+				id := int(atomic.LoadInt32(&b.id))
+				go b.goroutine(id)
+				atomic.AddInt32(&b.id, 1)
+				// log.Println("create go ", id)
 			}
 			return true, nil
 		default:
@@ -320,7 +318,7 @@ func (b *OnDemandBlockTaskPool) allowToCreateGoroutine() bool {
 
 	rate := float64(len(b.queue)) / float64(cap(b.queue))
 	if rate == 0 || rate < b.queueBacklogRate {
-		log.Println("rate == 0", rate == 0, "rate", rate, " < ", b.queueBacklogRate)
+		// log.Println("rate == 0", rate == 0, "rate", rate, " < ", b.queueBacklogRate)
 		return false
 	}
 
@@ -439,9 +437,9 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 			b.mutex.Lock()
 			// log.Println("id", id, "totalGo-mem", b.totalGo-b.timeoutGroup.size(), "totalGo", b.totalGo, "mem", b.timeoutGroup.size())
 			if b.coreGo < b.totalGo && (len(b.queue) == 0 || int32(len(b.queue)) < b.totalGo) {
-				// 协程在(核心,最大]区间
+				// 协程在(coreGo,maxGo]区间
 				// 如果没有任务可以执行，或者被判定为可能抢不到任务的协程直接退出
-				// 一定要在此处减1才能让此刻等待在mutex上的其他协程被正确地分区
+				// 注意：一定要在此处减1才能让此刻等待在mutex上的其他协程被正确地分区
 				b.totalGo--
 				// log.Println("id", id, "exits....")
 				b.mutex.Unlock()
@@ -450,10 +448,10 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 
 			if b.initGo < b.totalGo-b.timeoutGroup.size() /* && len(b.queue) == 0 */ {
 				// log.Println("id", id, "initGo", b.initGo, "totalGo-mem", b.totalGo-b.timeoutGroup.size(), "totalGo", b.totalGo)
-				// 协程在(初始，核心]区间，如果没有任务可以执行，重置计时器
-				// 当len(b.queue) != 0时，即便协程属于(核心,最大]区间，其实也要给一个定时器
-				// 因为现在看队列中有任务，等真去拿的时候可能恰好没任务，那么此时常驻协程（初始协程数/initGo）就会暂时增加
-				// 直到队列再次有任务时才可能将协程数降至初始协程数，因为注释掉了len(b.queue) == 0判断条件
+				// 协程在(initGo，coreGo]区间，如果没有任务可以执行，重置计时器
+				// 当len(b.queue) != 0时，即便协程属于(coreGo,maxGo]区间，也应该给它一个定时器兜底。
+				// 因为现在看队列中有任务，等真去拿的时候可能恰好没任务，如果不给它一个定时器兜底此时就会出现当前协程总数长时间大于始协程数（initGo）的情况。
+				// 直到队列再次有任务时才可能将当前总协程数准确无误地降至初始协程数，因此注释掉len(b.queue) == 0判断条件
 				idleTimer = time.NewTimer(b.maxIdleTime)
 				b.timeoutGroup.add(id)
 				// log.Println("id", id, "add timeoutGroup", "size", b.timeoutGroup.size())
@@ -501,7 +499,7 @@ func (b *OnDemandBlockTaskPool) Shutdown() (<-chan struct{}, error) {
 			// 策略：先将队列中的任务启动并执行（清空队列），再等待全部运行中的任务自然退出
 
 			// 先关闭等待队列不再允许提交
-			// 同时任务调度循环能够通过b.queue是否被关闭来终止循环
+			// 同时工作协程能够通过判断b.queue是否被关闭来终止获取任务循环
 			close(b.queue)
 			return b.shutdownDone, nil
 		}
@@ -528,11 +526,11 @@ func (b *OnDemandBlockTaskPool) ShutdownNow() ([]Task, error) {
 
 		if atomic.CompareAndSwapInt32(&b.state, stateRunning, stateStopped) {
 			// 目标：立刻关闭并且返回所有剩下未执行的任务
-			// 策略：关闭等待队列不再接受新任务，中断任务启动循环，清空等待队列并保存返回
+			// 策略：关闭等待队列不再接受新任务，中断工作协程的获取任务循环，清空等待队列并保存返回
 
 			close(b.queue)
 
-			// 发送中断信号，中断任务启动循环
+			// 发送中断信号，中断工作协程获取任务循环
 			b.shutdownNowCancel()
 
 			// 清空队列并保存
@@ -555,6 +553,7 @@ func (b *OnDemandBlockTaskPool) internalState() int32 {
 	}
 }
 
+// numOfGo 用于查看TaskPool中有多少工作协程
 func (b *OnDemandBlockTaskPool) numOfGo() int32 {
 	var n int32
 	b.mutex.RLock()
