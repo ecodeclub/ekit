@@ -24,7 +24,6 @@ func TestReverseInt(t *testing.T) {
 	tests := []struct {
 		name string
 		src  []int
-		dst  []int
 		want []int
 	}{
 		{
@@ -46,16 +45,12 @@ func TestReverseInt(t *testing.T) {
 	}
 }
 
-func ExampleReverseInt() {
+func ExampleReverse() {
 	res := Reverse[int]([]int{1, 3, 2, 2, 4})
 	fmt.Println(res)
+	res2 := Reverse[string]([]string{"a", "b", "c", "d", "e"})
+	fmt.Println(res2)
 	// Output:
-	// [4,2,2,3,1]
-}
-
-func ExampleReverseString() {
-	res := Reverse[string]([]string{"a", "b", "c", "d", "e"})
-	fmt.Println(res)
-	// Output:
-	// ["e","d","c","b","a"]
+	// [4 2 2 3 1]
+	// [e d c b a]
 }
