@@ -3,7 +3,11 @@ package sqlx
 import (
 	"database/sql"
 	"database/sql/driver"
+	"encoding/json"
+	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
@@ -33,15 +37,32 @@ func TestEncryptColumn_Basic(t *testing.T) {
 			input:  &EncryptColumn[string]{Key: "ABCDABCDABCDABCD", Val: "adsnfjkenfjkndjsknfjenjfknsadnfkjejfn", Valid: true},
 			output: &EncryptColumn[string]{Key: "ABCDABCDABCDABCD"},
 		},
+		{
+			name:      "complex64",
+			input:     &EncryptColumn[complex64]{Key: "ABCDABCDABCDABCD", Val: complex(1, 2), Valid: true},
+			wantEnErr: &json.UnsupportedTypeError{Type: reflect.TypeOf(complex64(complex(1, 2)))},
+		},
+		{
+			name:      "complex128",
+			input:     &EncryptColumn[complex128]{Key: "ABCDABCDABCDABCD", Val: complex(1, 2), Valid: true},
+			wantEnErr: &json.UnsupportedTypeError{Type: reflect.TypeOf(complex(1, 2))},
+		},
+		{
+			name:      "struct has complex128",
+			input:     &EncryptColumn[complex128]{Key: "ABCDABCDABCDABCD", Val: complex(1, 2), Valid: true},
+			wantEnErr: &json.UnsupportedTypeError{Type: reflect.TypeOf(complex(1, 2))},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			encrypt, err := tc.input.(driver.Valuer).Value()
 			assert.Equal(t, tc.wantEnErr, err)
-			err = tc.output.(sql.Scanner).Scan(encrypt)
-			assert.Equal(t, tc.wantDeErr, err)
-			assert.Equal(t, tc.input, tc.output)
+			if err == nil {
+				err = tc.output.(sql.Scanner).Scan(encrypt)
+				assert.Equal(t, tc.wantDeErr, err)
+				assert.Equal(t, tc.input, tc.output)
+			}
 		})
 	}
 }
@@ -75,19 +96,50 @@ func TestEncryptColumn_Sql(t *testing.T) {
 
 	key := "ABCDABCDABCDABCD"
 	testCases := []struct {
-		name    string
-		encrypt any
-		decrypt any
+		name      string
+		encrypt   any
+		decrypt   any
+		wantError error
 	}{
 		{
-			name:    "int (32位)",
-			encrypt: &EncryptColumn[int32]{Val: int32(123), Valid: true, Key: key},
+			name:    "int8",
+			encrypt: &EncryptColumn[int8]{Val: int8(123), Valid: true, Key: key},
+			decrypt: &EncryptColumn[int8]{Key: key},
+		},
+		{
+			name:    "int16",
+			encrypt: &EncryptColumn[int16]{Val: int16(330), Valid: true, Key: key},
+			decrypt: &EncryptColumn[int16]{Key: key},
+		},
+		{
+			name:    "int32",
+			encrypt: &EncryptColumn[int32]{Val: int32(65550), Valid: true, Key: key},
 			decrypt: &EncryptColumn[int32]{Key: key},
 		},
 		{
-			name:    "float (32位)",
-			encrypt: &EncryptColumn[float32]{Val: float32(123.12), Valid: true, Key: key},
-			decrypt: &EncryptColumn[float32]{Key: key},
+			name:    "int64",
+			encrypt: &EncryptColumn[int64]{Val: int64(4294967300), Valid: true, Key: key},
+			decrypt: &EncryptColumn[int64]{Key: key},
+		},
+		{
+			name:    "uint8",
+			encrypt: &EncryptColumn[uint8]{Val: uint8(123), Valid: true, Key: key},
+			decrypt: &EncryptColumn[uint8]{Key: key},
+		},
+		{
+			name:    "uint16",
+			encrypt: &EncryptColumn[uint16]{Val: uint16(330), Valid: true, Key: key},
+			decrypt: &EncryptColumn[uint16]{Key: key},
+		},
+		{
+			name:    "uint32",
+			encrypt: &EncryptColumn[uint32]{Val: uint32(65550), Valid: true, Key: key},
+			decrypt: &EncryptColumn[uint32]{Key: key},
+		},
+		{
+			name:    "uint64",
+			encrypt: &EncryptColumn[uint64]{Val: uint64(4294967300), Valid: true, Key: key},
+			decrypt: &EncryptColumn[uint64]{Key: key},
 		},
 		{
 			name:    "int tiny ",
@@ -98,6 +150,52 @@ func TestEncryptColumn_Sql(t *testing.T) {
 			name:    "int small ",
 			encrypt: &EncryptColumn[int]{Val: 1<<16 + 1, Valid: true, Key: key},
 			decrypt: &EncryptColumn[int]{Key: key},
+		},
+		{
+			name:    "uint tiny ",
+			encrypt: &EncryptColumn[uint]{Val: 123, Valid: true, Key: key},
+			decrypt: &EncryptColumn[uint]{Key: key},
+		},
+		{
+			name:    "uint small ",
+			encrypt: &EncryptColumn[uint]{Val: 1<<16 + 1, Valid: true, Key: key},
+			decrypt: &EncryptColumn[uint]{Key: key},
+		},
+		{
+			name:    "float32",
+			encrypt: &EncryptColumn[float32]{Val: float32(123.12), Valid: true, Key: key},
+			decrypt: &EncryptColumn[float32]{Key: key},
+		},
+		{
+			name:    "float64",
+			encrypt: &EncryptColumn[float64]{Val: 1212321412321323.12222221322, Valid: true, Key: key},
+			decrypt: &EncryptColumn[float64]{Key: key},
+		},
+		{
+			name: "map string string",
+			encrypt: &EncryptColumn[map[string]string]{Val: map[string]string{
+				"A": "B",
+				"C": "D",
+			}, Valid: true, Key: key},
+			decrypt: &EncryptColumn[map[string]string]{Key: key},
+		},
+		{
+			name: "map int string",
+			encrypt: &EncryptColumn[map[int]string]{Val: map[int]string{
+				1: "B",
+				2: "D",
+				3: "E",
+			}, Valid: true, Key: key},
+			decrypt: &EncryptColumn[map[int]string]{Key: key},
+		},
+		{
+			name: "slice string",
+			encrypt: &EncryptColumn[[]string]{Val: []string{
+				"B",
+				"D",
+				"E",
+			}, Valid: true, Key: key},
+			decrypt: &EncryptColumn[[]string]{Key: key},
 		},
 		{
 			name:    "bool",
@@ -114,9 +212,7 @@ func TestEncryptColumn_Sql(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err = db.Exec(updateQuery, tc.encrypt)
-			if err != nil {
-				t.Error(err)
-			}
+			require.Nil(t, err)
 			err = db.QueryRow(selectQuery).Scan(tc.decrypt)
 			assert.Equal(t, tc.encrypt, tc.decrypt)
 		})
@@ -126,4 +222,10 @@ func TestEncryptColumn_Sql(t *testing.T) {
 type Simple struct {
 	Name string
 	Age  int
+}
+
+type HasComplex struct {
+	Name string
+	Age  int
+	C    complex128
 }

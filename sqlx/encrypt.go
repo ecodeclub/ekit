@@ -56,12 +56,12 @@ func (e EncryptColumn[T]) Value() (driver.Value, error) {
 	case []byte:
 		b = valT
 	case int8, int16, int32, int64, uint8, uint16, uint32, uint64,
-		float32, float64, complex64, complex128:
+		float32, float64:
 		buffer := new(bytes.Buffer)
 		err = binary.Write(buffer, binary.BigEndian, val)
 		b = buffer.Bytes()
 	case int:
-		tmp := uint64(valT)
+		tmp := int64(valT)
 		buffer := new(bytes.Buffer)
 		err = binary.Write(buffer, binary.BigEndian, tmp)
 		b = buffer.Bytes()
@@ -100,11 +100,7 @@ func (e *EncryptColumn[T]) Scan(src any) error {
 		return err
 	}
 	err = e.setValAfterDecrypt(b)
-	if err == nil {
-		e.Valid = true
-	} else {
-		e.Valid = false
-	}
+	e.Valid = err == nil
 	return err
 }
 
