@@ -1,3 +1,17 @@
+// Copyright 2021 gotomicro
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package sqlx
 
 import (
@@ -47,11 +61,6 @@ func TestEncryptColumn_Basic(t *testing.T) {
 			input:     &EncryptColumn[complex128]{Key: "ABCDABCDABCDABCD", Val: complex(1, 2), Valid: true},
 			wantEnErr: &json.UnsupportedTypeError{Type: reflect.TypeOf(complex(1, 2))},
 		},
-		{
-			name:      "struct has complex128",
-			input:     &EncryptColumn[complex128]{Key: "ABCDABCDABCDABCD", Val: complex(1, 2), Valid: true},
-			wantEnErr: &json.UnsupportedTypeError{Type: reflect.TypeOf(complex(1, 2))},
-		},
 	}
 
 	for _, tc := range testCases {
@@ -68,7 +77,7 @@ func TestEncryptColumn_Basic(t *testing.T) {
 }
 
 func TestEncryptColumn_Sql(t *testing.T) {
-	db, err := sql.Open("sqlite3", "./sqlx_test.db")
+	db, err := sql.Open("sqlite3", "file:test.db?cache=shared&mode=memory")
 	if err != nil {
 		t.Error(err)
 	}
@@ -198,6 +207,11 @@ func TestEncryptColumn_Sql(t *testing.T) {
 			decrypt: &EncryptColumn[[]string]{Key: key},
 		},
 		{
+			name:    "bytes",
+			encrypt: &EncryptColumn[[]byte]{Val: []byte("hello"), Valid: true, Key: key},
+			decrypt: &EncryptColumn[[]byte]{Key: key},
+		},
+		{
 			name:    "bool",
 			encrypt: &EncryptColumn[bool]{Val: true, Valid: true, Key: key},
 			decrypt: &EncryptColumn[bool]{Key: key},
@@ -222,10 +236,4 @@ func TestEncryptColumn_Sql(t *testing.T) {
 type Simple struct {
 	Name string
 	Age  int
-}
-
-type HasComplex struct {
-	Name string
-	Age  int
-	C    complex128
 }

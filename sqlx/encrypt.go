@@ -96,7 +96,6 @@ func (e *EncryptColumn[T]) Scan(src any) error {
 		return fmt.Errorf("ekit：EncryptColumn.Scan 不支持 src 类型 %v", src)
 	}
 	if err != nil {
-		e.Valid = false
 		return err
 	}
 	err = e.setValAfterDecrypt(b)
