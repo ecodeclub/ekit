@@ -288,9 +288,8 @@ func (b *OnDemandBlockTaskPool) trySubmit(ctx context.Context, task Task, state 
 		case b.queue <- task:
 			if state == stateRunning && b.allowToCreateGoroutine() {
 				b.increaseTotalGo(1)
-				id := int(atomic.LoadInt32(&b.id))
+				id := int(atomic.AddInt32(&b.id, 1))
 				go b.goroutine(id)
-				atomic.AddInt32(&b.id, 1)
 				// log.Println("create go ", id)
 			}
 			return true, nil
@@ -360,8 +359,7 @@ func (b *OnDemandBlockTaskPool) Start() error {
 
 			b.increaseTotalGo(n)
 			for i := int32(0); i < n; i++ {
-				go b.goroutine(int(atomic.LoadInt32(&b.id)))
-				atomic.AddInt32(&b.id, 1)
+				go b.goroutine(int(atomic.AddInt32(&b.id, 1)))
 			}
 			atomic.CompareAndSwapInt32(&b.state, stateLocked, stateRunning)
 			return nil
