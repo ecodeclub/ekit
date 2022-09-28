@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gotomicro/ekit/internal/errs"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -213,16 +215,7 @@ func TestArrayList_Delete(t *testing.T) {
 		wantErr   error
 	}{
 		{
-			name: "index 0",
-			list: &ArrayList[int]{
-				vals: []int{123, 100},
-			},
-			index:     0,
-			wantSlice: []int{100},
-			wantVal:   123,
-		},
-		{
-			name: "index middle",
+			name: "deleted",
 			list: &ArrayList[int]{
 				vals: []int{123, 124, 125},
 			},
@@ -236,24 +229,7 @@ func TestArrayList_Delete(t *testing.T) {
 				vals: []int{123, 100},
 			},
 			index:   12,
-			wantErr: newErrIndexOutOfRange(2, 12),
-		},
-		{
-			name: "index less than 0",
-			list: &ArrayList[int]{
-				vals: []int{123, 100},
-			},
-			index:   -1,
-			wantErr: newErrIndexOutOfRange(2, -1),
-		},
-		{
-			name: "index last",
-			list: &ArrayList[int]{
-				vals: []int{123, 100, 101, 102, 102, 102},
-			},
-			index:     5,
-			wantSlice: []int{123, 100, 101, 102, 102},
-			wantVal:   102,
+			wantErr: errs.NewErrIndexOutOfRange(2, 12),
 		},
 	}
 
@@ -318,6 +294,14 @@ func TestArrayList_Delete_Shrink(t *testing.T) {
 			wantCap: 2048,
 		},
 
+		// cap <= 64，但不满足缩容条件的例子
+		{
+			name:    "cap <= 64",
+			cap:     64,
+			loop:    2,
+			wantCap: 64,
+		},
+
 		// ----- #阶段二 边界测试# -----
 		// 测试用例边界
 		// ps:测试时：
@@ -329,14 +313,14 @@ func TestArrayList_Delete_Shrink(t *testing.T) {
 			name:    "case 6",
 			cap:     65,
 			loop:    2,
-			wantCap: 64,
+			wantCap: 32,
 		},
 		// case 6-2:  cap65,loop为16
 		{
 			name:    "case 6-2",
 			cap:     65,
 			loop:    16,
-			wantCap: 64,
+			wantCap: 32,
 		},
 		// case 6-3:  cap130,loop为34，删除一个元素后为33，刚好不满足四分之一
 		{

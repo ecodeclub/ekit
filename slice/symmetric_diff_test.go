@@ -60,7 +60,7 @@ func TestSymmetricDiffSet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res := SymmetricDiffSet[int](tt.src, tt.dst)
-			assert.Equal(t, true, equal[int](res, tt.want))
+			assert.ElementsMatch(t, tt.want, res)
 		})
 	}
 }
@@ -105,7 +105,7 @@ func TestSymmetricDiffSetFunc(t *testing.T) {
 			res := SymmetricDiffSetFunc[int](tt.src, tt.dst, func(src, dst int) bool {
 				return src == dst
 			})
-			assert.Equal(t, true, equal[int](res, tt.want))
+			assert.ElementsMatch(t, tt.want, res)
 		})
 	}
 }
