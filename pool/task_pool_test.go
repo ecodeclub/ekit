@@ -17,6 +17,8 @@ package pool
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -991,4 +993,20 @@ func TestGroup(t *testing.T) {
 	assert.True(t, g.isIn(id))
 	g.delete(id)
 	assert.Equal(t, int32(0), g.size())
+}
+
+func ExampleNewOnDemandBlockTaskPool() {
+	p, _ := NewOnDemandBlockTaskPool(10, 100)
+	_ = p.Start()
+	// wg 只是用来确保任务执行的，你在实际使用过程中是不需要的
+	var wg sync.WaitGroup
+	wg.Add(1)
+	_ = p.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+		fmt.Println("hello, world")
+		wg.Done()
+		return nil
+	}))
+	wg.Wait()
+	// Output:
+	// hello, world
 }
