@@ -48,7 +48,7 @@ func (e EncryptColumn[T]) Value() (driver.Value, error) {
 	if !e.Valid {
 		return nil, errInvalid
 	}
-	if len(e.Key) != 16 || len(e.Key) != 24 || len(e.Key) != 32 {
+	if len(e.Key) != 16 && len(e.Key) != 24 && len(e.Key) != 32 {
 		return nil, errKeyLengthInvalid
 	}
 	var val any = e.Val
