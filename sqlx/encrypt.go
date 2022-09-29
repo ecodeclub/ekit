@@ -39,6 +39,7 @@ type EncryptColumn[T any] struct {
 }
 
 var errInvalid = errors.New("ekit EncryptColumn无效")
+var errKeyLengthInvalid = errors.New("ekit EncryptColumn key 长度不合法")
 
 // Value 返回加密后的值
 // 如果 T 是基本类型，那么会对 T 进行直接加密
@@ -46,6 +47,9 @@ var errInvalid = errors.New("ekit EncryptColumn无效")
 func (e EncryptColumn[T]) Value() (driver.Value, error) {
 	if !e.Valid {
 		return nil, errInvalid
+	}
+	if len(e.Key) != 16 || len(e.Key) != 24 || len(e.Key) != 32 {
+		return nil, errKeyLengthInvalid
 	}
 	var val any = e.Val
 	var err error
