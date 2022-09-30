@@ -189,6 +189,74 @@ func BenchmarkValue_Load(b *testing.B) {
 	})
 }
 
+func BenchmarkValue_Store(b *testing.B) {
+	b.Run("Value", func(b *testing.B) {
+		val := NewValue[int]()
+		for i := 0; i < b.N; i++ {
+			val.Store(123)
+		}
+	})
+
+	b.Run("atomic Value", func(b *testing.B) {
+		val := &atomic.Value{}
+
+		for i := 0; i < b.N; i++ {
+			val.Store(123)
+		}
+	})
+}
+
+func BenchmarkValue_Swap(b *testing.B) {
+	b.Run("Value", func(b *testing.B) {
+		val := NewValueOf[int](123)
+		for i := 0; i < b.N; i++ {
+			_ = val.Swap(456)
+		}
+	})
+
+	b.Run("atomic Value", func(b *testing.B) {
+		val := &atomic.Value{}
+		val.Store(123)
+		for i := 0; i < b.N; i++ {
+			_ = val.Swap(456)
+		}
+	})
+}
+
+func BenchmarkValue_CompareAndSwap(b *testing.B) {
+	b.Run("Value", func(b *testing.B) {
+		b.Run("fail", func(b *testing.B) {
+			val := NewValueOf[int](123)
+			for i := 0; i < b.N; i++ {
+				_ = val.CompareAndSwap(-1, 100)
+			}
+		})
+		b.Run("success", func(b *testing.B) {
+			val := NewValueOf[int](0)
+			for i := 0; i < b.N; i++ {
+				_ = val.CompareAndSwap(i, i+1)
+			}
+		})
+	})
+
+	b.Run("atomic Value", func(b *testing.B) {
+		b.Run("fail", func(b *testing.B) {
+			val := &atomic.Value{}
+			val.Store(123)
+			for i := 0; i < b.N; i++ {
+				_ = val.CompareAndSwap(-1, 100)
+			}
+		})
+		b.Run("success", func(b *testing.B) {
+			val := &atomic.Value{}
+			val.Store(0)
+			for i := 0; i < b.N; i++ {
+				_ = val.CompareAndSwap(i, i+1)
+			}
+		})
+	})
+}
+
 type User struct {
 	Name string
 }
