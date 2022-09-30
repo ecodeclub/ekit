@@ -111,6 +111,10 @@ func TestValue_Swap(t *testing.T) {
 			assert.Equal(t, tc.new, newVal)
 		})
 	}
+
+	val := NewValue[*User]()
+	oldVal := val.Swap(&User{})
+	assert.Nil(t, oldVal)
 }
 
 func TestValue_Store(t *testing.T) {
