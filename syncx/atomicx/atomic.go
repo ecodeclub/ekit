@@ -46,3 +46,16 @@ func (v *Value[T]) Load() (val T) {
 func (v *Value[T]) Store(val T) {
 	v.val.Store(val)
 }
+
+func (v *Value[T]) Swap(new T) (old T) {
+	data := v.val.Swap(new)
+	if data == nil {
+		return
+	}
+	old = data.(T)
+	return
+}
+
+func (v *Value[T]) CompareAndSwap(old, new T) (swapped bool) {
+	return v.val.CompareAndSwap(old, new)
+}
