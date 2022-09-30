@@ -39,7 +39,7 @@ type EncryptColumn[T any] struct {
 }
 
 var errInvalid = errors.New("ekit EncryptColumn无效")
-var errKeyLengthInvalid = errors.New("ekit EncryptColumn key 长度不合法")
+var errKeyLengthInvalid = errors.New("ekit EncryptColumn仅支持 16/24/32 byte 的key")
 
 // Value 返回加密后的值
 // 如果 T 是基本类型，那么会对 T 进行直接加密
