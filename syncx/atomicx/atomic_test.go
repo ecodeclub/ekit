@@ -111,13 +111,9 @@ func TestValue_Swap(t *testing.T) {
 			assert.Equal(t, tc.new, newVal)
 		})
 	}
-
-	val := NewValue[*User]()
-	oldVal := val.Swap(&User{})
-	assert.Nil(t, oldVal)
 }
 
-func TestValue_Store(t *testing.T) {
+func TestValue_Store_Load(t *testing.T) {
 	testCases := []struct {
 		name    string
 		input   *User
@@ -143,31 +139,6 @@ func TestValue_Store(t *testing.T) {
 			val.Store(tc.input)
 			v := val.Load()
 			assert.Equal(t, tc.wantVal, v)
-		})
-	}
-}
-
-func TestValue_Load(t *testing.T) {
-	testCases := []struct {
-		name    string
-		val     *Value[*User]
-		wantVal *User
-	}{
-		{
-			name: "nil",
-			val:  NewValue[*User](),
-		},
-		{
-			name:    "get user",
-			val:     NewValueOf[*User](&User{Name: "Tom"}),
-			wantVal: &User{Name: "Tom"},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			val := tc.val.Load()
-			assert.Equal(t, tc.wantVal, val)
 		})
 	}
 }
