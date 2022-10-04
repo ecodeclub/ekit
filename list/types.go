@@ -14,9 +14,12 @@
 
 package list
 
+import "github.com/gotomicro/ekit/internal/queue"
+
 // List 接口
 // 该接口只定义清楚各个方法的行为和表现
 type List[T any] interface {
+	queue.Queue[T]
 	// Get 返回对应下标的元素，
 	// 在下标超出范围的情况下，返回错误
 	Get(index int) (T, error)

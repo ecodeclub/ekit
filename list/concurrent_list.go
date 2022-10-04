@@ -14,7 +14,10 @@
 
 package list
 
-import "sync"
+import (
+	"context"
+	"sync"
+)
 
 var (
 	_ List[any] = &ConcurrentList[any]{}
@@ -25,6 +28,18 @@ var (
 type ConcurrentList[T any] struct {
 	List[T]
 	lock sync.RWMutex
+}
+
+func (c *ConcurrentList[T]) Put(ctx context.Context, t T) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.List.Put(ctx, t)
+}
+
+func (c *ConcurrentList[T]) Poll(ctx context.Context) (T, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.List.Poll(ctx)
 }
 
 func (c *ConcurrentList[T]) Get(index int) (T, error) {

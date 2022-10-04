@@ -15,6 +15,8 @@
 package list
 
 import (
+	"context"
+
 	"github.com/gotomicro/ekit/internal/errs"
 	"github.com/gotomicro/ekit/internal/slice"
 )
@@ -38,6 +40,14 @@ func NewArrayListOf[T any](ts []T) *ArrayList[T] {
 	return &ArrayList[T]{
 		vals: ts,
 	}
+}
+
+func (a *ArrayList[T]) Put(ctx context.Context, t T) error {
+	return a.Append(t)
+}
+
+func (a *ArrayList[T]) Poll(ctx context.Context) (T, error) {
+	return a.Delete(0)
 }
 
 func (a *ArrayList[T]) Get(index int) (t T, e error) {

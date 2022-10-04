@@ -14,7 +14,11 @@
 
 package list
 
-import "github.com/gotomicro/ekit/internal/errs"
+import (
+	"context"
+
+	"github.com/gotomicro/ekit/internal/errs"
+)
 
 var (
 	_ List[any] = &LinkedList[any]{}
@@ -54,6 +58,14 @@ func NewLinkedListOf[T any](ts []T) *LinkedList[T] {
 	return list
 }
 
+func (l *LinkedList[T]) Put(ctx context.Context, t T) error {
+	return l.Append(t)
+}
+
+func (l *LinkedList[T]) Poll(ctx context.Context) (T, error) {
+	return l.Delete(0)
+}
+
 func (l *LinkedList[T]) findNode(index int) *node[T] {
 	var cur *node[T]
 	if index <= l.Len()/2 {
@@ -87,8 +99,8 @@ func (l *LinkedList[T]) checkIndex(index int) bool {
 // Append 往链表最后添加元素
 func (l *LinkedList[T]) Append(ts ...T) error {
 	for _, t := range ts {
-		node := &node[T]{prev: l.tail.prev, next: l.tail, val: t}
-		node.prev.next, node.next.prev = node, node
+		n := &node[T]{prev: l.tail.prev, next: l.tail, val: t}
+		n.prev.next, n.next.prev = n, n
 		l.length++
 	}
 	return nil

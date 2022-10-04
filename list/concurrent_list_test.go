@@ -15,6 +15,7 @@
 package list
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -23,6 +24,78 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestConcurrentList_Poll(t *testing.T) {
+	testCases := []struct {
+		name      string
+		list      *ConcurrentList[int]
+		wantVal   int
+		wantErr   error
+		wantSlice []int
+	}{
+		{
+			name:    "empty",
+			list:    newConcurrentListOfSlice[int](nil),
+			wantErr: errs.NewErrIndexOutOfRange(0, 0),
+		},
+		{
+			name:      "only one",
+			list:      newConcurrentListOfSlice[int]([]int{1}),
+			wantVal:   1,
+			wantSlice: []int{},
+		},
+		{
+			name:      "multiple",
+			list:      newConcurrentListOfSlice[int]([]int{1, 2, 3}),
+			wantVal:   1,
+			wantSlice: []int{2, 3},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			val, err := tc.list.Poll(context.Background())
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantVal, val)
+			assert.Equal(t, tc.wantSlice, tc.list.AsSlice())
+		})
+	}
+}
+
+func TestConcurrentList_Put(t *testing.T) {
+	testCases := []struct {
+		name      string
+		list      *ConcurrentList[int]
+		val       int
+		wantSlice []int
+		wantErr   error
+	}{
+		{
+			name:      "empty",
+			list:      newConcurrentListOfSlice[int](nil),
+			val:       1,
+			wantSlice: []int{1},
+		},
+		{
+			name:      "not empty",
+			list:      newConcurrentListOfSlice[int]([]int{1, 2, 3}),
+			val:       4,
+			wantSlice: []int{1, 2, 3, 4},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.list.Put(context.Background(), tc.val)
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantSlice, tc.list.AsSlice())
+		})
+	}
+}
 
 func TestConcurrentList_Add(t *testing.T) {
 	testCases := []struct {

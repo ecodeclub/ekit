@@ -15,14 +15,86 @@
 package list
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/gotomicro/ekit/internal/errs"
-
 	"github.com/stretchr/testify/assert"
 )
+
+func TestArrayList_Poll(t *testing.T) {
+	testCases := []struct {
+		name      string
+		list      *ArrayList[int]
+		wantVal   int
+		wantErr   error
+		wantSlice []int
+	}{
+		{
+			name:    "empty",
+			list:    NewArrayList[int](2),
+			wantErr: errs.NewErrIndexOutOfRange(0, 0),
+		},
+		{
+			name:      "only one",
+			list:      NewArrayListOf[int]([]int{1}),
+			wantVal:   1,
+			wantSlice: []int{},
+		},
+		{
+			name:      "multiple",
+			list:      NewArrayListOf[int]([]int{1, 2, 3}),
+			wantVal:   1,
+			wantSlice: []int{2, 3},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			val, err := tc.list.Poll(context.Background())
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantVal, val)
+			assert.Equal(t, tc.wantSlice, tc.list.vals)
+		})
+	}
+}
+
+func TestArrayList_Put(t *testing.T) {
+	testCases := []struct {
+		name      string
+		list      *ArrayList[int]
+		val       int
+		wantSlice []int
+		wantErr   error
+	}{
+		{
+			name:      "empty",
+			list:      NewArrayList[int](2),
+			val:       1,
+			wantSlice: []int{1},
+		},
+		{
+			name:      "not empty",
+			list:      NewArrayListOf[int]([]int{1, 2, 3}),
+			val:       4,
+			wantSlice: []int{1, 2, 3, 4},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.list.Put(context.Background(), tc.val)
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantSlice, tc.list.vals)
+		})
+	}
+}
 
 func TestArrayList_Add(t *testing.T) {
 	testCases := []struct {
