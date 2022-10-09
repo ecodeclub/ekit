@@ -99,7 +99,7 @@ func (p *PriorityArrayQueue[T]) Dequeue() (T, error) {
 
 func (p *PriorityArrayQueue[T]) heapify(data []T, n, i int) {
 	minPos := i
-	for true {
+	for {
 		if left := i * 2; left <= n && p.less(data[left], data[minPos]) {
 			minPos = left
 		}

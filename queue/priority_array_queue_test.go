@@ -15,15 +15,15 @@
 package queue
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewPriorityArrayQueue(t *testing.T) {
 	data := []int{6, 5, 4, 3, 2, 1}
 	expected := []int{1, 2, 3, 4, 5, 6}
-	var less Less[int]
-	less = func(a, b int) bool {
+	var less Less[int] = func(a, b int) bool {
 		return a < b
 	}
 	testCases := []struct {
@@ -70,8 +70,7 @@ func TestNewPriorityArrayQueue(t *testing.T) {
 func TestNewEmptyPriorityArrayQueue(t *testing.T) {
 	data := []int{6, 5, 4, 3, 2, 1}
 	expected := []int{1, 2, 3, 4, 5, 6}
-	var less Less[int]
-	less = func(a, b int) bool {
+	var less Less[int] = func(a, b int) bool {
 		return a < b
 	}
 	testCases := []struct {
@@ -121,8 +120,7 @@ func TestNewEmptyPriorityArrayQueue(t *testing.T) {
 func TestPriorityArrayQueue_Dequeue(t *testing.T) {
 	data := []int{6, 5, 4, 3, 2, 1}
 	expected := []int{1, 2, 3, 4, 5, 6}
-	var less Less[int]
-	less = func(a, b int) bool {
+	var less Less[int] = func(a, b int) bool {
 		return a < b
 	}
 
@@ -180,8 +178,7 @@ func TestPriorityArrayQueue_Dequeue(t *testing.T) {
 func TestPriorityArrayQueue_Enqueue(t *testing.T) {
 	data := []int{6, 5, 4, 3, 2, 1}
 	expected := []int{1, 2, 3, 4, 5, 6}
-	var less Less[int]
-	less = func(a, b int) bool {
+	var less Less[int] = func(a, b int) bool {
 		return a < b
 	}
 
