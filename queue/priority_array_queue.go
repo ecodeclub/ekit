@@ -1,7 +1,22 @@
+// Copyright 2021 gotomicro
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package queue
 
 import (
 	"errors"
+	"sync"
 )
 
 type Less[T any] func(a, b T) bool
@@ -18,17 +33,32 @@ type PriorityArrayQueue[T any] struct {
 	capacity int
 	// 队列中的元素，为便于计算父子节点的index，0位置留空，根节点从1开始
 	data []T
+
+	m sync.RWMutex
 }
 
 func (p *PriorityArrayQueue[T]) Len() int {
+	p.m.RLock()
+	defer p.m.RUnlock()
 	return len(p.data) - 1
 }
 
 func (p *PriorityArrayQueue[T]) Cap() int {
+	p.m.RLock()
+	defer p.m.RUnlock()
 	return p.capacity
 }
 
 func (p *PriorityArrayQueue[T]) Enqueue(t T) error {
+	p.m.RLock()
+	if p.capacity > 0 && len(p.data)-1 == p.capacity {
+		p.m.RUnlock()
+		return ErrOutOfCapacity
+	}
+	p.m.RUnlock()
+
+	p.m.Lock()
+	defer p.m.Unlock()
 	if p.capacity > 0 && len(p.data)-1 == p.capacity {
 		return ErrOutOfCapacity
 	}
@@ -45,6 +75,17 @@ func (p *PriorityArrayQueue[T]) Enqueue(t T) error {
 }
 
 func (p *PriorityArrayQueue[T]) Dequeue() (T, error) {
+	p.m.RLock()
+	if len(p.data) < 2 {
+		t := new(T)
+		p.m.RUnlock()
+		return *t, ErrEmptyQueue
+	}
+	p.m.RUnlock()
+
+	p.m.Lock()
+	defer p.m.Unlock()
+
 	if len(p.data) < 2 {
 		t := new(T)
 		return *t, ErrEmptyQueue
