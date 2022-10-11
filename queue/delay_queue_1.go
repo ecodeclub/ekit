@@ -12,66 +12,85 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build demo
-
 package queue
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
+
+	"github.com/gotomicro/ekit/internal/queue"
 
 	"github.com/gotomicro/ekit"
 )
 
-var errNoElem = errors.New("no elem")
-
 type DelayQueue[T Delayable[T]] struct {
-	q         PriorityQueue[T]
-	mutex     *sync.Mutex
-	available *sync.Cond
+	q     queue.PriorityQueue[T]
+	mutex sync.RWMutex
+
+	enqueueSignal chan struct{}
+	dequeueSignal chan struct{}
+}
+
+func NewDelayQueue[T Delayable[T]](compare ekit.Comparator[T]) *DelayQueue[T] {
+	return &DelayQueue[T]{
+		q:             *queue.NewPriorityQueue[T](0, compare),
+		enqueueSignal: make(chan struct{}, 1),
+		dequeueSignal: make(chan struct{}, 1),
+	}
 }
 
 func (d *DelayQueue[T]) Enqueue(ctx context.Context, t T) error {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-	err := d.q.Enqueue(ctx, t)
-	if err != nil {
+	for {
+		d.mutex.Lock()
+		err := d.q.Enqueue(t)
+		d.mutex.Unlock()
+		if err == queue.ErrOutOfCapacity {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-d.dequeueSignal:
+				continue
+			}
+		}
+
+		if err == nil {
+			// 这里使用写锁，是为了在 Dequeue 那边
+			// 当一开始的 Peek 返回 queue.ErrEmptyQueue 的时候不会错过这个入队信号
+			d.mutex.Lock()
+			head, err := d.q.Peek()
+			if err != nil {
+				// 这种情况就是出现在入队成功之后，元素立刻被取走了
+				// 这里 err 预期应该只有 queue.ErrEmptyQueue 一种可能
+				d.mutex.Lock()
+				return nil
+			}
+			if t.CompareTo(head) == 0 {
+				select {
+				case d.enqueueSignal <- struct{}{}:
+				default:
+				}
+			}
+			d.mutex.Lock()
+		}
 		return err
 	}
-	head, err := d.q.peek()
-	if err != nil {
-		return err
-	}
-	if t.CompareTo(head) == 0 {
-		d.available.Signal()
-	}
-	return nil
+
 }
 
 func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 	ticker := time.NewTicker(0)
 	ticker.Stop()
-	wakeup := make(chan struct{}, 1)
 	for {
-		head, err := d.q.peek()
-		go func() {
-			d.available.Wait()
-			// 可能 panic，要考虑检测有没有 close 掉 wakeup
-			// 并发安全难以做到
-			// 如果 wakeup 已经被关闭了，那么意味着这个调用者已经拿到值了
-			// 所以它被唤醒，其实是错误的
-			// 需要在 wakeup 之后，唤醒别的调用者
-			wakeup <- struct{}{}
-		}()
-		if err == errNoElem {
+		d.mutex.RLock()
+		head, err := d.q.Peek()
+		d.mutex.RUnlock()
+		if err == queue.ErrEmptyQueue {
 			select {
 			case <-ctx.Done():
 				var t T
 				return t, ctx.Err()
-			case <-wakeup:
-
+			case <-d.enqueueSignal:
 			}
 		} else {
 			ticker.Reset(head.Delay())
@@ -80,19 +99,22 @@ func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 				var t T
 				return t, ctx.Err()
 			case <-ticker.C:
-				return d.q.Dequeue(ctx)
-			case <-wakeup:
+				var t T
+				d.mutex.Lock()
+				t, err = d.q.Dequeue()
+				d.mutex.Unlock()
+				// 被人抢走了，理论上是不会出现这个可能的
+				if err == queue.ErrEmptyQueue {
+					continue
+				}
+				select {
+				case d.dequeueSignal <- struct{}{}:
+				default:
+				}
+				return t, nil
+			case <-d.enqueueSignal:
 			}
 		}
-
-	}
-}
-
-func NewDelayQueue() *DelayQueue[user] {
-	mutex := &sync.Mutex{}
-	return &DelayQueue[user]{
-		mutex:     mutex,
-		available: sync.NewCond(mutex),
 	}
 }
 

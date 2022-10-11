@@ -16,8 +16,6 @@ package queue
 
 import (
 	"context"
-
-	"github.com/gotomicro/ekit"
 )
 
 // BlockingQueue 阻塞队列
@@ -49,9 +47,4 @@ type Queue[T any] interface {
 	// Dequeue 从队首获得一个元素
 	// 如果此时队列里面没有元素，那么返回错误
 	Dequeue() (T, error)
-}
-
-type PriorityQueue[T ekit.Comparable[T]] interface {
-	BlockingQueue[T]
-	peek() (T, error)
 }
