@@ -225,3 +225,77 @@ func TestPriorityArrayQueue_Enqueue(t *testing.T) {
 
 	}
 }
+
+func TestPriorityArrayQueue_Shrink(t *testing.T) {
+	var less Less[int] = func(a, b int) bool {
+		return a < b
+	}
+	testCases := []struct {
+		name        string
+		originCap   int
+		enqueueLoop int
+		dequeueLoop int
+		expectCap   int
+	}{
+		{
+			name:        "小于64",
+			originCap:   32,
+			enqueueLoop: 6,
+			dequeueLoop: 5,
+			expectCap:   32,
+		},
+		{
+			name:        "小于2048, 不足1/4",
+			originCap:   1000,
+			enqueueLoop: 20,
+			dequeueLoop: 5,
+			expectCap:   62,
+		},
+		{
+			name:        "小于2048, 超过1/4",
+			originCap:   1000,
+			enqueueLoop: 400,
+			dequeueLoop: 5,
+			expectCap:   1000,
+		},
+		{
+			name:        "大于2048，不足一半",
+			originCap:   3000,
+			enqueueLoop: 400,
+			dequeueLoop: 40,
+			expectCap:   937,
+		},
+		{
+			name:        "大于2048，不足一半",
+			originCap:   3000,
+			enqueueLoop: 60,
+			dequeueLoop: 40,
+			expectCap:   58,
+		},
+		{
+			name:        "大于2048，大于一半",
+			originCap:   3000,
+			enqueueLoop: 2000,
+			dequeueLoop: 5,
+			expectCap:   3000,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			q := NewPriorityArrayQueue[int](tc.originCap, less)
+			for i := 0; i < tc.enqueueLoop; i++ {
+				err := q.Enqueue(i)
+				if err != nil {
+					return
+				}
+			}
+			for i := 0; i < tc.dequeueLoop; i++ {
+				_, err := q.Dequeue()
+				if err != nil {
+					return
+				}
+			}
+			assert.Equal(t, tc.expectCap, q.Cap())
+		})
+	}
+}

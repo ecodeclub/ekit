@@ -50,6 +50,11 @@ func (p *PriorityArrayQueue[T]) Cap() int {
 	return p.capacity
 }
 
+func (p *PriorityArrayQueue[T]) calCapacity() int {
+	p.capacity = cap(p.data) - 1
+	return p.capacity
+}
+
 func (p *PriorityArrayQueue[T]) isFull() bool {
 	return p.capacity > 0 && len(p.data)-1 == p.capacity
 }
@@ -84,13 +89,34 @@ func (p *PriorityArrayQueue[T]) Dequeue() (T, error) {
 	pop := p.data[1]
 	p.data[1] = p.data[len(p.data)-1]
 	p.data = p.data[:len(p.data)-1]
-	p.reduceCapacityIfNecessary()
+	p.shrinkIfNecessary()
 	p.heapify(p.data, len(p.data)-1, 1)
 	return pop, nil
 }
 
-func (p *PriorityArrayQueue[T]) reduceCapacityIfNecessary() {
-
+func (p *PriorityArrayQueue[T]) shrinkIfNecessary() {
+	calCap := func(c, l int) int {
+		if c <= 64 {
+			return c
+		}
+		if c > 2048 && (c/l >= 2) {
+			factor := 0.625
+			return int(float32(c) * float32(factor))
+		}
+		if c <= 2048 && (c/l >= 4) {
+			return c / 2
+		}
+		return c
+	}
+	c, l := p.capacity, len(p.data)-1
+	n := calCap(c, l)
+	if n == c {
+		return
+	}
+	s := make([]T, 0, n+1)
+	s = append(s, p.data...)
+	p.data = s
+	p.calCapacity()
 }
 
 func (p *PriorityArrayQueue[T]) heapify(data []T, n, i int) {
