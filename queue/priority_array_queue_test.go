@@ -17,14 +17,22 @@ package queue
 import (
 	"testing"
 
+	"github.com/gotomicro/ekit"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewPriorityArrayQueue(t *testing.T) {
 	data := []int{6, 5, 4, 3, 2, 1}
 	expected := []int{1, 2, 3, 4, 5, 6}
-	var less Less[int] = func(a, b int) bool {
-		return a < b
+	var compare ekit.Comparator[int] = func(a, b int) int {
+		if a < b {
+			return -1
+		}
+		if a == b {
+			return 0
+		}
+		return 1
 	}
 	testCases := []struct {
 		name     string
@@ -33,17 +41,17 @@ func TestNewPriorityArrayQueue(t *testing.T) {
 	}{
 		{
 			name:     "默认",
-			q:        NewPriorityArrayQueueFromArray(data, less),
+			q:        NewPriorityArrayQueueFromArray(data, compare),
 			capacity: len(data),
 		},
 		{
 			name:     "capacity 小于默认",
-			q:        NewPriorityArrayQueueFromArray(data, less, WithNewCapacity[int](len(data)-2)),
+			q:        NewPriorityArrayQueueFromArray(data, compare, WithNewCapacity[int](len(data)-2)),
 			capacity: len(data),
 		},
 		{
 			name:     "capacity 大于默认",
-			q:        NewPriorityArrayQueueFromArray(data, less, WithNewCapacity[int](8)),
+			q:        NewPriorityArrayQueueFromArray(data, compare, WithNewCapacity[int](8)),
 			capacity: 8,
 		},
 	}
@@ -70,8 +78,14 @@ func TestNewPriorityArrayQueue(t *testing.T) {
 func TestNewEmptyPriorityArrayQueue(t *testing.T) {
 	data := []int{6, 5, 4, 3, 2, 1}
 	expected := []int{1, 2, 3, 4, 5, 6}
-	var less Less[int] = func(a, b int) bool {
-		return a < b
+	var compare ekit.Comparator[int] = func(a, b int) int {
+		if a < b {
+			return -1
+		}
+		if a == b {
+			return 0
+		}
+		return 1
 	}
 	testCases := []struct {
 		name     string
@@ -80,12 +94,12 @@ func TestNewEmptyPriorityArrayQueue(t *testing.T) {
 	}{
 		{
 			name:     "无边界",
-			q:        NewBoundlessPriorityArrayQueue(less),
+			q:        NewBoundlessPriorityArrayQueue(compare),
 			capacity: 0,
 		},
 		{
 			name:     "有边界 ",
-			q:        NewPriorityArrayQueue(len(data), less),
+			q:        NewPriorityArrayQueue(len(data), compare),
 			capacity: len(data),
 		},
 	}
@@ -120,8 +134,14 @@ func TestNewEmptyPriorityArrayQueue(t *testing.T) {
 func TestPriorityArrayQueue_Dequeue(t *testing.T) {
 	data := []int{6, 5, 4, 3, 2, 1}
 	expected := []int{1, 2, 3, 4, 5, 6}
-	var less Less[int] = func(a, b int) bool {
-		return a < b
+	var compare ekit.Comparator[int] = func(a, b int) int {
+		if a < b {
+			return -1
+		}
+		if a == b {
+			return 0
+		}
+		return 1
 	}
 
 	testCases := []struct {
@@ -135,7 +155,7 @@ func TestPriorityArrayQueue_Dequeue(t *testing.T) {
 		{
 			name:      "无边界",
 			capacity:  0,
-			q:         NewBoundlessPriorityArrayQueue[int](less),
+			q:         NewBoundlessPriorityArrayQueue[int](compare),
 			data:      data,
 			wantSlice: expected,
 			wantErr:   errEmptyQueue,
@@ -143,7 +163,7 @@ func TestPriorityArrayQueue_Dequeue(t *testing.T) {
 		{
 			name:      "有边界",
 			capacity:  0,
-			q:         NewPriorityArrayQueue[int](len(data), less),
+			q:         NewPriorityArrayQueue[int](len(data), compare),
 			data:      data,
 			wantSlice: expected,
 			wantErr:   errEmptyQueue,
@@ -178,8 +198,14 @@ func TestPriorityArrayQueue_Dequeue(t *testing.T) {
 func TestPriorityArrayQueue_Enqueue(t *testing.T) {
 	data := []int{6, 5, 4, 3, 2, 1}
 	expected := []int{1, 2, 3, 4, 5, 6}
-	var less Less[int] = func(a, b int) bool {
-		return a < b
+	var compare ekit.Comparator[int] = func(a, b int) int {
+		if a < b {
+			return -1
+		}
+		if a == b {
+			return 0
+		}
+		return 1
 	}
 
 	testCases := []struct {
@@ -193,14 +219,14 @@ func TestPriorityArrayQueue_Enqueue(t *testing.T) {
 		{
 			name:     "队列满",
 			capacity: len(data),
-			q:        NewPriorityArrayQueueFromArray[int](data, less),
+			q:        NewPriorityArrayQueueFromArray[int](data, compare),
 			data:     data,
 			wantErr:  errOutOfCapacity,
 		},
 		{
 			name:      "队列不满",
 			capacity:  len(data),
-			q:         NewPriorityArrayQueue[int](len(data), less),
+			q:         NewPriorityArrayQueue[int](len(data), compare),
 			data:      data,
 			wantSlice: expected,
 		},
@@ -227,8 +253,14 @@ func TestPriorityArrayQueue_Enqueue(t *testing.T) {
 }
 
 func TestPriorityArrayQueue_Shrink(t *testing.T) {
-	var less Less[int] = func(a, b int) bool {
-		return a < b
+	var compare ekit.Comparator[int] = func(a, b int) int {
+		if a < b {
+			return -1
+		}
+		if a == b {
+			return 0
+		}
+		return 1
 	}
 	testCases := []struct {
 		name        string
@@ -282,7 +314,7 @@ func TestPriorityArrayQueue_Shrink(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			q := NewPriorityArrayQueue[int](tc.originCap, less)
+			q := NewPriorityArrayQueue[int](tc.originCap, compare)
 			for i := 0; i < tc.enqueueLoop; i++ {
 				err := q.Enqueue(i)
 				if err != nil {

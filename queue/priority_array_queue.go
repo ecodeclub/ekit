@@ -17,9 +17,9 @@ package queue
 import (
 	"errors"
 	"sync"
-)
 
-type Less[T any] func(a, b T) bool
+	"github.com/gotomicro/ekit"
+)
 
 var (
 	errOutOfCapacity = errors.New("超出最大容量限制")
@@ -29,7 +29,7 @@ var (
 // PriorityArrayQueue 是一个基于小顶堆的优先队列
 type PriorityArrayQueue[T any] struct {
 	// 用于比较前一个元素是否小于后一个元素
-	less Less[T]
+	compare ekit.Comparator[T]
 	// 队列容量
 	capacity int
 	// 队列中的元素，为便于计算父子节点的index，0位置留空，根节点从1开始
@@ -68,7 +68,7 @@ func (p *PriorityArrayQueue[T]) Enqueue(t T) error {
 
 	p.data = append(p.data, t)
 	node, parent := len(p.data)-1, (len(p.data)-1)/2
-	for parent > 0 && p.less(p.data[node], p.data[parent]) {
+	for parent > 0 && p.compare(p.data[node], p.data[parent]) < 0 {
 		p.data[parent], p.data[node] = p.data[node], p.data[parent]
 		node = parent
 		parent = parent / 2
@@ -122,10 +122,10 @@ func (p *PriorityArrayQueue[T]) shrinkIfNecessary() {
 func (p *PriorityArrayQueue[T]) heapify(data []T, n, i int) {
 	minPos := i
 	for {
-		if left := i * 2; left <= n && p.less(data[left], data[minPos]) {
+		if left := i * 2; left <= n && p.compare(data[left], data[minPos]) < 0 {
 			minPos = left
 		}
-		if right := i*2 + 1; right <= n && p.less(data[right], data[minPos]) {
+		if right := i*2 + 1; right <= n && p.compare(data[right], data[minPos]) < 0 {
 			minPos = right
 		}
 		if minPos == i {
@@ -143,27 +143,27 @@ func (p *PriorityArrayQueue[T]) buildHeap() {
 	}
 }
 
-func NewBoundlessPriorityArrayQueue[T any](less Less[T]) *PriorityArrayQueue[T] {
+func NewBoundlessPriorityArrayQueue[T any](compare ekit.Comparator[T]) *PriorityArrayQueue[T] {
 	return &PriorityArrayQueue[T]{
 		capacity: 0,
 		data:     make([]T, 1, 64),
-		less:     less,
+		compare:  compare,
 	}
 }
 
-func NewPriorityArrayQueue[T any](capacity int, less Less[T]) *PriorityArrayQueue[T] {
+func NewPriorityArrayQueue[T any](capacity int, compare ekit.Comparator[T]) *PriorityArrayQueue[T] {
 	return &PriorityArrayQueue[T]{
 		capacity: capacity,
 		data:     make([]T, 1, capacity+1),
-		less:     less,
+		compare:  compare,
 	}
 }
 
-func NewPriorityArrayQueueFromArray[T any](data []T, less Less[T], opts ...PriorityArrayQueueOption[T]) *PriorityArrayQueue[T] {
+func NewPriorityArrayQueueFromArray[T any](data []T, compare ekit.Comparator[T], opts ...PriorityArrayQueueOption[T]) *PriorityArrayQueue[T] {
 	p := &PriorityArrayQueue[T]{
 		capacity: len(data),
 		data:     make([]T, 1, len(data)+1),
-		less:     less,
+		compare:  compare,
 	}
 	p.data = append(p.data, data...)
 	p.buildHeap()
