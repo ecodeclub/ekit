@@ -12,24 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ekit
+package queue
 
-// RealNumber 实数
-// 绝大多数情况下，你都应该用这个来表达数字的含义
-type RealNumber interface {
-	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
-		~int | ~int8 | ~int16 | ~int32 | ~int64 |
-		~float32 | ~float64
-}
+import (
+	"fmt"
+	"testing"
+)
 
-type Number interface {
-	RealNumber | ~complex64 | ~complex128
-}
-
-type Comparable[T any] interface {
-	// CompareTo 方法只能返回以下三个返回值:
-	// 1: dst 比较大
-	// 0: 两者一样大小
-	// -1: dst 比较小
-	CompareTo(dst T) int
+func TestNewDelayQueue(t *testing.T) {
+	q := NewDelayQueue()
+	fmt.Println(q)
 }
