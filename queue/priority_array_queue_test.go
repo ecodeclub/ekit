@@ -138,7 +138,7 @@ func TestPriorityArrayQueue_Dequeue(t *testing.T) {
 			q:         NewBoundlessPriorityArrayQueue[int](less),
 			data:      data,
 			wantSlice: expected,
-			wantErr:   ErrEmptyQueue,
+			wantErr:   errEmptyQueue,
 		},
 		{
 			name:      "有边界",
@@ -146,7 +146,7 @@ func TestPriorityArrayQueue_Dequeue(t *testing.T) {
 			q:         NewPriorityArrayQueue[int](len(data), less),
 			data:      data,
 			wantSlice: expected,
-			wantErr:   ErrEmptyQueue,
+			wantErr:   errEmptyQueue,
 		},
 	}
 	for _, tc := range testCases {
@@ -195,7 +195,7 @@ func TestPriorityArrayQueue_Enqueue(t *testing.T) {
 			capacity: len(data),
 			q:        NewPriorityArrayQueueFromArray[int](data, less),
 			data:     data,
-			wantErr:  ErrOutOfCapacity,
+			wantErr:  errOutOfCapacity,
 		},
 		{
 			name:      "队列不满",

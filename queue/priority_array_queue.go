@@ -22,10 +22,11 @@ import (
 type Less[T any] func(a, b T) bool
 
 var (
-	ErrOutOfCapacity = errors.New("超出最大容量限制")
-	ErrEmptyQueue    = errors.New("队列为空")
+	errOutOfCapacity = errors.New("超出最大容量限制")
+	errEmptyQueue    = errors.New("队列为空")
 )
 
+// PriorityArrayQueue 是一个基于小顶堆的优先队列
 type PriorityArrayQueue[T any] struct {
 	// 用于比较前一个元素是否小于后一个元素
 	less Less[T]
@@ -49,18 +50,15 @@ func (p *PriorityArrayQueue[T]) Cap() int {
 	return p.capacity
 }
 
-func (p *PriorityArrayQueue[T]) Enqueue(t T) error {
-	p.m.RLock()
-	if p.capacity > 0 && len(p.data)-1 == p.capacity {
-		p.m.RUnlock()
-		return ErrOutOfCapacity
-	}
-	p.m.RUnlock()
+func (p *PriorityArrayQueue[T]) isFull() bool {
+	return p.capacity > 0 && len(p.data)-1 == p.capacity
+}
 
+func (p *PriorityArrayQueue[T]) Enqueue(t T) error {
 	p.m.Lock()
 	defer p.m.Unlock()
-	if p.capacity > 0 && len(p.data)-1 == p.capacity {
-		return ErrOutOfCapacity
+	if p.isFull() {
+		return errOutOfCapacity
 	}
 
 	p.data = append(p.data, t)
@@ -75,26 +73,24 @@ func (p *PriorityArrayQueue[T]) Enqueue(t T) error {
 }
 
 func (p *PriorityArrayQueue[T]) Dequeue() (T, error) {
-	p.m.RLock()
-	if len(p.data) < 2 {
-		t := new(T)
-		p.m.RUnlock()
-		return *t, ErrEmptyQueue
-	}
-	p.m.RUnlock()
-
 	p.m.Lock()
 	defer p.m.Unlock()
 
 	if len(p.data) < 2 {
 		t := new(T)
-		return *t, ErrEmptyQueue
+		return *t, errEmptyQueue
 	}
+
 	pop := p.data[1]
 	p.data[1] = p.data[len(p.data)-1]
 	p.data = p.data[:len(p.data)-1]
+	p.reduceCapacityIfNecessary()
 	p.heapify(p.data, len(p.data)-1, 1)
 	return pop, nil
+}
+
+func (p *PriorityArrayQueue[T]) reduceCapacityIfNecessary() {
+
 }
 
 func (p *PriorityArrayQueue[T]) heapify(data []T, n, i int) {
