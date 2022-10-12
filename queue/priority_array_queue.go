@@ -23,8 +23,8 @@ import (
 )
 
 var (
-	errOutOfCapacity = errors.New("超出最大容量限制")
-	errEmptyQueue    = errors.New("队列为空")
+	errOutOfCapacity = errors.New("ekit: 超出最大容量限制")
+	errEmptyQueue    = errors.New("ekit: 队列为空")
 )
 
 // PriorityArrayQueue 是一个基于小顶堆的优先队列
@@ -83,8 +83,8 @@ func (p *PriorityArrayQueue[T]) Dequeue() (T, error) {
 	defer p.m.Unlock()
 
 	if len(p.data) < 2 {
-		t := new(T)
-		return *t, errEmptyQueue
+		var t T
+		return t, errEmptyQueue
 	}
 
 	pop := p.data[1]
