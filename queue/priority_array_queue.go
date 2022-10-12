@@ -16,6 +16,7 @@ package queue
 
 import (
 	"errors"
+	"github.com/gotomicro/ekit/internal/slice"
 	"sync"
 
 	"github.com/gotomicro/ekit"
@@ -95,27 +96,7 @@ func (p *PriorityArrayQueue[T]) Dequeue() (T, error) {
 }
 
 func (p *PriorityArrayQueue[T]) shrinkIfNecessary() {
-	calCap := func(c, l int) int {
-		if c <= 64 {
-			return c
-		}
-		if c > 2048 && (c/l >= 2) {
-			factor := 0.625
-			return int(float32(c) * float32(factor))
-		}
-		if c <= 2048 && (c/l >= 4) {
-			return c / 2
-		}
-		return c
-	}
-	c, l := p.capacity, len(p.data)-1
-	n := calCap(c, l)
-	if n == c {
-		return
-	}
-	s := make([]T, 0, n+1)
-	s = append(s, p.data...)
-	p.data = s
+	p.data = slice.Shrink[T](p.data)
 	p.calCapacity()
 }
 

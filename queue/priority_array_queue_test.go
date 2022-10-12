@@ -281,7 +281,7 @@ func TestPriorityArrayQueue_Shrink(t *testing.T) {
 			originCap:   1000,
 			enqueueLoop: 20,
 			dequeueLoop: 5,
-			expectCap:   62,
+			expectCap:   61,
 		},
 		{
 			name:        "小于2048, 超过1/4",
@@ -295,14 +295,14 @@ func TestPriorityArrayQueue_Shrink(t *testing.T) {
 			originCap:   3000,
 			enqueueLoop: 400,
 			dequeueLoop: 40,
-			expectCap:   937,
+			expectCap:   936,
 		},
 		{
 			name:        "大于2048，不足一半",
 			originCap:   3000,
 			enqueueLoop: 60,
 			dequeueLoop: 40,
-			expectCap:   58,
+			expectCap:   57,
 		},
 		{
 			name:        "大于2048，大于一半",
