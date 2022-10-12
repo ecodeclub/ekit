@@ -97,10 +97,6 @@ func (p *PriorityArrayQueue[T]) Dequeue() (T, error) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	//if len(p.data) < 2 {
-	//	var t T
-	//	return t, errEmptyQueue
-	//}
 	if p.isEmpty() {
 		var t T
 		return t, errEmptyQueue
