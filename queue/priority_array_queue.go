@@ -16,8 +16,9 @@ package queue
 
 import (
 	"errors"
-	"github.com/gotomicro/ekit/internal/slice"
 	"sync"
+
+	"github.com/gotomicro/ekit/internal/slice"
 
 	"github.com/gotomicro/ekit"
 )
@@ -60,6 +61,20 @@ func (p *PriorityArrayQueue[T]) isFull() bool {
 	return p.capacity > 0 && len(p.data)-1 == p.capacity
 }
 
+func (p *PriorityArrayQueue[T]) isEmpty() bool {
+	return len(p.data) < 2
+}
+
+func (p *PriorityArrayQueue[T]) Peek() (T, error) {
+	p.m.RLock()
+	defer p.m.RUnlock()
+	if p.isEmpty() {
+		var t T
+		return t, errEmptyQueue
+	}
+	return p.data[1], nil
+}
+
 func (p *PriorityArrayQueue[T]) Enqueue(t T) error {
 	p.m.Lock()
 	defer p.m.Unlock()
@@ -82,7 +97,11 @@ func (p *PriorityArrayQueue[T]) Dequeue() (T, error) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	if len(p.data) < 2 {
+	//if len(p.data) < 2 {
+	//	var t T
+	//	return t, errEmptyQueue
+	//}
+	if p.isEmpty() {
 		var t T
 		return t, errEmptyQueue
 	}
