@@ -16,7 +16,6 @@ package queue
 
 import (
 	"errors"
-	"sync"
 
 	"github.com/gotomicro/ekit/internal/slice"
 
@@ -24,62 +23,52 @@ import (
 )
 
 var (
-	errOutOfCapacity = errors.New("ekit: 超出最大容量限制")
-	errEmptyQueue    = errors.New("ekit: 队列为空")
+	ErrOutOfCapacity = errors.New("ekit: 超出最大容量限制")
+	ErrEmptyQueue    = errors.New("ekit: 队列为空")
 )
 
-// PriorityArrayQueue 是一个基于小顶堆的优先队列
-type PriorityArrayQueue[T any] struct {
+// PriorityQueue 是一个基于小顶堆的优先队列
+type PriorityQueue[T any] struct {
 	// 用于比较前一个元素是否小于后一个元素
 	compare ekit.Comparator[T]
 	// 队列容量
 	capacity int
 	// 队列中的元素，为便于计算父子节点的index，0位置留空，根节点从1开始
 	data []T
-
-	m sync.RWMutex
 }
 
-func (p *PriorityArrayQueue[T]) Len() int {
-	p.m.RLock()
-	defer p.m.RUnlock()
+func (p *PriorityQueue[T]) Len() int {
 	return len(p.data) - 1
 }
 
-func (p *PriorityArrayQueue[T]) Cap() int {
-	p.m.RLock()
-	defer p.m.RUnlock()
+func (p *PriorityQueue[T]) Cap() int {
 	return p.capacity
 }
 
-func (p *PriorityArrayQueue[T]) calCapacity() int {
+func (p *PriorityQueue[T]) calCapacity() int {
 	p.capacity = cap(p.data) - 1
 	return p.capacity
 }
 
-func (p *PriorityArrayQueue[T]) isFull() bool {
+func (p *PriorityQueue[T]) isFull() bool {
 	return p.capacity > 0 && len(p.data)-1 == p.capacity
 }
 
-func (p *PriorityArrayQueue[T]) isEmpty() bool {
+func (p *PriorityQueue[T]) isEmpty() bool {
 	return len(p.data) < 2
 }
 
-func (p *PriorityArrayQueue[T]) Peek() (T, error) {
-	p.m.RLock()
-	defer p.m.RUnlock()
+func (p *PriorityQueue[T]) Peek() (T, error) {
 	if p.isEmpty() {
 		var t T
-		return t, errEmptyQueue
+		return t, ErrEmptyQueue
 	}
 	return p.data[1], nil
 }
 
-func (p *PriorityArrayQueue[T]) Enqueue(t T) error {
-	p.m.Lock()
-	defer p.m.Unlock()
+func (p *PriorityQueue[T]) Enqueue(t T) error {
 	if p.isFull() {
-		return errOutOfCapacity
+		return ErrOutOfCapacity
 	}
 
 	p.data = append(p.data, t)
@@ -93,13 +82,10 @@ func (p *PriorityArrayQueue[T]) Enqueue(t T) error {
 	return nil
 }
 
-func (p *PriorityArrayQueue[T]) Dequeue() (T, error) {
-	p.m.Lock()
-	defer p.m.Unlock()
-
+func (p *PriorityQueue[T]) Dequeue() (T, error) {
 	if p.isEmpty() {
 		var t T
-		return t, errEmptyQueue
+		return t, ErrEmptyQueue
 	}
 
 	pop := p.data[1]
@@ -110,12 +96,12 @@ func (p *PriorityArrayQueue[T]) Dequeue() (T, error) {
 	return pop, nil
 }
 
-func (p *PriorityArrayQueue[T]) shrinkIfNecessary() {
+func (p *PriorityQueue[T]) shrinkIfNecessary() {
 	p.data = slice.Shrink[T](p.data)
 	p.calCapacity()
 }
 
-func (p *PriorityArrayQueue[T]) heapify(data []T, n, i int) {
+func (p *PriorityQueue[T]) heapify(data []T, n, i int) {
 	minPos := i
 	for {
 		if left := i * 2; left <= n && p.compare(data[left], data[minPos]) < 0 {
@@ -132,53 +118,23 @@ func (p *PriorityArrayQueue[T]) heapify(data []T, n, i int) {
 	}
 }
 
-func (p *PriorityArrayQueue[T]) buildHeap() {
+func (p *PriorityQueue[T]) buildHeap() {
 	last := len(p.data) - 1
 	for i := last / 2; i > 0; i-- {
 		p.heapify(p.data, len(p.data)-1, i)
 	}
 }
 
-func NewBoundlessPriorityArrayQueue[T any](compare ekit.Comparator[T]) *PriorityArrayQueue[T] {
-	return &PriorityArrayQueue[T]{
-		capacity: 0,
-		data:     make([]T, 1, 64),
-		compare:  compare,
+// NewPriorityQueue 创建优先队列 capacity <= 0 时，为无界队列
+func NewPriorityQueue[T any](capacity int, compare ekit.Comparator[T]) *PriorityQueue[T] {
+	sliceCap := capacity + 1
+	if capacity < 1 {
+		capacity = 0
+		sliceCap = 64
 	}
-}
-
-func NewPriorityArrayQueue[T any](capacity int, compare ekit.Comparator[T]) *PriorityArrayQueue[T] {
-	return &PriorityArrayQueue[T]{
+	return &PriorityQueue[T]{
 		capacity: capacity,
-		data:     make([]T, 1, capacity+1),
+		data:     make([]T, 1, sliceCap),
 		compare:  compare,
-	}
-}
-
-func NewPriorityArrayQueueFromArray[T any](data []T, compare ekit.Comparator[T], opts ...PriorityArrayQueueOption[T]) *PriorityArrayQueue[T] {
-	p := &PriorityArrayQueue[T]{
-		capacity: len(data),
-		data:     make([]T, 1, len(data)+1),
-		compare:  compare,
-	}
-	p.data = append(p.data, data...)
-	p.buildHeap()
-	for _, opt := range opts {
-		opt(p)
-	}
-	return p
-}
-
-type PriorityArrayQueueOption[T any] func(p *PriorityArrayQueue[T])
-
-func WithNewCapacity[T any](capacity int) PriorityArrayQueueOption[T] {
-	return func(p *PriorityArrayQueue[T]) {
-		if capacity <= p.capacity {
-			return
-		}
-		p.capacity = capacity
-		old := p.data[1:]
-		p.data = make([]T, 1, capacity+1)
-		p.data = append(p.data, old...)
 	}
 }
