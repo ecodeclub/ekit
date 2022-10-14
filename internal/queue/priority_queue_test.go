@@ -17,8 +17,6 @@ package queue
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/gotomicro/ekit"
 
 	"github.com/stretchr/testify/assert"
@@ -26,7 +24,6 @@ import (
 
 func TestNewPriorityQueue(t *testing.T) {
 	data := []int{6, 5, 4, 3, 2, 1}
-	expected := []int{1, 2, 3, 4, 5, 6}
 	var compare ekit.Comparator[int] = func(a, b int) int {
 		if a < b {
 			return -1
@@ -40,16 +37,22 @@ func TestNewPriorityQueue(t *testing.T) {
 		name     string
 		q        *PriorityQueue[int]
 		capacity int
+		data     []int
+		expected []int
 	}{
 		{
 			name:     "无边界",
 			q:        NewPriorityQueue(0, compare),
 			capacity: 0,
+			data:     data,
+			expected: []int{1, 2, 3, 4, 5, 6},
 		},
 		{
 			name:     "有边界 ",
 			q:        NewPriorityQueue(len(data), compare),
 			capacity: len(data),
+			data:     data,
+			expected: []int{1, 2, 3, 4, 5, 6},
 		},
 	}
 	for _, tc := range testCases {
@@ -57,7 +60,7 @@ func TestNewPriorityQueue(t *testing.T) {
 			assert.Equal(t, 0, tc.q.Len())
 			for _, d := range data {
 				err := tc.q.Enqueue(d)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				if err != nil {
 					return
 				}
@@ -67,13 +70,13 @@ func TestNewPriorityQueue(t *testing.T) {
 			res := make([]int, 0, len(data))
 			for tc.q.Len() > 0 {
 				el, err := tc.q.Dequeue()
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				if err != nil {
 					return
 				}
 				res = append(res, el)
 			}
-			assert.Equal(t, expected, res)
+			assert.Equal(t, tc.expected, res)
 		})
 
 	}
@@ -116,14 +119,14 @@ func TestPriorityQueue_Peek(t *testing.T) {
 			q := NewPriorityQueue[int](tc.capacity, compare)
 			for _, el := range tc.data {
 				err := q.Enqueue(el)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				if err != nil {
 					return
 				}
 			}
 			for q.Len() > 0 {
 				peek, err := q.Peek()
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				el, _ := q.Dequeue()
 				assert.Equal(t, el, peek)
 			}
@@ -151,6 +154,8 @@ func TestPriorityQueue_Dequeue(t *testing.T) {
 		name      string
 		capacity  int
 		data      []int
+		pivot     int
+		remain    []int
 		wantSlice []int
 		wantErr   error
 	}{
@@ -158,13 +163,17 @@ func TestPriorityQueue_Dequeue(t *testing.T) {
 			name:      "无边界",
 			capacity:  0,
 			data:      data,
+			pivot:     2,
+			remain:    []int{0, 4, 6, 5},
 			wantSlice: expected,
 			wantErr:   ErrEmptyQueue,
 		},
 		{
 			name:      "有边界",
-			capacity:  0,
+			capacity:  len(data),
 			data:      data,
+			pivot:     3,
+			remain:    []int{0, 5, 6},
 			wantSlice: expected,
 			wantErr:   ErrEmptyQueue,
 		},
@@ -174,19 +183,24 @@ func TestPriorityQueue_Dequeue(t *testing.T) {
 			q := NewPriorityQueue[int](tc.capacity, compare)
 			for _, el := range tc.data {
 				err := q.Enqueue(el)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				if err != nil {
 					return
 				}
 			}
 			res := make([]int, 0, len(tc.data))
+			i := 0
 			for q.Len() > 0 {
 				el, err := q.Dequeue()
-				assert.Nil(t, err)
+				assert.NoError(t, err)
+				if i == tc.pivot {
+					assert.Equal(t, tc.remain, q.data)
+				}
 				if err != nil {
 					return
 				}
 				res = append(res, el)
+				i++
 			}
 			assert.Equal(t, tc.wantSlice, res)
 			_, err := q.Dequeue()
@@ -198,7 +212,6 @@ func TestPriorityQueue_Dequeue(t *testing.T) {
 
 func TestPriorityQueue_Enqueue(t *testing.T) {
 	data := []int{6, 5, 4, 3, 2, 1}
-	expected := []int{1, 2, 3, 4, 5, 6}
 	var compare ekit.Comparator[int] = func(a, b int) int {
 		if a < b {
 			return -1
@@ -214,28 +227,47 @@ func TestPriorityQueue_Enqueue(t *testing.T) {
 		capacity  int
 		data      []int
 		wantSlice []int
+		pivot     int
+		pivotData []int
 		wantErr   error
 	}{
 		{
-			name:     "队列满",
-			capacity: len(data),
-			data:     data,
-			wantErr:  ErrOutOfCapacity,
+			name:      "队列满",
+			capacity:  len(data),
+			data:      data,
+			pivot:     2,
+			pivotData: []int{0, 4, 6, 5},
+			wantErr:   ErrOutOfCapacity,
+			wantSlice: []int{0, 1, 3, 2, 6, 4, 5},
 		},
 		{
 			name:      "队列不满",
 			capacity:  len(data) * 2,
 			data:      data,
-			wantSlice: expected,
+			pivot:     3,
+			pivotData: []int{0, 3, 4, 5, 6},
+			wantSlice: []int{0, 1, 3, 2, 6, 4, 5},
+		},
+		{
+			name:      "无界队列",
+			capacity:  len(data) * 2,
+			data:      data,
+			pivot:     3,
+			pivotData: []int{0, 3, 4, 5, 6},
+			wantSlice: []int{0, 1, 3, 2, 6, 4, 5},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			q := NewPriorityQueue[int](tc.capacity, compare)
-			for _, el := range tc.data {
+			for i, el := range tc.data {
 				err := q.Enqueue(el)
-				require.NoError(t, err)
+				assert.NoError(t, err)
+				if i == tc.pivot {
+					assert.Equal(t, tc.pivotData, q.data)
+				}
 			}
+			assert.Equal(t, tc.wantSlice, q.data)
 			if q.Len() == q.capacity {
 				err := q.Enqueue(1)
 				assert.Equal(t, tc.wantErr, err)
@@ -245,7 +277,7 @@ func TestPriorityQueue_Enqueue(t *testing.T) {
 			}
 			for _, el := range tc.data {
 				err := q.Enqueue(el)
-				require.NoError(t, err)
+				assert.NoError(t, err)
 				if err != nil {
 					return
 				}
