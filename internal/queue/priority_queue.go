@@ -118,13 +118,6 @@ func (p *PriorityQueue[T]) heapify(data []T, n, i int) {
 	}
 }
 
-func (p *PriorityQueue[T]) buildHeap() {
-	last := len(p.data) - 1
-	for i := last / 2; i > 0; i-- {
-		p.heapify(p.data, len(p.data)-1, i)
-	}
-}
-
 // NewPriorityQueue 创建优先队列 capacity <= 0 时，为无界队列
 func NewPriorityQueue[T any](capacity int, compare ekit.Comparator[T]) *PriorityQueue[T] {
 	sliceCap := capacity + 1

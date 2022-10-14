@@ -225,6 +225,7 @@ func TestConcurrentPriorityQueue_Dequeue(t *testing.T) {
 			}
 			wg.Wait()
 			assert.Equal(t, tc.remain, q.Len())
+			assert.Equal(t, tc.errCount, len(errChan))
 			close(resultChan)
 			prev := -1
 			for {
@@ -232,15 +233,12 @@ func TestConcurrentPriorityQueue_Dequeue(t *testing.T) {
 				if !ok {
 					break
 				}
-				//assert.Less(t, prev, el)
+				// assert.Less(t, prev, el)
 				if prev > el {
-					t.Log(prev, el)
-					//return
+					return
 				}
 				prev = el
 			}
-
-			assert.Equal(t, tc.errCount, len(errChan))
 
 		})
 
