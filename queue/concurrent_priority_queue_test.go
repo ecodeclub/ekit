@@ -17,11 +17,11 @@ package queue
 import (
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/gotomicro/ekit"
 	"github.com/gotomicro/ekit/internal/queue"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -30,72 +30,54 @@ var (
 )
 
 func TestNewConcurrentPriorityQueue(t *testing.T) {
-	data := []int{6, 5, 4, 3, 2, 1}
-	expected := []int{1, 2, 3, 4, 5, 6}
-	var compare ekit.Comparator[int] = func(a, b int) int {
-		if a < b {
-			return -1
-		}
-		if a == b {
-			return 0
-		}
-		return 1
-	}
 	testCases := []struct {
 		name     string
 		q        *ConcurrentPriorityQueue[int]
 		capacity int
+		data     []int
+		expect   []int
 	}{
 		{
 			name:     "无边界",
-			q:        NewConcurrentPriorityQueue(0, compare),
+			q:        NewConcurrentPriorityQueue(0, compare()),
 			capacity: 0,
+			data:     []int{6, 5, 4, 3, 2, 1},
+			expect:   []int{1, 2, 3, 4, 5, 6},
 		},
 		{
 			name:     "有边界 ",
-			q:        NewConcurrentPriorityQueue(len(data), compare),
-			capacity: len(data),
+			q:        NewConcurrentPriorityQueue(6, compare()),
+			capacity: 6,
+			data:     []int{6, 5, 4, 3, 2, 1},
+			expect:   []int{1, 2, 3, 4, 5, 6},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, 0, tc.q.Len())
-			for _, d := range data {
-				err := tc.q.Enqueue(d)
-				assert.NoError(t, err)
-				if err != nil {
-					return
-				}
+			for _, d := range tc.data {
+				require.NoError(t, tc.q.Enqueue(d))
 			}
 			assert.Equal(t, tc.capacity, tc.q.Cap())
-			assert.Equal(t, len(data), tc.q.Len())
-			res := make([]int, 0, len(data))
+			assert.Equal(t, len(tc.data), tc.q.Len())
+			res := make([]int, 0, len(tc.data))
 			for tc.q.Len() > 0 {
+				head, err := tc.q.Peek()
+				require.NoError(t, err)
 				el, err := tc.q.Dequeue()
-				assert.NoError(t, err)
-				if err != nil {
-					return
-				}
+				require.NoError(t, err)
+				assert.Equal(t, head, el)
 				res = append(res, el)
 			}
-			assert.Equal(t, expected, res)
+			assert.Equal(t, tc.expect, res)
 		})
 
 	}
 
 }
 
+// 多个go routine 执行入队操作，完成后，主携程把元素逐一出队，只要有序，可以认为并发入队没问题
 func TestConcurrentPriorityQueue_Enqueue(t *testing.T) {
-	var compare ekit.Comparator[int] = func(a, b int) int {
-		if a < b {
-			return -1
-		}
-		if a == b {
-			return 0
-		}
-		return 1
-	}
-
 	testCases := []struct {
 		name        string
 		capacity    int
@@ -123,7 +105,7 @@ func TestConcurrentPriorityQueue_Enqueue(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			q := NewConcurrentPriorityQueue[int](tc.capacity, compare)
+			q := NewConcurrentPriorityQueue[int](tc.capacity, compare())
 			wg := sync.WaitGroup{}
 			wg.Add(tc.concurrency)
 			errChan := make(chan error, tc.capacity)
@@ -140,29 +122,25 @@ func TestConcurrentPriorityQueue_Enqueue(t *testing.T) {
 				}(i)
 			}
 			wg.Wait()
+			assert.Equal(t, tc.errCount, len(errChan))
 			prev := -1
 			for q.Len() > 0 {
 				el, _ := q.Dequeue()
 				assert.Less(t, prev, el)
+
+				// 入队元素总数小于capacity时，应该所有元素都入队了，出队顺序应该依次加1
+				if prev > -1 && len(errChan) == 0 {
+					assert.Equal(t, prev+1, el)
+				}
 				prev = el
 			}
-			assert.Equal(t, tc.errCount, len(errChan))
 		})
 
 	}
 }
 
+// 主要通过测试多个协程并发出队时，每个协程内出队元素有序，间接确认并发安全
 func TestConcurrentPriorityQueue_Dequeue(t *testing.T) {
-	var compare ekit.Comparator[int] = func(a, b int) int {
-		if a < b {
-			return -1
-		}
-		if a == b {
-			return 0
-		}
-		return 1
-	}
-
 	testCases := []struct {
 		name        string
 		total       int
@@ -179,7 +157,6 @@ func TestConcurrentPriorityQueue_Dequeue(t *testing.T) {
 			concurrency: 100,
 			perRoutine:  9,
 			remain:      10,
-			wantErr:     errEmptyQueue,
 		},
 		{
 			name:        "入队小于出队",
@@ -193,54 +170,76 @@ func TestConcurrentPriorityQueue_Dequeue(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			q := NewConcurrentPriorityQueue[int](tc.total, compare)
-			resultChan := make(chan int, tc.concurrency*tc.perRoutine)
-			errChan := make(chan error, tc.errCount)
+			q := NewConcurrentPriorityQueue[int](tc.total, compare())
 			for i := tc.total; i > 0; i-- {
-				err := q.Enqueue(i)
-				assert.NoError(t, err)
-				if err != nil {
-					return
-				}
+				require.NoError(t, q.Enqueue(i))
 			}
+
+			resultChan := make(chan int, tc.concurrency*tc.perRoutine)
+			disOrderChan := make(chan bool, tc.concurrency*tc.perRoutine)
+			errChan := make(chan error, tc.errCount)
 			wg := sync.WaitGroup{}
-			wg.Add(tc.concurrency * tc.perRoutine)
+			wg.Add(tc.concurrency)
+
 			for i := 0; i < tc.concurrency; i++ {
 				go func() {
+					prev := -1
 					for i := 0; i < tc.perRoutine; i++ {
 						el, err := q.Dequeue()
 						if err != nil {
-							assert.Equal(t, tc.wantErr, err)
+							// 如果出队报错，把错误放到error通道，以便后续检查错误的内容和数量是否符合预期
 							errChan <- err
-						}
-						go func() {
-							// TODO: 更合理的计算时间
-							d := el
-							time.Sleep(time.Millisecond * time.Duration(d))
+						} else {
+							// 如果出队不报错，则检查出队结果是否符合预期
 							resultChan <- el
-							wg.Done()
-						}()
+							if prev >= el {
+								disOrderChan <- false
+							}
+							prev = el
+						}
+
 					}
+					wg.Done()
 				}()
 			}
 			wg.Wait()
-			assert.Equal(t, tc.remain, q.Len())
-			assert.Equal(t, tc.errCount, len(errChan))
 			close(resultChan)
-			prev := -1
-			for {
-				el, ok := <-resultChan
-				if !ok {
-					break
-				}
-				// assert.Less(t, prev, el)
-				if prev > el {
-					return
-				}
-				prev = el
+			close(errChan)
+			close(disOrderChan)
+
+			// 检查并发出队的元素数量，是否符合预期
+			assert.Equal(t, tc.remain, q.Len())
+
+			// 检查所有协程中的执行错误，是否符合预期
+			assert.Equal(t, tc.errCount, len(errChan))
+			for err := range errChan {
+				assert.Equal(t, tc.wantErr, err)
+			}
+
+			// 每个协程内部，出队元素应该有序，检查是否发现无序的情况
+			assert.Equal(t, 0, len(disOrderChan))
+
+			// 每个协程的每次出队操作，出队元素都应该不同，检查是否符合预期
+			resultSet := make(map[int]bool)
+			for el := range resultChan {
+				_, ok := resultSet[el]
+				assert.Equal(t, false, ok)
+				resultSet[el] = true
 			}
 
 		})
 
+	}
+}
+
+func compare() ekit.Comparator[int] {
+	return func(a, b int) int {
+		if a < b {
+			return -1
+		}
+		if a == b {
+			return 0
+		}
+		return 1
 	}
 }
