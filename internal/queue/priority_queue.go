@@ -48,6 +48,9 @@ func (p *PriorityQueue[T]) Cap() int {
 }
 
 func (p *PriorityQueue[T]) calCapacity() int {
+	if p.capacity < 1 {
+		return 0
+	}
 	p.capacity = cap(p.data) - 1
 	return p.capacity
 }
@@ -99,7 +102,7 @@ func (p *PriorityQueue[T]) Dequeue() (T, error) {
 }
 
 func (p *PriorityQueue[T]) shrinkIfNecessary() {
-	if p.capacity < 1 {
+	if p.capacity > 0 {
 		return
 	}
 	p.data = slice.Shrink[T](p.data)

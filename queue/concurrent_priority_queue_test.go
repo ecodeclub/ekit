@@ -139,7 +139,7 @@ func TestConcurrentPriorityQueue_Enqueue(t *testing.T) {
 	}
 }
 
-// 主要通过测试多个协程并发出队时，每个协程内出队元素有序，间接确认并发安全
+// 预先入队一组数据，通过测试多个协程并发出队时，每个协程内出队元素有序，间接确认并发安全
 func TestConcurrentPriorityQueue_Dequeue(t *testing.T) {
 	testCases := []struct {
 		name        string
@@ -229,6 +229,68 @@ func TestConcurrentPriorityQueue_Dequeue(t *testing.T) {
 
 		})
 
+	}
+}
+
+// 测试同时并发出入队。只要并发安全，并发出入队后的剩余元素数量+报错数量应该符合预期
+// TODO 有待设计更好的并发出入队测试方案
+func TestConcurrentPriorityQueue_EnqueueDequeue(t *testing.T) {
+	testCases := []struct {
+		name      string
+		enqueue   int
+		dequeue   int
+		wantSlice []int
+		remain    int
+		wantErr   error
+		errCount  int
+	}{
+		{
+			name:    "出队等于入队",
+			enqueue: 500,
+			dequeue: 500,
+			remain:  0,
+		},
+		{
+			name:    "出队小于入队",
+			enqueue: 500,
+			dequeue: 400,
+			remain:  100,
+		},
+		{
+			name:    "出队大于入队",
+			enqueue: 500,
+			dequeue: 600,
+			remain:  -100,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			q := NewConcurrentPriorityQueue[int](0, compare())
+			errChan := make(chan error, tc.dequeue)
+			wg := sync.WaitGroup{}
+			wg.Add(tc.enqueue + tc.dequeue)
+			go func() {
+				for i := 0; i < tc.enqueue; i++ {
+					go func(i int) {
+						require.NoError(t, q.Enqueue(i))
+						wg.Done()
+					}(i)
+				}
+			}()
+			go func() {
+				for i := 0; i < tc.dequeue; i++ {
+					_, err := q.Dequeue()
+					if err != nil {
+						errChan <- err
+					}
+					wg.Done()
+				}
+			}()
+
+			wg.Wait()
+			close(errChan)
+			assert.Equal(t, tc.remain, q.Len()-len(errChan))
+		})
 	}
 }
 
