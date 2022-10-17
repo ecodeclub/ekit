@@ -28,6 +28,8 @@ var (
 )
 
 // PriorityQueue 是一个基于小顶堆的优先队列
+// 当capacity= 0时，为无界队列，切片容量会动态扩缩容
+// 当capacity!=0 时，为有界队列，初始化后就固定容量，不会扩缩容
 type PriorityQueue[T any] struct {
 	// 用于比较前一个元素是否小于后一个元素
 	compare ekit.Comparator[T]
@@ -97,6 +99,9 @@ func (p *PriorityQueue[T]) Dequeue() (T, error) {
 }
 
 func (p *PriorityQueue[T]) shrinkIfNecessary() {
+	if p.capacity < 1 {
+		return
+	}
 	p.data = slice.Shrink[T](p.data)
 	p.calCapacity()
 }

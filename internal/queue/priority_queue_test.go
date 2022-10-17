@@ -370,6 +370,13 @@ func TestPriorityQueue_Shrink(t *testing.T) {
 		expectCap   int
 	}{
 		{
+			name:        "无界队列",
+			originCap:   0,
+			enqueueLoop: 3000,
+			dequeueLoop: 2999,
+			expectCap:   0,
+		},
+		{
 			name:        "小于64",
 			originCap:   32,
 			enqueueLoop: 6,
