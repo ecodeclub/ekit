@@ -22,43 +22,43 @@ import (
 )
 
 type ConcurrentPriorityQueue[T any] struct {
-	queue.PriorityQueue[T]
-	m sync.RWMutex
+	pg queue.PriorityQueue[T]
+	m  sync.RWMutex
 }
 
 func (c *ConcurrentPriorityQueue[T]) Len() int {
 	c.m.RLock()
 	defer c.m.RUnlock()
-	return c.PriorityQueue.Len()
+	return c.pg.Len()
 }
 
 func (c *ConcurrentPriorityQueue[T]) Cap() int {
 	c.m.RLock()
 	defer c.m.RUnlock()
-	return c.PriorityQueue.Cap()
+	return c.pg.Cap()
 }
 
 func (c *ConcurrentPriorityQueue[T]) Peek() (T, error) {
 	c.m.RLock()
 	defer c.m.RUnlock()
-	return c.PriorityQueue.Peek()
+	return c.pg.Peek()
 }
 
 func (c *ConcurrentPriorityQueue[T]) Enqueue(t T) error {
 	c.m.Lock()
 	defer c.m.Unlock()
-	return c.PriorityQueue.Enqueue(t)
+	return c.pg.Enqueue(t)
 }
 
 func (c *ConcurrentPriorityQueue[T]) Dequeue() (T, error) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	return c.PriorityQueue.Dequeue()
+	return c.pg.Dequeue()
 }
 
 // NewConcurrentPriorityQueue 创建优先队列 capacity <= 0 时，为无界队列
 func NewConcurrentPriorityQueue[T any](capacity int, compare ekit.Comparator[T]) *ConcurrentPriorityQueue[T] {
 	return &ConcurrentPriorityQueue[T]{
-		PriorityQueue: *queue.NewPriorityQueue[T](capacity, compare),
+		pg: *queue.NewPriorityQueue[T](capacity, compare),
 	}
 }
