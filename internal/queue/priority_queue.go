@@ -28,8 +28,8 @@ var (
 )
 
 // PriorityQueue 是一个基于小顶堆的优先队列
-// 当capacity= 0时，为无界队列，切片容量会动态扩缩容
-// 当capacity!=0 时，为有界队列，初始化后就固定容量，不会扩缩容
+// 当capacity <= 0时，为无界队列，切片容量会动态扩缩容
+// 当capacity > 0 时，为有界队列，初始化后就固定容量，不会扩缩容
 type PriorityQueue[T any] struct {
 	// 用于比较前一个元素是否小于后一个元素
 	compare ekit.Comparator[T]
@@ -47,12 +47,8 @@ func (p *PriorityQueue[T]) Cap() int {
 	return p.capacity
 }
 
-func (p *PriorityQueue[T]) calCapacity() int {
-	if p.capacity < 1 {
-		return 0
-	}
-	p.capacity = cap(p.data) - 1
-	return p.capacity
+func (p *PriorityQueue[T]) IsBoundless() bool {
+	return p.capacity <= 0
 }
 
 func (p *PriorityQueue[T]) isFull() bool {
@@ -102,11 +98,9 @@ func (p *PriorityQueue[T]) Dequeue() (T, error) {
 }
 
 func (p *PriorityQueue[T]) shrinkIfNecessary() {
-	if p.capacity > 0 {
-		return
+	if p.IsBoundless() {
+		p.data = slice.Shrink[T](p.data)
 	}
-	p.data = slice.Shrink[T](p.data)
-	p.calCapacity()
 }
 
 func (p *PriorityQueue[T]) heapify(data []T, n, i int) {
@@ -126,7 +120,7 @@ func (p *PriorityQueue[T]) heapify(data []T, n, i int) {
 	}
 }
 
-// NewPriorityQueue 创建优先队列 capacity <= 0 时，为无界队列
+// NewPriorityQueue 创建优先队列 capacity <= 0 时，为无界队列，否则有有界队列
 func NewPriorityQueue[T any](capacity int, compare ekit.Comparator[T]) *PriorityQueue[T] {
 	sliceCap := capacity + 1
 	if capacity < 1 {
