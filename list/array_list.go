@@ -92,22 +92,7 @@ func (a *ArrayList[T]) Delete(index int) (T, error) {
 
 // shrink 数组缩容
 func (a *ArrayList[T]) shrink() {
-	var newCap int
-	c, l := a.Cap(), a.Len()
-	if c <= 64 {
-		return
-	}
-	if c > 2048 && (c/l >= 2) {
-		newCap = int(float32(c) * float32(0.625))
-	} else if c <= 2048 && (c/l >= 4) {
-		newCap = c / 2
-	} else {
-		// 不满足缩容
-		return
-	}
-	newSlice := make([]T, 0, newCap)
-	newSlice = append(newSlice, a.vals...)
-	a.vals = newSlice
+	a.vals = slice.Shrink(a.vals)
 }
 
 func (a *ArrayList[T]) Len() int {
