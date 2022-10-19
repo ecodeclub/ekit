@@ -243,21 +243,21 @@ func TestConcurrentPriorityQueue_EnqueueDequeue(t *testing.T) {
 	}{
 		{
 			name:    "出队等于入队",
-			enqueue: 5000,
-			dequeue: 5000,
+			enqueue: 50,
+			dequeue: 50,
 			remain:  0,
 		},
 		{
 			name:    "出队小于入队",
-			enqueue: 5000,
-			dequeue: 4000,
-			remain:  1000,
+			enqueue: 50,
+			dequeue: 40,
+			remain:  10,
 		},
 		{
 			name:    "出队大于入队",
-			enqueue: 5000,
-			dequeue: 6000,
-			remain:  -1000,
+			enqueue: 50,
+			dequeue: 60,
+			remain:  -10,
 		},
 	}
 	for _, tt := range testCases {

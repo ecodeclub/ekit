@@ -43,6 +43,7 @@ func (p *PriorityQueue[T]) Len() int {
 	return len(p.data) - 1
 }
 
+// Cap 无界队列返回0，有界队列返回创建队列时设置的值
 func (p *PriorityQueue[T]) Cap() int {
 	return p.capacity
 }
