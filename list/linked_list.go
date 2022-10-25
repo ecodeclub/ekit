@@ -14,7 +14,10 @@
 
 package list
 
-import "github.com/gotomicro/ekit/internal/errs"
+import (
+	"github.com/gotomicro/ekit/bean/option"
+	"github.com/gotomicro/ekit/internal/errs"
+)
 
 var (
 	_ List[any] = &LinkedList[any]{}
@@ -29,29 +32,48 @@ type node[T any] struct {
 
 // LinkedList 双向循环链表
 type LinkedList[T any] struct {
-	head   *node[T]
-	tail   *node[T]
-	length int
+	head     *node[T]
+	tail     *node[T]
+	length   int
+	capacity int
 }
 
 // NewLinkedList 创建一个双向循环链表
-func NewLinkedList[T any]() *LinkedList[T] {
+func NewLinkedList[T any](opts ...option.Option[LinkedList[T]]) *LinkedList[T] {
 	head := &node[T]{}
 	tail := &node[T]{next: head, prev: head}
 	head.next, head.prev = tail, tail
-	return &LinkedList[T]{
+	res := &LinkedList[T]{
 		head: head,
 		tail: tail,
 	}
+	option.Apply(res, opts...)
+	return res
 }
 
 // NewLinkedListOf 将切片转换为双向循环链表, 直接使用了切片元素的值，而没有进行复制
-func NewLinkedListOf[T any](ts []T) *LinkedList[T] {
+func NewLinkedListOf[T any](ts []T, opts ...option.Option[LinkedList[T]]) *LinkedList[T] {
 	list := NewLinkedList[T]()
 	if err := list.Append(ts...); err != nil {
 		panic(err)
 	}
+	option.Apply(list, opts...)
 	return list
+}
+
+// WithCapacityOption 用于为LinkedList设置capacity
+// 配合NewLinkedListOf()使用时，若这里设置的capacity值小于切片的长度，则用切片长度作为它的capacity
+func WithCapacityOption[T any](capacity int) option.Option[LinkedList[T]] {
+	return func(l *LinkedList[T]) {
+		if capacity < l.Len() {
+			capacity = l.Len()
+		}
+		l.capacity = capacity
+	}
+}
+
+func (l *LinkedList[T]) IsBoundless() bool {
+	return l.capacity <= 0
 }
 
 func (l *LinkedList[T]) findNode(index int) *node[T] {
@@ -86,6 +108,9 @@ func (l *LinkedList[T]) checkIndex(index int) bool {
 
 // Append 往链表最后添加元素
 func (l *LinkedList[T]) Append(ts ...T) error {
+	if !l.IsBoundless() && l.length+len(ts) > l.capacity {
+		return errs.ErrOutOfCapacity
+	}
 	for _, t := range ts {
 		node := &node[T]{prev: l.tail.prev, next: l.tail, val: t}
 		node.prev.next, node.next.prev = node, node
@@ -97,6 +122,9 @@ func (l *LinkedList[T]) Append(ts ...T) error {
 // Add 在 LinkedList 下标为 index 的位置插入一个元素
 // 当 index 等于 LinkedList 长度等同于 Append
 func (l *LinkedList[T]) Add(index int, t T) error {
+	if !l.IsBoundless() && l.length == l.capacity {
+		return errs.ErrOutOfCapacity
+	}
 	if index < 0 || index > l.length {
 		return errs.NewErrIndexOutOfRange(l.length, index)
 	}
@@ -134,12 +162,14 @@ func (l *LinkedList[T]) Delete(index int) (T, error) {
 	return node.val, nil
 }
 
+// Len 返回LinkedList当前长度
 func (l *LinkedList[T]) Len() int {
 	return l.length
 }
 
+// Cap 返回LinkedList的容量
 func (l *LinkedList[T]) Cap() int {
-	return l.Len()
+	return l.capacity
 }
 
 func (l *LinkedList[T]) Range(fn func(index int, t T) error) error {

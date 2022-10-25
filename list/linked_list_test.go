@@ -18,12 +18,15 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gotomicro/ekit/internal/errs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"math/rand"
 	"testing"
 )
 
+// 使用无界链表，不考虑容量限制，测试Add行为本身是否符合预期
 func TestLinkedList_Add(t *testing.T) {
 	testCases := []struct {
 		name           string
@@ -89,6 +92,72 @@ func TestLinkedList_Add(t *testing.T) {
 			index:          0,
 			wantErr:        nil,
 			wantLinkedList: NewLinkedListOf([]int{100}),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.list.Add(tc.index, tc.newVal)
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantLinkedList.AsSlice(), tc.list.AsSlice())
+		})
+	}
+}
+
+// 测试有界链表与容量边界相关的Add行为是否符合预期
+func TestBoundedLinkedList_Add(t *testing.T) {
+	testCases := []struct {
+		name           string
+		list           *LinkedList[int]
+		index          int
+		newVal         int
+		wantLinkedList *LinkedList[int]
+		wantErr        error
+	}{
+		{
+			name:           "under capacity, add to head",
+			list:           NewLinkedListOf[int]([]int{1, 2, 3}, WithCapacityOption[int](10)),
+			newVal:         100,
+			index:          0,
+			wantLinkedList: NewLinkedListOf[int]([]int{100, 1, 2, 3}),
+		},
+		{
+			name:           "under capacity, add in middle",
+			list:           NewLinkedListOf[int]([]int{1, 2, 3}, WithCapacityOption[int](10)),
+			newVal:         100,
+			index:          1,
+			wantLinkedList: NewLinkedListOf[int]([]int{1, 100, 2, 3}),
+		},
+		{
+			name:           "under capacity, add to tail",
+			list:           NewLinkedListOf[int]([]int{1, 2, 3}, WithCapacityOption[int](10)),
+			newVal:         100,
+			index:          3,
+			wantLinkedList: NewLinkedListOf[int]([]int{1, 2, 3, 100}),
+		},
+		{
+			name:    "out of capacity, add to head",
+			list:    NewLinkedListOf([]int{1, 2, 3}, WithCapacityOption[int](0)),
+			newVal:  100,
+			index:   0,
+			wantErr: errs.ErrOutOfCapacity,
+		},
+		{
+			name:    "out of capacity, add in middle",
+			list:    NewLinkedListOf([]int{1, 2, 3}, WithCapacityOption[int](0)),
+			newVal:  100,
+			index:   1,
+			wantErr: errs.ErrOutOfCapacity,
+		},
+		{
+			name:    "out of capacity, add to tail",
+			list:    NewLinkedListOf([]int{1, 2, 3}, WithCapacityOption[int](0)),
+			newVal:  100,
+			index:   2,
+			wantErr: errs.ErrOutOfCapacity,
 		},
 	}
 
@@ -179,11 +248,11 @@ func TestLinkedList_Delete(t *testing.T) {
 	}
 }
 
+// 使用无界链表，不考虑容量限制，测试Append行为本身是否符合预期
 func TestLinkedList_Append(t *testing.T) {
 	testCases := []struct {
 		name           string
 		list           *LinkedList[int]
-		index          int
 		newVal         []int
 		wantLinkedList *LinkedList[int]
 		wantErr        error
@@ -253,6 +322,84 @@ func TestLinkedList_Append(t *testing.T) {
 	}
 }
 
+// 测试有界链表与容量边界相关的Append行为是否符合预期
+func TestBoundedLinkedList_Append(t *testing.T) {
+	testCases := []struct {
+		name           string
+		list           *LinkedList[int]
+		newVal         []int
+		wantLinkedList *LinkedList[int]
+		wantErr        error
+	}{
+		{
+			name:           "under capacity",
+			list:           NewLinkedListOf[int]([]int{1, 2, 3}, WithCapacityOption[int](10)),
+			newVal:         []int{4, 5},
+			wantLinkedList: NewLinkedListOf[int]([]int{1, 2, 3, 4, 5}, WithCapacityOption[int](10)),
+		},
+		{
+			name:           "out of capacity",
+			list:           NewLinkedListOf[int]([]int{1, 2, 3}, WithCapacityOption[int](3)),
+			newVal:         []int{4, 5},
+			wantLinkedList: NewLinkedListOf[int]([]int{1, 2, 3}, WithCapacityOption[int](3)),
+			wantErr:        errs.ErrOutOfCapacity,
+		},
+		{
+			name:           "out of capacity partially",
+			list:           NewLinkedListOf[int]([]int{1, 2, 3}, WithCapacityOption[int](4)),
+			newVal:         []int{4, 5, 6},
+			wantLinkedList: NewLinkedListOf[int]([]int{1, 2, 3}, WithCapacityOption[int](4)),
+			wantErr:        errs.ErrOutOfCapacity,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.list.Append(tc.newVal...)
+			assert.Equal(t, tc.wantErr, err)
+			assert.Equal(t, tc.wantLinkedList.AsSlice(), tc.list.AsSlice())
+		})
+	}
+}
+
+func TestNewLinkedList_Default(t *testing.T) {
+	l := NewLinkedList[int]()
+	assert.Equal(t, true, l.IsBoundless())
+	assert.Equal(t, 0, l.Cap())
+	assert.Equal(t, 0, l.Len())
+	// 首尾相连的双向链表
+	assert.Equal(t, l.tail, l.head.next)
+	assert.Equal(t, l.tail, l.head.prev)
+	assert.Equal(t, l.head, l.tail.prev)
+	assert.Equal(t, l.head, l.tail.next)
+}
+
+func TestNewLinkedList_WithCapacityOption(t *testing.T) {
+	testCases := []struct {
+		name        string
+		capacity    int
+		isBoundless bool
+	}{
+		{
+			name:        "boundless",
+			capacity:    0,
+			isBoundless: true,
+		},
+		{
+			name:        "boundless",
+			capacity:    10,
+			isBoundless: false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			l := NewLinkedList[int](WithCapacityOption[int](tc.capacity))
+			assert.Equal(t, tc.isBoundless, l.IsBoundless())
+			assert.Equal(t, tc.capacity, l.Cap())
+			assert.Equal(t, 0, l.Len())
+		})
+	}
+}
+
 func TestNewLinkedListOf(t *testing.T) {
 	testCases := []struct {
 		name        string
@@ -288,6 +435,38 @@ func TestNewLinkedListOf(t *testing.T) {
 	}
 }
 
+func TestNewLinkedListOf_WithCapacity(t *testing.T) {
+	testCases := []struct {
+		name         string
+		capacity     int
+		slice        []int
+		wantCapacity int
+		wantedSlice  []int
+	}{
+		{
+			name:         "normal",
+			capacity:     10,
+			slice:        []int{1, 2, 3},
+			wantedSlice:  []int{1, 2, 3},
+			wantCapacity: 10,
+		},
+		{
+			name:         "capacity less than slice length",
+			capacity:     2,
+			slice:        []int{1, 2, 3},
+			wantedSlice:  []int{1, 2, 3},
+			wantCapacity: 3,
+		},
+	}
+
+	for _, tc := range testCases {
+		list := NewLinkedListOf(tc.slice, WithCapacityOption[int](tc.capacity))
+		// 在这里断言你的元素，可以利用 Get 方法，也可以直接用 AsSlice 来断言
+		assert.Equal(t, tc.wantedSlice, list.AsSlice())
+		assert.Equal(t, tc.wantCapacity, list.Cap())
+	}
+}
+
 func TestLinkedList_AsSlice(t *testing.T) {
 	vals := []int{1, 2, 3}
 	a := NewLinkedListOf[int](vals)
@@ -300,14 +479,35 @@ func TestLinkedList_AsSlice(t *testing.T) {
 	assert.NotEqual(t, aAddr, sliceAddr)
 }
 
-func TestLinkedList_Cap(t *testing.T) {
-	list := NewLinkedList[int]()
-	assert.Equal(t, 0, list.Cap())
-	err := list.Append(12)
-	if err != nil {
-		t.Fatal(err)
+func TestLinkedList_CapLen(t *testing.T) {
+	testCases := []struct {
+		name    string
+		l       *LinkedList[int]
+		wantCap int
+		wantLen int
+	}{
+		{
+			name:    "boundless",
+			l:       NewLinkedListOf[int]([]int{1, 2, 3}),
+			wantCap: 0,
+			wantLen: 3,
+		},
+		{
+			name:    "bounded",
+			l:       NewLinkedListOf[int]([]int{1, 2, 3}, WithCapacityOption[int](5)),
+			wantCap: 5,
+			wantLen: 3,
+		},
 	}
-	assert.Equal(t, 1, list.Cap())
+	for _, tc := range testCases {
+		t.Run(t.Name(), func(t *testing.T) {
+			assert.Equal(t, tc.wantCap, tc.l.Cap())
+			assert.Equal(t, tc.wantLen, tc.l.Len())
+			require.NoError(t, tc.l.Append(100))
+			assert.Equal(t, tc.wantCap, tc.l.Cap())
+			assert.Equal(t, tc.wantLen+1, tc.l.Len())
+		})
+	}
 }
 
 func TestLinkedList_Get(t *testing.T) {

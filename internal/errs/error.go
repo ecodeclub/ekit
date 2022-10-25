@@ -14,7 +14,12 @@
 
 package errs
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+var ErrOutOfCapacity = errors.New("ekit: 超出容量限制")
 
 // NewErrIndexOutOfRange 创建一个代表下标超出范围的错误
 func NewErrIndexOutOfRange(length int, index int) error {
