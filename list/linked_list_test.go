@@ -385,7 +385,7 @@ func TestNewLinkedList_WithCapacityOption(t *testing.T) {
 			isBoundless: true,
 		},
 		{
-			name:        "boundless",
+			name:        "bounded",
 			capacity:    10,
 			isBoundless: false,
 		},
