@@ -584,26 +584,28 @@ func testContextTimeoutInEnqueueOrDequeueOperation(t *testing.T, op func(q *Dela
 
 type Int struct {
 	id       int
-	deadline time.Duration
+	deadline time.Time
 }
 
 func newInt(id int, expire time.Duration) *Int {
-	return &Int{id: id, deadline: time.Duration(time.Now().Add(expire).Unix())}
+	return &Int{id: id, deadline: time.Now().Add(expire)}
 }
 
-func (i *Int) Delay() time.Duration {
+func (i *Int) Deadline() time.Time {
 	return i.deadline
 }
 
 func (i *Int) isExpired(now time.Time) bool {
-	return time.Duration(now.Unix())-i.deadline >= 0
+	return now.Unix()-i.deadline.Unix() >= 0
 }
 
 func testNewDelayQueue[T Delayable[T]](capacity int) (*DelayQueue[T], error) {
 	return NewDelayQueue[T](capacity, func(t1 T, t2 T) int {
-		if int64(t1.Delay()) < int64(t2.Delay()) {
+		t1Unix := t1.Deadline().Unix()
+		t2Unix := t2.Deadline().Unix()
+		if t1Unix < t2Unix {
 			return -1
-		} else if int64(t1.Delay()) == int64(t2.Delay()) {
+		} else if t1Unix == t2Unix {
 			return 0
 		} else {
 			return 1

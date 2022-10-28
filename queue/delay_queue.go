@@ -18,7 +18,7 @@ var (
 )
 
 type Delayable[T any] interface {
-	Delay() time.Duration
+	Deadline() time.Time
 }
 
 type DelayQueue[T Delayable[T]] struct {
@@ -336,7 +336,7 @@ func (d *DelayQueue[T]) dequeueProxy() {
 			goto blocking
 		}
 
-		remainingBlockingDuration = head.Delay() - time.Duration(time.Now().Unix())
+		remainingBlockingDuration = time.Duration(head.Deadline().Unix() - time.Now().Unix())
 		if remainingBlockingDuration > 0 {
 			// 数据未过期
 			log.Println("dequeueProxy, blocking before, waiting duration ....", head, remainingBlockingDuration, time.Now())
