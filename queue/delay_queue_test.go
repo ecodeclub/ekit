@@ -1,3 +1,17 @@
+// Copyright 2021 gotomicro
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package queue
 
 import (
@@ -296,139 +310,107 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 func TestDelayQueue_Enqueue_Dequeue(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Enqueue与Dequeue并发，Enqueue与Dequeue上均有并发", func(t *testing.T) {
+	increasingOrderExpireFunc := func(i int) time.Duration {
+		return 1000*time.Millisecond + time.Duration(i)*200*time.Millisecond
+	}
+
+	getDecreasingOrderExpireFunc := func(numOfEnqueue int) func(i int) time.Duration {
+		return func(i int) time.Duration {
+			return 20*time.Duration(numOfEnqueue)*time.Millisecond - time.Duration(i)*20*time.Millisecond
+		}
+	}
+
+	fixedExpireFunc := func(i int) time.Duration {
+		return time.Millisecond
+	}
+
+	backgroundCtxFunc := func() (context.Context, context.CancelFunc) {
+		return context.Background(), func() {}
+	}
+
+	dequeueCtxFunc := func() (context.Context, context.CancelFunc) {
+		return context.WithTimeout(context.Background(), 1000*time.Millisecond)
+	}
+
+	// 注意：并发测试的结果有是很难预测，尽最大努力构造重复的测试场景
+
+	t.Run("Enqueue与Dequeue并发", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("1:1，队列初始为空，先1个Dequeue阻塞后并发1个Enqueue，队列为空", func(t *testing.T) {
+		t.Run("1:N", func(t *testing.T) {
 			t.Parallel()
 
-			q, err := testNewDelayQueue[*Int](1)
-			assert.NoError(t, err)
-
-			assert.Equal(t, 0, q.Len())
-
-			syncChan := make(chan struct{})
-			resultChan := make(chan *DequeueResult[*Int], 1)
-			go func() {
-				syncChan <- struct{}{}
-				data, err := q.Dequeue(context.Background())
-				resultChan <- newDequeueResult(data, err)
-			}()
-
-			<-syncChan
-			expected := newInt(1, time.Millisecond)
-			assert.NoError(t, q.Enqueue(context.Background(), expected))
-
-			result := <-resultChan
-			assert.Equal(t, expected, result.data)
-			assert.NoError(t, result.err)
-		})
-
-		t.Run("1:N, 先1个Dequeue阻塞后并发N个Enqueue，队列中有数据", func(t *testing.T) {
-			t.Parallel()
-
-			n := 4
-			q, err := testNewDelayQueue[*Int](n)
-			assert.NoError(t, err)
-
-			assert.Equal(t, 0, q.Len())
-
-			m := 1
-			dequeueResultChan := make(chan *DequeueResult[*Int], m)
-			go func() {
-				data, err := q.Dequeue(context.Background())
-				dequeueResultChan <- newDequeueResult(data, err)
-			}()
-
-			enqueueErrChan := make(chan error, n)
-			for i := 0; i < n; i++ {
-				i := i
-				go func() {
-					enqueueErrChan <- q.Enqueue(context.Background(), newInt(i, time.Millisecond))
-					t.Log("i = ", i, "len = ", q.Len())
-
-				}()
-			}
-
-			for i := 0; i < n; i++ {
-				assert.NoError(t, <-enqueueErrChan)
-			}
-
-			result := <-dequeueResultChan
-			assert.True(t, result.data.isExpired(time.Now()))
-			assert.NoError(t, result.err)
-
-			assert.Equal(t, n-m, q.Len())
-		})
-
-		t.Run("新元素入队，队头无影响，仍返回原队头", func(t *testing.T) {
-			t.Parallel()
-
-			ascDeadline := func(i int) time.Duration {
-				return 1000*time.Millisecond + time.Duration(i)*200*time.Millisecond
-			}
-
-			t.Run("期间，队列未曾满", func(t *testing.T) {
+			t.Run("初始队列为空，1个Dequeue阻塞，N个Enqueue并发，验证数据过期且队列长度为N-1", func(t *testing.T) {
 				t.Parallel()
-				capacity, numOfEnqueueGo, numOfDequeueGo := 5, 4, 4
-				testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, ascDeadline, nil, nil)
+
+				capacity, numOfEnqueueGo, numOfDequeueGo := 4, 4, 1
+				testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, increasingOrderExpireFunc, backgroundCtxFunc, backgroundCtxFunc, nil, nil, func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueueGo int, numOfDequeueGo int) {
+					assert.Equal(t, numOfEnqueueGo-numOfDequeueGo, q.Len())
+				})
 			})
 
-			t.Run("期间，队列恰好满", func(t *testing.T) {
+			t.Run("初始队列为空，1个Enqueue阻塞，N个Dequeue并发，验证数据过期且队列为空", func(t *testing.T) {
 				t.Parallel()
-				capacity, numOfEnqueueGo, numOfDequeueGo := 5, 5, 5
-				testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, ascDeadline, nil, nil)
+
+				capacity, numOfEnqueueGo, numOfDequeueGo := 6, 1, 6
+
+				testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, fixedExpireFunc, backgroundCtxFunc, dequeueCtxFunc, nil, context.DeadlineExceeded, func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueueGo int, numOfDequeueGo int) {
+					assert.Equal(t, 0, q.Len())
+				})
 			})
 
-			t.Run("期间，队列曾塞满", func(t *testing.T) {
+		})
+
+		t.Run("N:N", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("初始队列为空，1个Dequeue阻塞，1个Enqueue并发，验证数据过期且队列为空", func(t *testing.T) {
 				t.Parallel()
-				capacity, numOfEnqueueGo, numOfDequeueGo := 5, 8, 5
-				testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, ascDeadline, errOutOfCapacity, nil)
+
+				capacity, numOfEnqueueGo, numOfDequeueGo := 1, 1, 1
+				testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, fixedExpireFunc, backgroundCtxFunc, backgroundCtxFunc, nil, nil, func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueueGo int, numOfDequeueGo int) {
+					assert.Equal(t, 0, q.Len())
+				})
+			})
+
+			t.Run("初始队列为空，N个Dequeue阻塞，N个Enqueue并发，验证数据过期且队列为空", func(t *testing.T) {
+				t.Parallel()
+
+				capacity, numOfEnqueueGo, numOfDequeueGo := 10, 10, 10
+				testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, getDecreasingOrderExpireFunc(numOfEnqueueGo), backgroundCtxFunc, backgroundCtxFunc, nil, nil, func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueueGo int, numOfDequeueGo int) {
+					assert.Equal(t, 0, q.Len())
+				})
 			})
 		})
 
-		t.Run("新元素入队，队头改变，返回新队头", func(t *testing.T) {
+		t.Run("N:M", func(t *testing.T) {
 			t.Parallel()
 
-			descDeadline := func(i int) time.Duration {
-				return 2000*time.Millisecond - time.Duration(i)*200*time.Millisecond
-			}
-
-			t.Run("期间，队列未曾满", func(t *testing.T) {
+			t.Run("Enqueue多，Dequeue少", func(t *testing.T) {
 				t.Parallel()
-				capacity, numOfEnqueueGo, numOfDequeueGo := 5, 4, 4
-				testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, descDeadline, nil, nil)
+
+				t.Run("新元素入队，队头改变，返回新队头", func(t *testing.T) {
+					t.Parallel()
+
+					capacity, numOfEnqueueGo, numOfDequeueGo := 100, 80, 50
+					testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, getDecreasingOrderExpireFunc(numOfEnqueueGo), backgroundCtxFunc, backgroundCtxFunc, nil, nil, func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueueGo int, numOfDequeueGo int) {
+						assert.Equal(t, numOfEnqueueGo-numOfDequeueGo, q.Len())
+					})
+				})
 			})
 
-			t.Run("期间，队列恰好满", func(t *testing.T) {
+			t.Run("Dequeue多，Enqueue少", func(t *testing.T) {
 				t.Parallel()
-				capacity, numOfEnqueueGo, numOfDequeueGo := 5, 5, 5
-				testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, descDeadline, nil, nil)
-			})
 
-			t.Run("期间，队列曾塞满", func(t *testing.T) {
-				t.Parallel()
-				capacity, numOfEnqueueGo, numOfDequeueGo := 5, 8, 5
-				testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, descDeadline, errOutOfCapacity, nil)
+				t.Run("新元素入队，队头改变，返回新队头", func(t *testing.T) {
+					t.Parallel()
+					capacity, numOfEnqueueGo, numOfDequeueGo := 10, 3, 9
+					testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, getDecreasingOrderExpireFunc(numOfEnqueueGo), backgroundCtxFunc, dequeueCtxFunc, nil, context.DeadlineExceeded, func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueueGo int, numOfDequeueGo int) {
+						assert.Equal(t, 0, q.Len())
+					})
+				})
 			})
 		})
-
-	})
-
-	t.Run("N:1", func(t *testing.T) {
-		t.Parallel()
-	})
-
-	t.Run("N:N", func(t *testing.T) {
-		t.Parallel()
-	})
-
-	t.Run("N:M", func(t *testing.T) {
-		t.Parallel()
-	})
-
-	t.Run("M:N", func(t *testing.T) {
-		t.Parallel()
 	})
 }
 
@@ -478,23 +460,30 @@ func testCallEnqueueConcurrently(t *testing.T, capacity int, numOfEnqueueGo int,
 	lenAssertFunc(t, q, capacity, numOfEnqueueGo)
 }
 
-func testCallEnqueueAndDequeueConcurrently(t *testing.T, capacity int, numOfEnqueueGo int, numOfDequeueGo int, deadlineFunc func(i int) time.Duration, enqueueError error, dequeueError error) {
+func testCallEnqueueAndDequeueConcurrently(t *testing.T, capacity int, numOfEnqueueGo int, numOfDequeueGo int, expireFunc func(i int) time.Duration,
+	enqueueCtxFunc func() (context.Context, context.CancelFunc), dequeueCtxFunc func() (context.Context, context.CancelFunc),
+	enqueueError error, dequeueError error, qLenAssertFunc func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueueGo int, numOfDequeueGo int)) {
 
 	q, err := testNewDelayQueue[*Int](capacity)
 	assert.NoError(t, err)
+	assert.Equal(t, 0, q.Len())
 
 	// 未调用Dequeue方法， dequeueProxy 协程一定不存在
 	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
+	// 未调用Enqueue方法，enqueueProxy 协程一定不存在
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
 
 	var dequeueErrGroup errgroup.Group
 	expiredElements := make(chan *Int, numOfDequeueGo)
-	syncChan := make(chan struct{}, numOfDequeueGo)
 
 	for i := 0; i < numOfDequeueGo; i++ {
 		dequeueErrGroup.Go(func() error {
-			e, err := q.Dequeue(context.Background())
-			syncChan <- struct{}{}
-			expiredElements <- e
+			ctx, cancelFunc := dequeueCtxFunc()
+			defer cancelFunc()
+			e, err := q.Dequeue(ctx)
+			if err == nil {
+				expiredElements <- e
+			}
 			return err
 		})
 	}
@@ -504,15 +493,11 @@ func testCallEnqueueAndDequeueConcurrently(t *testing.T, capacity int, numOfEnqu
 	for i := 0; i < numOfEnqueueGo; i++ {
 		i := i
 		enqueueErrGroup.Go(func() error {
-			// duration := 1000*time.Millisecond + time.Duration(i)*200*time.Millisecond
-			return q.Enqueue(context.Background(), newInt(i, deadlineFunc(i)))
+			ctx, cancelFunc := enqueueCtxFunc()
+			defer cancelFunc()
+			return q.Enqueue(ctx, newInt(i, expireFunc(i)))
 		})
 	}
-
-	<-syncChan
-
-	// 第一个Dequeue返回后，dequeueProxy 协程必须启动
-	assert.Equal(t, int64(1), atomic.LoadInt64(&q.numOfDequeueProxyGo))
 
 	assert.Equal(t, dequeueError, dequeueErrGroup.Wait())
 	now := time.Now()
@@ -520,12 +505,18 @@ func testCallEnqueueAndDequeueConcurrently(t *testing.T, capacity int, numOfEnqu
 
 	// 最后一个Dequeue返回后，dequeueProxy 协程必须退出
 	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
+	// 最后一个Enqueue返回后，enqueueProxy 协程必须退出
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
 
-	// 取出的元素相同并且过期
-	for i := 0; i < numOfDequeueGo; i++ {
+	// 取出的元素必须过期
+	// 间接证明 dequeueProxy 协程与 enqueueProxy 协程正常工作
+	n := len(expiredElements)
+	for i := 0; i < n; i++ {
 		elem := <-expiredElements
 		assert.True(t, elem.isExpired(now))
 	}
+
+	qLenAssertFunc(t, q, capacity, numOfEnqueueGo, numOfDequeueGo)
 }
 
 func testPassCanceledCtxToEnqueueOrDequeueOperation(t *testing.T, op func(q *DelayQueue[*Int], i int, ctx context.Context) error) {
@@ -611,13 +602,4 @@ func testNewDelayQueue[T Delayable[T]](capacity int) (*DelayQueue[T], error) {
 			return 1
 		}
 	})
-}
-
-type DequeueResult[T Delayable[T]] struct {
-	data T
-	err  error
-}
-
-func newDequeueResult[T Delayable[T]](data T, err error) *DequeueResult[T] {
-	return &DequeueResult[T]{data: data, err: err}
 }
