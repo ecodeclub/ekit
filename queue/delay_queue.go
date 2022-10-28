@@ -340,14 +340,13 @@ func (d *DelayQueue[T]) dequeueProxy() {
 			// log.Println("dequeueProxy, blocking before, waiting duration ....", head, remainingBlockingDuration, time.Now())
 			ticker.Reset(remainingBlockingDuration)
 			goto blocking
-		} else {
-			// 数据已过期
-			// log.Println("dequeueProxy, send before....")
-			d.dequeueAndSendExpiredElement()
-			// log.Println("dequeueProxy, send after....")
-			// 重新获取队头
-			continue
 		}
+		// 数据已过期
+		// log.Println("dequeueProxy, send before....")
+		d.dequeueAndSendExpiredElement()
+		// log.Println("dequeueProxy, send after....")
+		// 重新获取队头
+		continue
 
 	blocking:
 		// log.Println("dequeueProxy, blocking....")
