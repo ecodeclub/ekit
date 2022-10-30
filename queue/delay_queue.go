@@ -146,28 +146,8 @@ func (d *DelayQueue[T]) Enqueue(ctx context.Context, t T) error {
 		return ctx.Err()
 	}
 
-	// 更新计数与启动/关闭 enqueueProxy 协程必须是原子的
-	d.enqueueMutex.Lock()
-	d.enqueueCallers++
-	// 第一个检测到 enqueueProxy 协程没启动的调用者负责启动 enqueueProxy 协程，调用者进入下方select语言前 enqueueProxy 必须启动
-	if atomic.LoadInt64(&d.numOfEnqueueProxyGo) == 0 {
-		go d.enqueueProxy()
-		// enqueueProxy 协程启动后，通知当前协程继续运行
-		<-d.continueSignalFromEnqueueProxy
-	}
-	d.enqueueMutex.Unlock()
-
-	defer func() {
-		d.enqueueMutex.Lock()
-		d.enqueueCallers--
-		// 最后一个检测到 enqueueProxy 协程存在的调用者，在退出前需要确保 enqueueProxy 协程先于自己退出。
-		if d.enqueueCallers == 0 && atomic.LoadInt64(&d.numOfEnqueueProxyGo) == 1 {
-			// 以非阻塞方式发送信号，通知 enqueueProxy 协程走退出流程，当前协程阻塞等待
-			d.quitSignalForEnqueueProxy <- struct{}{}
-			<-d.continueSignalFromEnqueueProxy
-		}
-		d.enqueueMutex.Unlock()
-	}()
+	d.startEnqueueProxy()
+	defer d.closeEnqueueProxy()
 
 	// log.Println("Enqueue, Waiting for adding element....")
 	select {
@@ -175,6 +155,20 @@ func (d *DelayQueue[T]) Enqueue(ctx context.Context, t T) error {
 		return ctx.Err()
 	case d.newElementsChan <- t:
 		return <-d.enqueueErrorChan
+	}
+}
+
+func (d *DelayQueue[T]) startEnqueueProxy() {
+	// 更新计数与启动 enqueueProxy 协程必须是原子的
+	d.enqueueMutex.Lock()
+	defer d.enqueueMutex.Unlock()
+
+	d.enqueueCallers++
+	// 第一个检测到 enqueueProxy 协程没启动的调用者负责启动 enqueueProxy 协程，调用者进入下方select语言前 enqueueProxy 必须启动
+	if atomic.LoadInt64(&d.numOfEnqueueProxyGo) == 0 {
+		go d.enqueueProxy()
+		// enqueueProxy 协程启动后，通知当前协程继续运行
+		<-d.continueSignalFromEnqueueProxy
 	}
 }
 
@@ -258,6 +252,20 @@ func (d *DelayQueue[T]) enqueueProxy() {
 	}
 }
 
+func (d *DelayQueue[T]) closeEnqueueProxy() {
+	// 更新计数与关闭 enqueueProxy 协程必须是原子的
+	d.enqueueMutex.Lock()
+	defer d.enqueueMutex.Unlock()
+
+	d.enqueueCallers--
+	// 最后一个检测到 enqueueProxy 协程存在的调用者，在退出前需要确保 enqueueProxy 协程先于自己退出。
+	if d.enqueueCallers == 0 && atomic.LoadInt64(&d.numOfEnqueueProxyGo) == 1 {
+		// 以非阻塞方式发送信号，通知 enqueueProxy 协程走退出流程，当前协程阻塞等待
+		d.quitSignalForEnqueueProxy <- struct{}{}
+		<-d.continueSignalFromEnqueueProxy
+	}
+}
+
 func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 
 	var zeroValue T
@@ -265,29 +273,8 @@ func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 		return zeroValue, ctx.Err()
 	}
 
-	// 更新计数与启动/关闭 dequeueProxy 协程必须是原子的
-	d.dequeueMutex.Lock()
-	d.dequeueCallers++
-	// 第一个检测到 dequeueProxy 协程没有启动的协程进入下方select前，需要将 dequeueProxy 协程启动起来
-	if atomic.LoadInt64(&d.numOfDequeueProxyGo) == 0 {
-		go d.dequeueProxy()
-		// dequeueProxy 协程启动后，唤醒当前协程
-		<-d.continueSignalFromDequeueProxy
-	}
-	d.dequeueMutex.Unlock()
-
-	defer func() {
-		d.dequeueMutex.Lock()
-		d.dequeueCallers--
-		// 最后一个检测到 dequeueProxy 协程存在的协程，在退出前需要确保 dequeueProxy 协程先于自己退出。
-		if d.dequeueCallers == 0 && atomic.LoadInt64(&d.numOfDequeueProxyGo) == 1 {
-			// 以非阻塞方式发送信号，通知 dequeueProxy 协程走退出流程，当前协程阻塞等待
-			d.quitSignalForDequeueProxy <- struct{}{}
-			// dequeueProxy 协程退出前，通知当前协程退出
-			<-d.continueSignalFromDequeueProxy
-		}
-		d.dequeueMutex.Unlock()
-	}()
+	d.startDequeueProxy()
+	defer d.closeDequeueProxy()
 
 	// log.Println("Dequeue, Waiting for element....")
 
@@ -297,6 +284,20 @@ func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 	case elem := <-d.expiredElements:
 		// log.Println("Dequeue ...", elem)
 		return elem, nil
+	}
+}
+
+func (d *DelayQueue[T]) startDequeueProxy() {
+	// 更新计数与启动 dequeueProxy 协程必须是原子的
+	d.dequeueMutex.Lock()
+	defer d.dequeueMutex.Unlock()
+
+	// 第一个检测到 dequeueProxy 协程没有启动的协程进入下方select前，需要将 dequeueProxy 协程启动起来
+	d.dequeueCallers++
+	if atomic.LoadInt64(&d.numOfDequeueProxyGo) == 0 {
+		go d.dequeueProxy()
+		// dequeueProxy 协程启动后，唤醒当前协程
+		<-d.continueSignalFromDequeueProxy
 	}
 }
 
@@ -405,6 +406,21 @@ func (d *DelayQueue[T]) dequeueAndSendExpiredElement() {
 	// if enqueueProxyMayBeBlocked && thereIsNoUnreceivedWakeupSignal {
 	// 	d.wakeupSignalForEnqueueProxy <- struct{}{}
 	// }
+}
+
+func (d *DelayQueue[T]) closeDequeueProxy() {
+	// 更新计数与关闭 dequeueProxy 协程必须是原子的
+	d.dequeueMutex.Lock()
+	defer d.dequeueMutex.Unlock()
+
+	d.dequeueCallers--
+	// 最后一个检测到 dequeueProxy 协程存在的协程，在退出前需要确保 dequeueProxy 协程先于自己退出。
+	if d.dequeueCallers == 0 && atomic.LoadInt64(&d.numOfDequeueProxyGo) == 1 {
+		// 以非阻塞方式发送信号，通知 dequeueProxy 协程走退出流程，当前协程阻塞等待
+		d.quitSignalForDequeueProxy <- struct{}{}
+		// dequeueProxy 协程退出前，通知当前协程退出
+		<-d.continueSignalFromDequeueProxy
+	}
 }
 
 func (d *DelayQueue[T]) Len() int {
