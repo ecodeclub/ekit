@@ -25,11 +25,3 @@ type RealNumber interface {
 type Number interface {
 	RealNumber | ~complex64 | ~complex128
 }
-
-type Comparable[T any] interface {
-	// CompareTo 方法只能返回以下三个返回值:
-	// 1: dst 比较大
-	// 0: 两者一样大小
-	// -1: dst 比较小
-	CompareTo(dst T) int
-}
