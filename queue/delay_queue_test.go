@@ -36,9 +36,11 @@ func TestDelayQueue_New(t *testing.T) {
 	_, err = NewDelayQueue[*Int](1, nil)
 	assert.ErrorIs(t, err, errInvalidArgument)
 
-	q, err := testNewDelayQueue[*Int](1)
-	assert.NoError(t, err)
-	assert.Equal(t, 0, q.Len())
+	q := testNewDelayQueueWithPreCheck[*Int](t, 1)
+	// 代理协程必须关闭
+	q.Close()
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
 }
 
 func TestDelayQueue_Enqueue(t *testing.T) {
@@ -173,9 +175,7 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				t.Parallel()
 
 				capacity, numOfDequeue := 1, 3
-				q, err := testNewDelayQueue[*Int](capacity)
-				assert.NoError(t, err)
-				assert.Equal(t, 0, q.Len())
+				q := testNewDelayQueueWithPreCheck[*Int](t, capacity)
 
 				for i := 0; i < numOfDequeue; i++ {
 					func() {
@@ -187,6 +187,10 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				}
 
 				assert.Equal(t, 0, q.Len())
+				// 代理协程必须关闭
+				q.Close()
+				assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+				assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
 			})
 		})
 
@@ -197,9 +201,7 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				t.Parallel()
 
 				capacity, numOfDequeueGo := 1, 3
-				q, err := testNewDelayQueue[*Int](capacity)
-				assert.NoError(t, err)
-				assert.Equal(t, 0, q.Len())
+				q := testNewDelayQueueWithPreCheck[*Int](t, capacity)
 
 				errChan := make(chan error, numOfDequeueGo)
 				for i := 0; i < numOfDequeueGo; i++ {
@@ -216,6 +218,10 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				}
 
 				assert.Equal(t, 0, q.Len())
+				// 代理协程必须关闭
+				q.Close()
+				assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+				assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
 			})
 
 		})
@@ -227,8 +233,7 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				t.Parallel()
 
 				n := 3
-				q, err := testNewDelayQueue[*Int](n)
-				assert.NoError(t, err)
+				q := testNewDelayQueueWithPreCheck[*Int](t, n)
 
 				// 并发Enqueue
 				var eg errgroup.Group
@@ -251,6 +256,10 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				}
 
 				assert.Equal(t, 0, q.Len())
+				// 代理协程必须关闭
+				q.Close()
+				assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+				assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
 			})
 		})
 
@@ -261,8 +270,7 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				t.Parallel()
 
 				n := 3
-				q, err := testNewDelayQueue[*Int](n)
-				assert.NoError(t, err)
+				q := testNewDelayQueueWithPreCheck[*Int](t, n)
 
 				// 串行Enqueue
 				for i := 0; i < n; i++ {
@@ -272,9 +280,6 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 
 				// 队列已满
 				assert.Equal(t, n, q.Len())
-
-				// 未调用Dequeue方法， dequeueProxy 协程一定不存在
-				assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
 
 				var eg errgroup.Group
 				expiredElements := make(chan *Int, n)
@@ -289,9 +294,6 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				assert.NoError(t, eg.Wait())
 				assert.Equal(t, 0, q.Len())
 
-				// 最后一个Dequeue返回后，dequeueProxy 协程必须退出
-				assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
-
 				now := time.Now()
 
 				// 取出的元素必须过期，间接验证 dequeueProxy 协程被创建
@@ -299,6 +301,10 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 					elem := <-expiredElements
 					assert.True(t, elem.isExpired(now))
 				}
+				// 代理协程必须关闭
+				q.Close()
+				assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+				assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
 			})
 		})
 
@@ -416,13 +422,10 @@ func TestDelayQueue_Enqueue_Dequeue(t *testing.T) {
 
 func testCallEnqueueSequentially(t *testing.T, capacity int, numOfEnqueue int, expectedError error, lenAssertFunc func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueue int)) {
 
-	q, err := testNewDelayQueue[*Int](capacity)
-	assert.NoError(t, err)
+	q := testNewDelayQueueWithPreCheck[*Int](t, capacity)
 
 	for i := 0; i < numOfEnqueue-1; i++ {
 		assert.NoError(t, q.Enqueue(context.Background(), newInt(i, time.Microsecond)))
-		// 顺序调用，Enqueue调用者即是第一个（启动 enqueueProxy）又是最后一个（关闭 enqueueProxy）
-		assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
 	}
 
 	// 超时控制
@@ -431,15 +434,15 @@ func testCallEnqueueSequentially(t *testing.T, capacity int, numOfEnqueue int, e
 	assert.Equal(t, expectedError, q.Enqueue(ctx, newInt(numOfEnqueue, time.Microsecond)))
 
 	lenAssertFunc(t, q, capacity, numOfEnqueue)
+	// 代理协程必须关闭
+	q.Close()
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
 }
 
 func testCallEnqueueConcurrently(t *testing.T, capacity int, numOfEnqueueGo int, expectedErr error, lenAssertFunc func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueueGo int)) {
 
-	q, err := testNewDelayQueue[*Int](capacity)
-	assert.NoError(t, err)
-
-	// Enqueue之前，enqueueProxy 协程必须未启动
-	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+	q := testNewDelayQueueWithPreCheck[*Int](t, capacity)
 
 	var eg errgroup.Group
 	for i := 0; i < numOfEnqueueGo; i++ {
@@ -453,25 +456,20 @@ func testCallEnqueueConcurrently(t *testing.T, capacity int, numOfEnqueueGo int,
 
 	assert.Equal(t, expectedErr, eg.Wait())
 
-	// 最后一个Enqueue方法返回后，enqueueProxy 协程必须退出
-	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
-
 	// 通过队列的长度来间接验证 enqueueProxy 协程正常工作
 	lenAssertFunc(t, q, capacity, numOfEnqueueGo)
+
+	// 代理协程必须关闭
+	q.Close()
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
 }
 
 func testCallEnqueueAndDequeueConcurrently(t *testing.T, capacity int, numOfEnqueueGo int, numOfDequeueGo int, expireFunc func(i int) time.Duration,
 	enqueueCtxFunc func() (context.Context, context.CancelFunc), dequeueCtxFunc func() (context.Context, context.CancelFunc),
 	enqueueError error, dequeueError error, qLenAssertFunc func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueueGo int, numOfDequeueGo int)) {
 
-	q, err := testNewDelayQueue[*Int](capacity)
-	assert.NoError(t, err)
-	assert.Equal(t, 0, q.Len())
-
-	// 未调用Dequeue方法， dequeueProxy 协程一定不存在
-	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
-	// 未调用Enqueue方法，enqueueProxy 协程一定不存在
-	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+	q := testNewDelayQueueWithPreCheck[*Int](t, capacity)
 
 	var dequeueErrGroup errgroup.Group
 	expiredElements := make(chan *Int, numOfDequeueGo)
@@ -503,11 +501,6 @@ func testCallEnqueueAndDequeueConcurrently(t *testing.T, capacity int, numOfEnqu
 	now := time.Now()
 	assert.Equal(t, enqueueError, enqueueErrGroup.Wait())
 
-	// 最后一个Dequeue返回后，dequeueProxy 协程必须退出
-	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
-	// 最后一个Enqueue返回后，enqueueProxy 协程必须退出
-	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
-
 	// 取出的元素必须过期
 	// 间接证明 dequeueProxy 协程与 enqueueProxy 协程正常工作
 	n := len(expiredElements)
@@ -517,11 +510,14 @@ func testCallEnqueueAndDequeueConcurrently(t *testing.T, capacity int, numOfEnqu
 	}
 
 	qLenAssertFunc(t, q, capacity, numOfEnqueueGo, numOfDequeueGo)
+	// 代理协程必须关闭
+	q.Close()
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
 }
 
 func testPassCanceledCtxToEnqueueOrDequeueOperation(t *testing.T, op func(q *DelayQueue[*Int], i int, ctx context.Context) error) {
-	q, err := testNewDelayQueue[*Int](1)
-	assert.NoError(t, err)
+	q := testNewDelayQueueWithPreCheck[*Int](t, 1)
 
 	createContextFns := []func() (context.Context, context.CancelFunc){
 		func() (context.Context, context.CancelFunc) {
@@ -548,15 +544,18 @@ func testPassCanceledCtxToEnqueueOrDequeueOperation(t *testing.T, op func(q *Del
 	for i := 0; i < len(createContextFns); i++ {
 		assert.Error(t, <-errChan)
 	}
+	// 代理协程必须关闭
+	q.Close()
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
 }
 
 func testContextTimeoutInEnqueueOrDequeueOperation(t *testing.T, op func(q *DelayQueue[*Int], i int, ctx context.Context) error) {
 	var eg errgroup.Group
 
-	q, err := testNewDelayQueue[*Int](10)
-	assert.NoError(t, err)
-
 	n := 10
+	q := testNewDelayQueueWithPreCheck[*Int](t, n)
+
 	waitChan := make(chan int, n)
 	for i := 0; i < n; i++ {
 		i := i
@@ -571,6 +570,10 @@ func testContextTimeoutInEnqueueOrDequeueOperation(t *testing.T, op func(q *Dela
 		<-waitChan
 	}
 	assert.Equal(t, context.DeadlineExceeded, eg.Wait())
+	// 代理协程必须关闭
+	q.Close()
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
 }
 
 type Int struct {
@@ -602,4 +605,24 @@ func testNewDelayQueue[T Delayable[T]](capacity int) (*DelayQueue[T], error) {
 			return 1
 		}
 	})
+}
+
+func testNewDelayQueueWithPreCheck[T Delayable[T]](t *testing.T, capacity int) *DelayQueue[T] {
+	q, err := NewDelayQueue[T](capacity, func(t1 T, t2 T) int {
+		t1Unix := t1.Deadline().Unix()
+		t2Unix := t2.Deadline().Unix()
+		if t1Unix < t2Unix {
+			return -1
+		} else if t1Unix == t2Unix {
+			return 0
+		} else {
+			return 1
+		}
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, q.Len())
+	// 代理协程必须启动
+	assert.Equal(t, int64(1), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+	assert.Equal(t, int64(1), atomic.LoadInt64(&q.numOfDequeueProxyGo))
+	return q
 }

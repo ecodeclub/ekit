@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -84,28 +85,20 @@ type DelayQueue[T Delayable[T]] struct {
 	capacity             int
 	compareFuncOfElement ekit.Comparator[T]
 
-	// Enqueue方法上并发调用者协程计数
-	enqueueMutex   *sync.Mutex
-	enqueueCallers int64
+	// Proxy 协程生命周期管理相关
+	startedProxiesWaitGroup *sync.WaitGroup
+	stoppedProxiesWaitGroup *sync.WaitGroup
+	quitSignalChan          chan struct{}
 
 	// enqueueProxy 协程相关
-	numOfEnqueueProxyGo            int64
-	newElementsChan                chan T
-	enqueueErrorChan               chan error
-	quitSignalForEnqueueProxy      chan struct{}
-	continueSignalFromEnqueueProxy chan struct{}
-	wakeupSignalForEnqueueProxy    chan struct{}
-
-	// Dequeue方法上并发调用者协程计数
-	dequeueMutex   *sync.Mutex
-	dequeueCallers int64
-
+	numOfEnqueueProxyGo         int64
+	newElementsChan             chan T
+	enqueueErrorChan            chan error
+	wakeupSignalForEnqueueProxy chan struct{}
 	// dequeueProxy 协程相关
-	numOfDequeueProxyGo            int64
-	expiredElements                chan T
-	quitSignalForDequeueProxy      chan struct{}
-	continueSignalFromDequeueProxy chan struct{}
-	wakeupSignalForDequeueProxy    chan struct{}
+	numOfDequeueProxyGo         int64
+	expiredElements             chan T
+	wakeupSignalForDequeueProxy chan struct{}
 }
 
 func NewDelayQueue[T Delayable[T]](capacity int, compare ekit.Comparator[T]) (*DelayQueue[T], error) {
@@ -120,24 +113,32 @@ func NewDelayQueue[T Delayable[T]](capacity int, compare ekit.Comparator[T]) (*D
 		q:                    queue.NewPriorityQueue[T](capacity, compare),
 		capacity:             capacity,
 		compareFuncOfElement: compare,
-
-		enqueueMutex: &sync.Mutex{},
+		// 代理协程生命周期管理相关
+		startedProxiesWaitGroup: &sync.WaitGroup{},
+		stoppedProxiesWaitGroup: &sync.WaitGroup{},
+		quitSignalChan:          make(chan struct{}),
 		// enqueueProxy
-		newElementsChan:                make(chan T),
-		enqueueErrorChan:               make(chan error),
-		wakeupSignalForEnqueueProxy:    make(chan struct{}, 1),
-		quitSignalForEnqueueProxy:      make(chan struct{}, 1),
-		continueSignalFromEnqueueProxy: make(chan struct{}, 1),
-
-		dequeueMutex: &sync.Mutex{},
+		newElementsChan:             make(chan T),
+		enqueueErrorChan:            make(chan error),
+		wakeupSignalForEnqueueProxy: make(chan struct{}, 1),
 		// dequeueProxy
 		// expiredElements 必须有缓冲区
-		expiredElements:                make(chan T, capacity),
-		wakeupSignalForDequeueProxy:    make(chan struct{}, 1),
-		quitSignalForDequeueProxy:      make(chan struct{}, 1),
-		continueSignalFromDequeueProxy: make(chan struct{}, 1),
+		expiredElements:             make(chan T, capacity),
+		wakeupSignalForDequeueProxy: make(chan struct{}, 1),
 	}
+	d.startProxies()
 	return d, nil
+}
+
+func (d *DelayQueue[T]) startProxies() {
+	proxies := 2
+	d.stoppedProxiesWaitGroup.Add(proxies)
+	d.startedProxiesWaitGroup.Add(proxies)
+	go d.enqueueProxy()
+	go d.dequeueProxy()
+	d.startedProxiesWaitGroup.Wait()
+	atomic.AddInt64(&d.numOfEnqueueProxyGo, 1)
+	atomic.AddInt64(&d.numOfDequeueProxyGo, 1)
 }
 
 func (d *DelayQueue[T]) Enqueue(ctx context.Context, t T) error {
@@ -145,9 +146,6 @@ func (d *DelayQueue[T]) Enqueue(ctx context.Context, t T) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-
-	d.startEnqueueProxy()
-	defer d.closeEnqueueProxy()
 
 	// log.Println("Enqueue, Waiting for adding element....")
 	select {
@@ -158,36 +156,17 @@ func (d *DelayQueue[T]) Enqueue(ctx context.Context, t T) error {
 	}
 }
 
-func (d *DelayQueue[T]) startEnqueueProxy() {
-	// 更新计数与启动 enqueueProxy 协程必须是原子的
-	d.enqueueMutex.Lock()
-	defer d.enqueueMutex.Unlock()
-
-	d.enqueueCallers++
-	// 第一个检测到 enqueueProxy 协程没启动的调用者负责启动 enqueueProxy 协程，调用者进入下方select语言前 enqueueProxy 必须启动
-	if atomic.LoadInt64(&d.numOfEnqueueProxyGo) == 0 {
-		go d.enqueueProxy()
-		// enqueueProxy 协程启动后，通知当前协程继续运行
-		<-d.continueSignalFromEnqueueProxy
-	}
-}
-
 func (d *DelayQueue[T]) enqueueProxy() {
 
 	defer func() {
 		// 吞掉panic
 		_ = recover()
-		// 必须先更新计数，再发送信号
-		atomic.CompareAndSwapInt64(&d.numOfEnqueueProxyGo, 1, 0)
-		d.continueSignalFromEnqueueProxy <- struct{}{}
-		// log.Println("enqueueProxy stop....")
+		d.stoppedProxiesWaitGroup.Done()
+		log.Println("enqueueProxy stop....")
 	}()
 
-	// 必须先更新计数，再发送信号
-	atomic.CompareAndSwapInt64(&d.numOfEnqueueProxyGo, 0, 1)
-	d.continueSignalFromEnqueueProxy <- struct{}{}
-
-	// log.Println("enqueueProxy start....")
+	d.startedProxiesWaitGroup.Done()
+	log.Println("enqueueProxy start....")
 
 	for {
 
@@ -196,7 +175,6 @@ func (d *DelayQueue[T]) enqueueProxy() {
 			// log.Println("enqueueProxy, get element ", e)
 
 			d.mutex.Lock()
-
 			// 队列已满
 			// dequeueProxy 协程在向 d.expiredElements 发送数据时
 			// 即 d.dequeueAndSendExpiredElement() 中实现也用到了写锁
@@ -243,26 +221,12 @@ func (d *DelayQueue[T]) enqueueProxy() {
 			d.enqueueErrorChan <- (error)(nil)
 			// log.Println("enqueueProxy, send err == nil , element enqueued ....", e, "len = ", d.Len())
 
-		case <-d.quitSignalForEnqueueProxy:
+		case <-d.quitSignalChan:
 			return
 			// case <-d.wakeupSignalForEnqueueProxy:
 			// 	// 等待 dequeueProxy 在调用 d.q.Dequeue 后发送信号将自己唤醒
 			// 	log.Println("enqueueProxy, wakeup by dequeueProxy ... ")
 		}
-	}
-}
-
-func (d *DelayQueue[T]) closeEnqueueProxy() {
-	// 更新计数与关闭 enqueueProxy 协程必须是原子的
-	d.enqueueMutex.Lock()
-	defer d.enqueueMutex.Unlock()
-
-	d.enqueueCallers--
-	// 最后一个检测到 enqueueProxy 协程存在的调用者，在退出前需要确保 enqueueProxy 协程先于自己退出。
-	if d.enqueueCallers == 0 && atomic.LoadInt64(&d.numOfEnqueueProxyGo) == 1 {
-		// 以非阻塞方式发送信号，通知 enqueueProxy 协程走退出流程，当前协程阻塞等待
-		d.quitSignalForEnqueueProxy <- struct{}{}
-		<-d.continueSignalFromEnqueueProxy
 	}
 }
 
@@ -272,9 +236,6 @@ func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 	if ctx.Err() != nil {
 		return zeroValue, ctx.Err()
 	}
-
-	d.startDequeueProxy()
-	defer d.closeDequeueProxy()
 
 	// log.Println("Dequeue, Waiting for element....")
 
@@ -287,38 +248,21 @@ func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 	}
 }
 
-func (d *DelayQueue[T]) startDequeueProxy() {
-	// 更新计数与启动 dequeueProxy 协程必须是原子的
-	d.dequeueMutex.Lock()
-	defer d.dequeueMutex.Unlock()
-
-	// 第一个检测到 dequeueProxy 协程没有启动的协程进入下方select前，需要将 dequeueProxy 协程启动起来
-	d.dequeueCallers++
-	if atomic.LoadInt64(&d.numOfDequeueProxyGo) == 0 {
-		go d.dequeueProxy()
-		// dequeueProxy 协程启动后，唤醒当前协程
-		<-d.continueSignalFromDequeueProxy
-	}
-}
-
 func (d *DelayQueue[T]) dequeueProxy() {
 
 	defer func() {
 		// 吞掉panic
 		_ = recover()
-		// 必须先更新计数，再发送信号
-		atomic.CompareAndSwapInt64(&d.numOfDequeueProxyGo, 1, 0)
-		d.continueSignalFromDequeueProxy <- struct{}{}
-		// log.Println("dequeueProxy stop....")
+		d.stoppedProxiesWaitGroup.Done()
+		log.Println("dequeueProxy stop....")
 	}()
 
-	// 必须先更新计数，再发送信号
-	atomic.CompareAndSwapInt64(&d.numOfDequeueProxyGo, 0, 1)
-	d.continueSignalFromDequeueProxy <- struct{}{}
-	// log.Println("dequeueProxy start....")
+	d.startedProxiesWaitGroup.Done()
+	log.Println("dequeueProxy start....")
 
 	defaultBlockingDuration := time.Hour
 	ticker := time.NewTicker(defaultBlockingDuration)
+	defer ticker.Stop()
 	var remainingBlockingDuration time.Duration
 
 	for {
@@ -352,7 +296,7 @@ func (d *DelayQueue[T]) dequeueProxy() {
 	blocking:
 		// log.Println("dequeueProxy, blocking....")
 		select {
-		case <-d.quitSignalForDequeueProxy:
+		case <-d.quitSignalChan:
 			return
 		case <-ticker.C:
 			// 因为只有 dequeueProxy 协程调用d.q.Dequeue()
@@ -388,7 +332,7 @@ func (d *DelayQueue[T]) dequeueAndSendExpiredElement() {
 	// 如果注释掉 dequeueProxy 中case <-ticker.C下的本方法调用，在单 dequeueProxy 实例的前提下，进入这里只有一种情况：remainingBlockingDuration <= 0
 
 	// 单 dequeueProxy 协程下，一定没问题
-	// 多 dequeueProxy 协程下，要检查当前队头与阻塞前获取的队头是一样的，不一样要
+	// 多 dequeueProxy 协程下，要检查当前队头与阻塞前获取的队头是一样的，不一样要重新去获取队头
 	expired, _ := d.q.Dequeue()
 
 	// 非阻塞
@@ -408,21 +352,6 @@ func (d *DelayQueue[T]) dequeueAndSendExpiredElement() {
 	// }
 }
 
-func (d *DelayQueue[T]) closeDequeueProxy() {
-	// 更新计数与关闭 dequeueProxy 协程必须是原子的
-	d.dequeueMutex.Lock()
-	defer d.dequeueMutex.Unlock()
-
-	d.dequeueCallers--
-	// 最后一个检测到 dequeueProxy 协程存在的协程，在退出前需要确保 dequeueProxy 协程先于自己退出。
-	if d.dequeueCallers == 0 && atomic.LoadInt64(&d.numOfDequeueProxyGo) == 1 {
-		// 以非阻塞方式发送信号，通知 dequeueProxy 协程走退出流程，当前协程阻塞等待
-		d.quitSignalForDequeueProxy <- struct{}{}
-		// dequeueProxy 协程退出前，通知当前协程退出
-		<-d.continueSignalFromDequeueProxy
-	}
-}
-
 func (d *DelayQueue[T]) Len() int {
 	d.mutex.RLock()
 	// 一部分过期数据会缓存在 expiredElements 中
@@ -430,4 +359,12 @@ func (d *DelayQueue[T]) Len() int {
 	n := d.q.Len() + len(d.expiredElements)
 	d.mutex.RUnlock()
 	return n
+}
+
+func (d *DelayQueue[T]) Close() {
+	if atomic.CompareAndSwapInt64(&d.numOfEnqueueProxyGo, 1, 0) &&
+		atomic.CompareAndSwapInt64(&d.numOfDequeueProxyGo, 1, 0) {
+		close(d.quitSignalChan)
+		d.stoppedProxiesWaitGroup.Wait()
+	}
 }
