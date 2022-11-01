@@ -33,9 +33,6 @@ func TestDelayQueue_New(t *testing.T) {
 	_, err = testNewDelayQueue[*Int](-1)
 	assert.ErrorIs(t, err, errInvalidArgument)
 
-	_, err = NewDelayQueue[*Int](1, nil)
-	assert.ErrorIs(t, err, errInvalidArgument)
-
 	q := testNewDelayQueueWithPreCheck[*Int](t, 1)
 	// 代理协程必须关闭
 	q.Close()
@@ -650,31 +647,11 @@ func (i *Int) isExpired(now time.Time) bool {
 }
 
 func testNewDelayQueue[T Delayable[T]](capacity int) (*DelayQueue[T], error) {
-	return NewDelayQueue[T](capacity, func(t1 T, t2 T) int {
-		t1Unix := t1.Deadline().Unix()
-		t2Unix := t2.Deadline().Unix()
-		if t1Unix < t2Unix {
-			return -1
-		} else if t1Unix == t2Unix {
-			return 0
-		} else {
-			return 1
-		}
-	})
+	return NewDelayQueue[T](capacity)
 }
 
 func testNewDelayQueueWithPreCheck[T Delayable[T]](t *testing.T, capacity int) *DelayQueue[T] {
-	q, err := NewDelayQueue[T](capacity, func(t1 T, t2 T) int {
-		t1Unix := t1.Deadline().Unix()
-		t2Unix := t2.Deadline().Unix()
-		if t1Unix < t2Unix {
-			return -1
-		} else if t1Unix == t2Unix {
-			return 0
-		} else {
-			return 1
-		}
-	})
+	q, err := NewDelayQueue[T](capacity)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, q.Len())
 	// 代理协程必须启动

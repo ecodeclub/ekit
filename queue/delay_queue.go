@@ -57,13 +57,23 @@ type DelayQueue[T Delayable[T]] struct {
 	wakeupSignalForDequeueProxy chan struct{}
 }
 
-func NewDelayQueue[T Delayable[T]](capacity int, compare ekit.Comparator[T]) (*DelayQueue[T], error) {
+func NewDelayQueue[T Delayable[T]](capacity int) (*DelayQueue[T], error) {
 	if capacity <= 0 {
 		return nil, fmt.Errorf("%w: capacity必须大于0", errInvalidArgument)
 	}
-	if compare == nil {
-		return nil, fmt.Errorf("%w: compare不能为nil", errInvalidArgument)
+
+	compare := func(t1 T, t2 T) int {
+		t1Unix := t1.Deadline().Unix()
+		t2Unix := t2.Deadline().Unix()
+		if t1Unix < t2Unix {
+			return -1
+		} else if t1Unix == t2Unix {
+			return 0
+		} else {
+			return 1
+		}
 	}
+
 	d := &DelayQueue[T]{
 		mutex:                &sync.RWMutex{},
 		q:                    queue.NewPriorityQueue[T](capacity, compare),
