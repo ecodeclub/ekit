@@ -48,10 +48,9 @@ type DelayQueue[T Delayable[T]] struct {
 	stoppedProxiesWaitGroup *sync.WaitGroup
 	quitSignalChan          chan struct{}
 	// enqueueProxy 协程相关
-	numOfEnqueueProxyGo         int64
-	newElementsChan             chan T
-	enqueueErrorChan            chan error
-	wakeupSignalForEnqueueProxy chan struct{}
+	numOfEnqueueProxyGo int64
+	newElementsChan     chan T
+	enqueueErrorChan    chan error
 	// dequeueProxy 协程相关
 	numOfDequeueProxyGo         int64
 	expiredElements             chan T
@@ -75,9 +74,8 @@ func NewDelayQueue[T Delayable[T]](capacity int, compare ekit.Comparator[T]) (*D
 		stoppedProxiesWaitGroup: &sync.WaitGroup{},
 		quitSignalChan:          make(chan struct{}),
 		// enqueueProxy
-		newElementsChan:             make(chan T),
-		enqueueErrorChan:            make(chan error),
-		wakeupSignalForEnqueueProxy: make(chan struct{}, 1),
+		newElementsChan:  make(chan T),
+		enqueueErrorChan: make(chan error),
 		// dequeueProxy
 		// expiredElements 必须有缓冲区
 		expiredElements:             make(chan T, capacity),
@@ -96,6 +94,7 @@ func (d *DelayQueue[T]) startProxies() {
 	d.startedProxiesWaitGroup.Wait()
 	atomic.AddInt64(&d.numOfEnqueueProxyGo, 1)
 	atomic.AddInt64(&d.numOfDequeueProxyGo, 1)
+	// log.Println("Proxies Started .....")
 }
 
 func (d *DelayQueue[T]) enqueueProxy() {
@@ -117,8 +116,16 @@ func (d *DelayQueue[T]) enqueueProxy() {
 			return
 		case e := <-d.newElementsChan:
 			// log.Println("enqueueProxy, get element ", e)
+			if !d.isValidElement(e) {
+				// log.Println("enqueueProxy, send err == invalid t ... ")
+				d.enqueueErrorChan <- fmt.Errorf("%w: 元素t非法", errInvalidArgument)
+				// log.Println("enqueueProxy, blocking... ")
+				continue
+			}
+
 			d.mutex.Lock()
 			// 队列已满
+			// 注意：不能将其移动到锁之外
 			isFull := d.q.Len()+len(d.expiredElements) == d.capacity
 			if isFull {
 				d.mutex.Unlock()
@@ -127,7 +134,7 @@ func (d *DelayQueue[T]) enqueueProxy() {
 				// log.Println("enqueueProxy, blocking... ")
 				continue
 			}
-			// todo: 优化点：为 d.newElementsChan 设置缓冲区，拿到一次锁尽可能将缓冲区中数据全部Enqueue
+			// todo: 优化点：为 d.newElementsChan 设置缓冲区，拿到一次锁Enqueue5-10个，过多会饿死 dequeueProxy
 			//       需要注意容量判断问题，详见上方isFull
 			_ = d.q.Enqueue(e)
 
@@ -149,6 +156,16 @@ func (d *DelayQueue[T]) enqueueProxy() {
 			// log.Println("enqueueProxy, send err == nil , element enqueued ....", e, "len = ", d.Len())
 		}
 	}
+}
+
+func (d *DelayQueue[T]) isValidElement(elem T) (ok bool) {
+	defer func() {
+		ok = recover() == nil
+	}()
+	// elem 是 (*xxx)(nil)
+	// 或者 Deadline方法内直接panic
+	_ = elem.Deadline()
+	return true
 }
 
 func (d *DelayQueue[T]) dequeueProxy() {
@@ -273,5 +290,6 @@ func (d *DelayQueue[T]) Close() {
 		atomic.CompareAndSwapInt64(&d.numOfDequeueProxyGo, 1, 0) {
 		close(d.quitSignalChan)
 		d.stoppedProxiesWaitGroup.Wait()
+		// log.Println("Proxies Stopped .....")
 	}
 }

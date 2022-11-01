@@ -67,6 +67,15 @@ func TestDelayQueue_Enqueue(t *testing.T) {
 		})
 	})
 
+	t.Run("非法数据", func(t *testing.T) {
+		t.Parallel()
+
+		q := testNewDelayQueueWithPreCheck[*Int](t, 1)
+		defer q.Close()
+
+		assert.ErrorIs(t, q.Enqueue(context.Background(), (*Int)(nil)), errInvalidArgument)
+	})
+
 	t.Run("Enqueue与Dequeue串行", func(t *testing.T) {
 		t.Parallel()
 
