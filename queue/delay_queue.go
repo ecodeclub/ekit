@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -26,48 +25,6 @@ import (
 	"github.com/gotomicro/ekit"
 	"github.com/gotomicro/ekit/internal/queue"
 )
-
-// g1  - \
-// g2  - - Enqueue() -- N --> channel（多个通道） -- 1 --> enqueueProxy 协程 --
-// g3  - /                                                                   \
-//                                                      两个代理协程之间通过互斥锁、通道协作，详见下方说明3
-// g4  - \                                                                   /
-// g5  - - Dequeue() -- N --> channel（多个通道）-- 1 --> dequeueProxy 协程 --
-// g6  - /
-//
-// 说明：
-//    1. g1、g2、g3并发调用Enqueue方法，Enqueue方法内部启动一个代理协程 enqueueProxy，
-//       - enqueueProxy 职责
-//         - 从调用者协程们接收数据
-//         - 与下方 dequeueProxy 协程并发访问底层无锁优先级队列，将收到的数据入队
-//         - 将入队结果返回给调用者协程们
-//         - 如果有高优先级元素入队，导致队头变更，向 d.wakeupSignalForDequeueProxy 发信号通知下方 dequeueProxy 协程
-//         - 监听退出信号，来自最后一个调用者协程发送的退出信号
-//       - g1、g2、g3 通过channel与 enqueueProxy 协程通信
-//         - 调用协程们通过 d.newElementsChan 向 enqueueProxy 发送数据
-//         - 调用协程们通过 d.enqueueErrorChan 从 enqueueProxy 接收错误信息
-//         - 第一/最后一个调用协程通过 d.quitSignalForEnqueueProxy 和 d.continueSignalFromEnqueueProxy 启动/关闭 enqueueProxy 协程
-//           非并发，g1既是第一个又是最后一个需要负责启动和关闭 enqueueProxy
-//           并发下，g1负责启动 enqueueProxy，g3 负责关闭 enqueueProxy
-//
-//    2. g3、g4、g5并发调用Dequeue方法，Dequeue方法内部启动一个代理协程 dequeueProxy，
-//       - dequeueProxy 职责
-//         - 获取队头，等待其过期；
-// 		- 与上方 enqueueProxy 协程并发访问底层无锁优先级队列，将过期队头出队
-//         - 将出队结果返回给调用者协程们
-//         - 监听唤醒信号，来自 enqueueProxy 协程，重新检查队头
-//         - 监听退出信号，来自最后一个调用者协程发送的退出信号
-//       - g3、g4、g5 通过channel与 DequeueProxy 协程通信
-//         - 调用者协程们从 d.expiredElements 获取过期元素
-//         - dequeueProxy 协程通过 d.wakeupSignalForDequeueProxy 获取通知以重新检查队头
-//         - 第一/最后一个调用协程通过 d.quitSignalForDequeueProxy 和 d.continueSignalFromDequeueProxy 启动/关闭 dequeueProxy 协程
-//         - Dequeue的逻辑语义是"拿到队头，等待队头超时或自己超时返回; 拿不到队头，阻塞等待直到ctx过期"
-//           故Dequeue不返回延迟队列为空的错误，而是让调用者阻塞等待ctx超时；如果调用者未传递具有超时的ctx，导致永久阻塞是他自己的问题
-//
-//    3. enqueueProxy 与 dequeueProxy 协程之间通过互斥锁、通道来协作
-//      - 用 d.mutex 并发操作底层优先级队列 d.q
-//      - 用 d.wakeupSignalForDequeueProxy && d.wakeupSignalForEnqueueProxy 在队列状态变化时相互唤醒
-//      - 无锁队列 d.q 上只有 enqueueProxy 与 dequeueProxy 两个协程并发访问
 
 var (
 	errInvalidArgument    = errors.New("ekit: 参数非法")
@@ -90,7 +47,6 @@ type DelayQueue[T Delayable[T]] struct {
 	startedProxiesWaitGroup *sync.WaitGroup
 	stoppedProxiesWaitGroup *sync.WaitGroup
 	quitSignalChan          chan struct{}
-
 	// enqueueProxy 协程相关
 	numOfEnqueueProxyGo         int64
 	newElementsChan             chan T
@@ -142,57 +98,31 @@ func (d *DelayQueue[T]) startProxies() {
 	atomic.AddInt64(&d.numOfDequeueProxyGo, 1)
 }
 
-func (d *DelayQueue[T]) isClosed() bool {
-	return atomic.LoadInt64(&d.numOfEnqueueProxyGo) == 0 && atomic.LoadInt64(&d.numOfDequeueProxyGo) == 0
-}
-
-func (d *DelayQueue[T]) Enqueue(ctx context.Context, t T) error {
-
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-
-	if d.isClosed() {
-		return fmt.Errorf("%w", errQueueHasBeenClosed)
-	}
-
-	// log.Println("Enqueue, Waiting for adding element....")
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case d.newElementsChan <- t:
-		return <-d.enqueueErrorChan
-	}
-}
-
 func (d *DelayQueue[T]) enqueueProxy() {
 
 	defer func() {
-		// 吞掉panic
+		// 吞掉panic，使协程正常退出
 		_ = recover()
 		d.stoppedProxiesWaitGroup.Done()
-		log.Println("enqueueProxy stop....")
+		// log.Println("enqueueProxy stop....")
 	}()
 
 	d.startedProxiesWaitGroup.Done()
-	log.Println("enqueueProxy start....")
+	// log.Println("enqueueProxy start....")
 
 	for {
 
 		select {
+		case <-d.quitSignalChan:
+			return
 		case e := <-d.newElementsChan:
 			// log.Println("enqueueProxy, get element ", e)
-
 			d.mutex.Lock()
 			// 队列已满
-			// dequeueProxy 协程在向 d.expiredElements 发送数据时
-			// 即 d.dequeueAndSendExpiredElement() 中实现也用到了写锁
-			// 所以这里可以认为 len( d.expiredElements ) 不变
 			isFull := d.q.Len()+len(d.expiredElements) == d.capacity
 			if isFull {
 				d.mutex.Unlock()
 				// log.Println("enqueueProxy, send err == Full ... ")
-				// 通知当前 Enqueue 协程队列已满
 				d.enqueueErrorChan <- queue.ErrOutOfCapacity
 				// log.Println("enqueueProxy, blocking... ")
 				continue
@@ -200,78 +130,38 @@ func (d *DelayQueue[T]) enqueueProxy() {
 			// todo: 优化点：为 d.newElementsChan 设置缓冲区，拿到一次锁尽可能将缓冲区中数据全部Enqueue
 			//       需要注意容量判断问题，详见上方isFull
 			_ = d.q.Enqueue(e)
-			// err := d.q.Enqueue(e)
-			// if err != nil {
-			// 	// 队列已满
-			// 	d.mutex.Unlock()
-			// 	log.Println("enqueueProxy, send err == Full ... ")
-			// 	d.enqueueErrorChan <- queue.ErrOutOfCapacity
-			// 	log.Println("enqueueProxy, blocking... ")
-			// 	continue
-			// }
 
 			// 写锁保护中，刚入队成功，一定能拿到
 			head, _ := d.q.Peek()
-			// 新入队元素e具有相等或更高优先级，等于0为了兼容队列为空的情况
-			headOfQueueHasChanged := d.compareFuncOfElement(e, head) <= 0
-			// d.wakeupSignalForDequeueProxy 的消费者只有 dequeueProxy 协程
-			// 只有 d.wakeupSignalForDequeueProxy 为空时才需要再次发送信号
-			// 如果之前的信号还未被 dequeueProxy 协程消费，未消费的信号也能表示相同意义
-			// 即 dequeueProxy 协程拿到信号后重新去检查队头
-			thereIsNoUnreceivedWakeupSignal := len(d.wakeupSignalForDequeueProxy) == 0
 
+			// 新入队元素e具有相等或更高优先级，等于0为了兼容队列为空的情况，并且没有未接收的信号，才考虑发送唤醒信号
+			headOfQueueHasChanged := d.compareFuncOfElement(e, head) <= 0
+			thereIsNoUnreceivedWakeupSignal := len(d.wakeupSignalForDequeueProxy) == 0
 			if headOfQueueHasChanged && thereIsNoUnreceivedWakeupSignal {
 				d.wakeupSignalForDequeueProxy <- struct{}{}
 				// log.Println("enqueueProxy, notify dequeueProxy ... ")
 			}
+
 			d.mutex.Unlock()
 
 			// 通知 Enqueue 协程入队成功
 			d.enqueueErrorChan <- (error)(nil)
 			// log.Println("enqueueProxy, send err == nil , element enqueued ....", e, "len = ", d.Len())
-
-		case <-d.quitSignalChan:
-			return
-			// case <-d.wakeupSignalForEnqueueProxy:
-			// 	// 等待 dequeueProxy 在调用 d.q.Dequeue 后发送信号将自己唤醒
-			// 	log.Println("enqueueProxy, wakeup by dequeueProxy ... ")
 		}
-	}
-}
-
-func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
-
-	var zeroValue T
-	if ctx.Err() != nil {
-		return zeroValue, ctx.Err()
-	}
-
-	if d.isClosed() {
-		return zeroValue, fmt.Errorf("%w", errQueueHasBeenClosed)
-	}
-
-	// log.Println("Dequeue, Waiting for element....")
-
-	select {
-	case <-ctx.Done():
-		return zeroValue, ctx.Err()
-	case elem := <-d.expiredElements:
-		// log.Println("Dequeue ...", elem)
-		return elem, nil
 	}
 }
 
 func (d *DelayQueue[T]) dequeueProxy() {
 
 	defer func() {
-		// 吞掉panic
+		// 吞掉panic，使协程正常退出
 		_ = recover()
 		d.stoppedProxiesWaitGroup.Done()
-		log.Println("dequeueProxy stop....")
+		// log.Println("dequeueProxy stop....")
 	}()
 
 	d.startedProxiesWaitGroup.Done()
-	log.Println("dequeueProxy start....")
+	// log.Println("dequeueProxy start....")
 
 	defaultBlockingDuration := time.Hour
 	ticker := time.NewTicker(defaultBlockingDuration)
@@ -299,11 +189,15 @@ func (d *DelayQueue[T]) dequeueProxy() {
 			ticker.Reset(remainingBlockingDuration)
 			goto blocking
 		}
+
 		// 数据已过期
 		// log.Println("dequeueProxy, send before....")
-		d.dequeueAndSendExpiredElement()
+		d.mutex.Lock()
+		head, _ = d.q.Dequeue()
+		d.expiredElements <- head
+		// log.Println("dequeueProxy, element dequeued .... ", head, d.q.Len())
+		d.mutex.Unlock()
 		// log.Println("dequeueProxy, send after....")
-		// 重新获取队头
 		continue
 
 	blocking:
@@ -312,57 +206,57 @@ func (d *DelayQueue[T]) dequeueProxy() {
 		case <-d.quitSignalChan:
 			return
 		case <-ticker.C:
-			// 因为只有 dequeueProxy 协程调用d.q.Dequeue()
-			// 阻塞醒来后是可以立即调用d.q.Dequeue()，即便与b.q.Enqueue()并发也是正确的。
-			// 不存在原队头被其他协程并发调用d.q.Dequeue()出队的情况(前提单 dequeueProxy 实例）
-			// 为了便于理解程序，将下方调用代码注释，不注释下方调用的逻辑分析见方法内部注释
-			// d.dequeueAndSendExpiredElement()
 			// log.Println("dequeueProxy, unblocked by Ticker.....")
 		case <-d.wakeupSignalForDequeueProxy:
-			// 队头更新，再次检查
 			// log.Println("dequeueProxy, unblocked by Signal.....")
 		}
 	}
 }
 
-func (d *DelayQueue[T]) dequeueAndSendExpiredElement() {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-	// 前置条件：单 dequeueProxy 协程实例
+func (d *DelayQueue[T]) Enqueue(ctx context.Context, t T) error {
 
-	// 如果不注释掉 dequeueProxy 中case <-ticker.C下的本方法调用，在单 dequeueProxy 实例的前提下，程序执行到这里有两种情况：
-	// Case 1. 队头元素X过期，直接出队元素X
-	// Case 2. 协程按原队头X的 remainingBlockingDuration 阻塞中：
-	// 	        A. 阻塞到期后，执行d.q.Dequeue()删除原队头X
-	// 	        B. 收到新元素Y入队的信号，重新去队头获取阻塞时间duration
-	//             1) 如果已过期duration <= 0，直接将新队头出队（即重复[Case 1]操作）此时出队的是新队头Y
-	//             2) 如果还需阻塞，重复[Case 2.A]操作，此时出队的也是新队头Y
-	//             3) 如果有新元素入队，此时重复[Case 2.B]操作
-	// 通过以上分析可知，无论d.q.Dequeue()出队的是原队头X还是新队头Y/Z/M等(多次插队），因插队元素相比于原队头具有更高或相等的优先级
-	// 那么即便按照原队头的remainingBlockingDuration进行阻塞且被唤醒后直接d.q.Dequeue()删除的是新队头也是安全。
-	// 因为新队头的截止日期应该早于或等原队头的截止日期。
+	if d.isClosed() {
+		return fmt.Errorf("%w", errQueueHasBeenClosed)
+	}
 
-	// 如果注释掉 dequeueProxy 中case <-ticker.C下的本方法调用，在单 dequeueProxy 实例的前提下，进入这里只有一种情况：remainingBlockingDuration <= 0
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 
-	// 单 dequeueProxy 协程下，一定没问题
-	// 多 dequeueProxy 协程下，要检查当前队头与阻塞前获取的队头是一样的，不一样要重新去获取队头
-	expired, _ := d.q.Dequeue()
+	// log.Println("Enqueue, Waiting for adding element....")
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case d.newElementsChan <- t:
+		return <-d.enqueueErrorChan
+	}
+}
 
-	// 非阻塞
-	// 即便此时 dequeueProxy 协程收到退出信号,因 d.expiredElements 有缓冲区且与 d.q 的容量相同
-	// 因此过期的数据会缓存在 d.expiredElements 中后续调用Dequeue的协程可以直接拿到
-	// 注意: d.expiredElements 一定要有缓冲，
-	// 否则唯一的Dequeue调用者协程因ctx超时走退出流程时，
-	// Dequeue 调用者协程等待在 d.quitSignalForDequeueProxy 上而 dequeueProxy 协程等待在 d.expiredElements <- expired 上从而形成两者相互等待
-	d.expiredElements <- expired
-	// log.Println("dequeueProxy, element dequeued .... ", expired, d.q.Len())
+func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 
-	// 之前容量为满，enqueueProxy 可能被阻塞
-	// enqueueProxyMayBeBlocked := d.q.Len()+len(d.expiredElements) == d.capacity
-	// thereIsNoUnreceivedWakeupSignal := len(d.wakeupSignalForEnqueueProxy) == 0
-	// if enqueueProxyMayBeBlocked && thereIsNoUnreceivedWakeupSignal {
-	// 	d.wakeupSignalForEnqueueProxy <- struct{}{}
-	// }
+	var zeroValue T
+
+	if d.isClosed() {
+		return zeroValue, fmt.Errorf("%w", errQueueHasBeenClosed)
+	}
+
+	if ctx.Err() != nil {
+		return zeroValue, ctx.Err()
+	}
+
+	// log.Println("Dequeue, Waiting for element....")
+
+	select {
+	case <-ctx.Done():
+		return zeroValue, ctx.Err()
+	case elem := <-d.expiredElements:
+		// log.Println("Dequeue ...", elem)
+		return elem, nil
+	}
+}
+
+func (d *DelayQueue[T]) isClosed() bool {
+	return atomic.LoadInt64(&d.numOfEnqueueProxyGo) == 0 && atomic.LoadInt64(&d.numOfDequeueProxyGo) == 0
 }
 
 func (d *DelayQueue[T]) Len() int {
