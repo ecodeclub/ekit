@@ -70,7 +70,8 @@ import (
 //      - 无锁队列 d.q 上只有 enqueueProxy 与 dequeueProxy 两个协程并发访问
 
 var (
-	errInvalidArgument = errors.New("ekit: 参数非法")
+	errInvalidArgument    = errors.New("ekit: 参数非法")
+	errQueueHasBeenClosed = errors.New("ekit: 队列已关闭")
 )
 
 // Delayable 入队元素需要实现接口中的 Deadline 方法
@@ -141,10 +142,18 @@ func (d *DelayQueue[T]) startProxies() {
 	atomic.AddInt64(&d.numOfDequeueProxyGo, 1)
 }
 
+func (d *DelayQueue[T]) isClosed() bool {
+	return atomic.LoadInt64(&d.numOfEnqueueProxyGo) == 0 && atomic.LoadInt64(&d.numOfDequeueProxyGo) == 0
+}
+
 func (d *DelayQueue[T]) Enqueue(ctx context.Context, t T) error {
 
 	if ctx.Err() != nil {
 		return ctx.Err()
+	}
+
+	if d.isClosed() {
+		return fmt.Errorf("%w", errQueueHasBeenClosed)
 	}
 
 	// log.Println("Enqueue, Waiting for adding element....")
@@ -235,6 +244,10 @@ func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 	var zeroValue T
 	if ctx.Err() != nil {
 		return zeroValue, ctx.Err()
+	}
+
+	if d.isClosed() {
+		return zeroValue, fmt.Errorf("%w", errQueueHasBeenClosed)
 	}
 
 	// log.Println("Dequeue, Waiting for element....")

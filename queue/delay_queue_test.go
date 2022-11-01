@@ -420,6 +420,53 @@ func TestDelayQueue_Enqueue_Dequeue(t *testing.T) {
 	})
 }
 
+func TestDelayQueue_Close(t *testing.T) {
+	t.Parallel()
+
+	t.Run("正常情况", func(t *testing.T) {
+		q := testNewDelayQueueWithPreCheck[*Int](t, 1)
+		q.Close()
+		assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+		assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
+	})
+
+	t.Run("重复调用", func(t *testing.T) {
+		q := testNewDelayQueueWithPreCheck[*Int](t, 1)
+		q.Close()
+		assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+		assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
+		q.Close()
+		assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+		assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
+	})
+
+	t.Run("异常情况", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("队列关闭后，执行Enqueue", func(t *testing.T) {
+			t.Parallel()
+			q := testNewDelayQueueWithPreCheck[*Int](t, 1)
+			q.Close()
+			assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+			assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
+
+			assert.ErrorIs(t, q.Enqueue(context.Background(), newInt(1, time.Millisecond)), errQueueHasBeenClosed)
+		})
+
+		t.Run("队列关闭后，执行Dequeue", func(t *testing.T) {
+			t.Parallel()
+			q := testNewDelayQueueWithPreCheck[*Int](t, 1)
+			q.Close()
+			assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
+			assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
+
+			_, err := q.Dequeue(context.Background())
+			assert.ErrorIs(t, err, errQueueHasBeenClosed)
+		})
+	})
+
+}
+
 func testCallEnqueueSequentially(t *testing.T, capacity int, numOfEnqueue int, expectedError error, lenAssertFunc func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueue int)) {
 
 	q := testNewDelayQueueWithPreCheck[*Int](t, capacity)
