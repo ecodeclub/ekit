@@ -44,6 +44,7 @@ type Delayable[T any] interface {
 type DelayQueue[T Delayable[T]] struct {
 	mutex                *sync.RWMutex
 	q                    *queue.PriorityQueue[T]
+	qCache               *queue.PriorityQueue[T]
 	capacity             int
 	compareFuncOfElement ekit.Comparator[T]
 
@@ -53,16 +54,19 @@ type DelayQueue[T Delayable[T]] struct {
 	quitSignalChan          chan struct{}
 	stateOfProxyGoroutines  int64
 	// enqueueProxy 协程相关
-	newElementsChan  chan T
+	enqueueElemsChan chan T
 	enqueueErrorChan chan error
+	// workerProxy 协程相关
+	wakeupWorkerProxy chan struct{}
 	// dequeueProxy 协程相关
-	expiredElements             chan T
-	wakeupSignalForDequeueProxy chan struct{}
+	dequeueElemsChan   chan T
+	dequeueErrorChan   chan error
+	wakeupDequeueProxy chan struct{}
 }
 
 func NewDelayQueue[T Delayable[T]](capacity int) (*DelayQueue[T], error) {
-	if capacity <= 0 {
-		return nil, fmt.Errorf("%w: capacity必须大于0", errInvalidArgument)
+	if capacity < 0 {
+		return nil, fmt.Errorf("%w: capacity必须大于等于0", errInvalidArgument)
 	}
 
 	compare := func(t1 T, t2 T) int {
@@ -80,6 +84,7 @@ func NewDelayQueue[T Delayable[T]](capacity int) (*DelayQueue[T], error) {
 	d := &DelayQueue[T]{
 		mutex:                &sync.RWMutex{},
 		q:                    queue.NewPriorityQueue[T](capacity, compare),
+		qCache:               queue.NewPriorityQueue[T](capacity, compare),
 		capacity:             capacity,
 		compareFuncOfElement: compare,
 		// 代理协程生命周期管理相关
@@ -88,22 +93,25 @@ func NewDelayQueue[T Delayable[T]](capacity int) (*DelayQueue[T], error) {
 		quitSignalChan:          make(chan struct{}),
 		stateOfProxyGoroutines:  stateOfProxyGoroutinesCreated,
 		// enqueueProxy
-		newElementsChan:  make(chan T),
+		enqueueElemsChan: make(chan T),
 		enqueueErrorChan: make(chan error),
+		// workerProxy
+		wakeupWorkerProxy: make(chan struct{}, 1),
 		// dequeueProxy
-		// expiredElements 必须有缓冲区
-		expiredElements:             make(chan T, capacity),
-		wakeupSignalForDequeueProxy: make(chan struct{}, 1),
+		dequeueElemsChan:   make(chan T),
+		dequeueErrorChan:   make(chan error),
+		wakeupDequeueProxy: make(chan struct{}, 1),
 	}
 	d.startProxies()
 	return d, nil
 }
 
 func (d *DelayQueue[T]) startProxies() {
-	proxies := 2
+	proxies := 3
 	d.stoppedProxiesWaitGroup.Add(proxies)
 	d.startedProxiesWaitGroup.Add(proxies)
 	go d.enqueueProxy()
+	go d.workerProxy()
 	go d.dequeueProxy()
 	d.startedProxiesWaitGroup.Wait()
 	atomic.StoreInt64(&d.stateOfProxyGoroutines, stateOfProxyGoroutinesRunning)
@@ -127,7 +135,7 @@ func (d *DelayQueue[T]) enqueueProxy() {
 		select {
 		case <-d.quitSignalChan:
 			return
-		case e := <-d.newElementsChan:
+		case e := <-d.enqueueElemsChan:
 			// log.Println("enqueueProxy, get element ", e)
 			if !d.isValidElement(e) {
 				// log.Println("enqueueProxy, send err == invalid t ... ")
@@ -139,7 +147,7 @@ func (d *DelayQueue[T]) enqueueProxy() {
 			d.mutex.Lock()
 			// 队列已满
 			// 注意：不能将其移动到锁之外
-			isFull := d.q.Len()+len(d.expiredElements) == d.capacity
+			isFull := d.capacity > 0 && d.q.Len()+d.qCache.Len() == d.capacity
 			if isFull {
 				d.mutex.Unlock()
 				// log.Println("enqueueProxy, send err == Full ... ")
@@ -147,7 +155,8 @@ func (d *DelayQueue[T]) enqueueProxy() {
 				// log.Println("enqueueProxy, blocking... ")
 				continue
 			}
-			// todo: 优化点：为 d.newElementsChan 设置缓冲区，拿到一次锁Enqueue5-10个，过多会饿死 dequeueProxy
+
+			// todo: 优化点：为 d.enqueueElemsChan 设置缓冲区，拿到一次锁Enqueue5-10个，过多会饿死 workerProxy
 			//       需要注意容量判断问题，详见上方isFull
 			_ = d.q.Enqueue(e)
 
@@ -156,10 +165,10 @@ func (d *DelayQueue[T]) enqueueProxy() {
 
 			// 新入队元素e具有相等或更高优先级，等于0为了兼容队列为空的情况，并且没有未接收的信号，才考虑发送唤醒信号
 			headOfQueueHasChanged := d.compareFuncOfElement(e, head) <= 0
-			thereIsNoUnreceivedWakeupSignal := len(d.wakeupSignalForDequeueProxy) == 0
+			thereIsNoUnreceivedWakeupSignal := len(d.wakeupWorkerProxy) == 0
 			if headOfQueueHasChanged && thereIsNoUnreceivedWakeupSignal {
-				d.wakeupSignalForDequeueProxy <- struct{}{}
-				// log.Println("enqueueProxy, notify dequeueProxy ... ")
+				d.wakeupWorkerProxy <- struct{}{}
+				// log.Println("enqueueProxy, notify workerProxy ... ")
 			}
 
 			d.mutex.Unlock()
@@ -181,8 +190,73 @@ func (d *DelayQueue[T]) isValidElement(elem T) (ok bool) {
 	return true
 }
 
-func (d *DelayQueue[T]) dequeueProxy() {
+func (d *DelayQueue[T]) workerProxy() {
 
+	defer func() {
+		// 吞掉panic，使协程正常退出
+		_ = recover()
+		d.stoppedProxiesWaitGroup.Done()
+		// log.Println("workerProxy stop....")
+	}()
+
+	d.startedProxiesWaitGroup.Done()
+	// log.Println("workerProxy start....")
+
+	defaultBlockingDuration := time.Hour
+	ticker := time.NewTicker(defaultBlockingDuration)
+	defer ticker.Stop()
+	var remainingBlockingDuration time.Duration
+
+	for {
+		// log.Println("workerProxy, peek before....")
+		d.mutex.RLock()
+		head, err := d.q.Peek()
+		d.mutex.RUnlock()
+		// log.Println("workerProxy, peek after....")
+
+		// 队列为空
+		if err != nil {
+			// log.Println("workerProxy, blocking before, queue empty....")
+			ticker.Reset(defaultBlockingDuration)
+			goto blocking
+		}
+
+		remainingBlockingDuration = time.Duration(head.Deadline().Unix() - time.Now().Unix())
+		if remainingBlockingDuration > 0 {
+			// 数据未过期
+			// log.Println("workerProxy, blocking before, waiting duration ....", head, remainingBlockingDuration, time.Now())
+			ticker.Reset(remainingBlockingDuration)
+			goto blocking
+		}
+
+		// 数据已过期
+		// log.Println("workerProxy, cache before....")
+		d.mutex.Lock()
+		head, _ = d.q.Dequeue()
+		// 将过期数据放入缓存中，保持顺序
+		_ = d.qCache.Enqueue(head)
+		// log.Println("workerProxy, element dequeued from q enqueue into qCache .... ", head, d.q.Len(), d.qCache.Len())
+		if d.qCache.Len() == 1 && len(d.wakeupDequeueProxy) == 0 {
+			d.wakeupDequeueProxy <- struct{}{}
+		}
+		d.mutex.Unlock()
+		// log.Println("workerProxy, cache after....")
+		continue
+
+	blocking:
+		// log.Println("workerProxy, blocking....")
+		select {
+		case <-d.quitSignalChan:
+			return
+		case <-ticker.C:
+			// log.Println("workerProxy, unblocked by Ticker.....")
+		case <-d.wakeupWorkerProxy:
+			// log.Println("workerProxy, unblocked by Signal.....")
+		}
+	}
+}
+
+func (d *DelayQueue[T]) dequeueProxy() {
 	defer func() {
 		// 吞掉panic，使协程正常退出
 		_ = recover()
@@ -193,54 +267,39 @@ func (d *DelayQueue[T]) dequeueProxy() {
 	d.startedProxiesWaitGroup.Done()
 	// log.Println("dequeueProxy start....")
 
-	defaultBlockingDuration := time.Hour
-	ticker := time.NewTicker(defaultBlockingDuration)
-	defer ticker.Stop()
-	var remainingBlockingDuration time.Duration
-
 	for {
-		// log.Println("dequeueProxy, peek before....")
+		// log.Println("dequeueProxy, peeked before...")
 		d.mutex.RLock()
-		head, err := d.q.Peek()
+		elem, err := d.qCache.Peek()
 		d.mutex.RUnlock()
-		// log.Println("dequeueProxy, peek after....")
-
-		// 队列为空
+		// log.Println("dequeueProxy, peeked after...")
 		if err != nil {
-			// log.Println("dequeueProxy, blocking before, queue empty....")
-			ticker.Reset(defaultBlockingDuration)
-			goto blocking
+			// log.Println("dequeueProxy, blocking, qCache empty ...")
+			select {
+			case <-d.quitSignalChan:
+				return
+			case <-d.wakeupDequeueProxy:
+				// log.Println("dequeueProxy, unblocked by wakeup ...")
+			}
+			continue
 		}
+		// log.Println("dequeueProxy, peeked element from qCache .... ", elem)
 
-		remainingBlockingDuration = time.Duration(head.Deadline().Unix() - time.Now().Unix())
-		if remainingBlockingDuration > 0 {
-			// 数据未过期
-			// log.Println("dequeueProxy, blocking before, waiting duration ....", head, remainingBlockingDuration, time.Now())
-			ticker.Reset(remainingBlockingDuration)
-			goto blocking
-		}
-
-		// 数据已过期
-		// log.Println("dequeueProxy, send before....")
-		d.mutex.Lock()
-		head, _ = d.q.Dequeue()
-		d.expiredElements <- head
-		// log.Println("dequeueProxy, element dequeued .... ", head, d.q.Len())
-		d.mutex.Unlock()
-		// log.Println("dequeueProxy, send after....")
-		continue
-
-	blocking:
-		// log.Println("dequeueProxy, blocking....")
 		select {
 		case <-d.quitSignalChan:
 			return
-		case <-ticker.C:
-			// log.Println("dequeueProxy, unblocked by Ticker.....")
-		case <-d.wakeupSignalForDequeueProxy:
-			// log.Println("dequeueProxy, unblocked by Signal.....")
+		case d.dequeueElemsChan <- elem:
+			d.mutex.Lock()
+			// 元素一定存在，且err == nil
+			_, err := d.qCache.Dequeue()
+			// log.Println("dequeueProxy, element dequeued from qCache .... ", head, d.qCache.Len()+d.q.Len())
+			d.mutex.Unlock()
+
+			d.dequeueErrorChan <- err
 		}
+
 	}
+
 }
 
 func (d *DelayQueue[T]) Enqueue(ctx context.Context, t T) error {
@@ -257,8 +316,10 @@ func (d *DelayQueue[T]) Enqueue(ctx context.Context, t T) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case d.newElementsChan <- t:
-		return <-d.enqueueErrorChan
+	case d.enqueueElemsChan <- t:
+		err := <-d.enqueueErrorChan
+		// log.Println("Enqueue, Get response ....", err)
+		return err
 	}
 }
 
@@ -279,9 +340,10 @@ func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 	select {
 	case <-ctx.Done():
 		return zeroValue, ctx.Err()
-	case elem := <-d.expiredElements:
-		// log.Println("Dequeue ...", elem)
-		return elem, nil
+	case elem := <-d.dequeueElemsChan:
+		err := <-d.dequeueErrorChan
+		// log.Println("Dequeue ...", elem, " len = ", d.Len(), err)
+		return elem, err
 	}
 }
 
@@ -291,11 +353,14 @@ func (d *DelayQueue[T]) isClosed() bool {
 
 func (d *DelayQueue[T]) Len() int {
 	d.mutex.RLock()
-	// 一部分过期数据会缓存在 expiredElements 中
-	// 但并未被Dequeue调用协程取走，所以逻辑上还是要将缓存数据算在内的。
-	n := d.q.Len() + len(d.expiredElements)
-	d.mutex.RUnlock()
-	return n
+	defer d.mutex.RUnlock()
+	return d.q.Len() + d.qCache.Len()
+}
+
+func (d *DelayQueue[T]) Cap() int {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+	return d.capacity
 }
 
 func (d *DelayQueue[T]) Close() {

@@ -27,13 +27,14 @@ import (
 func TestDelayQueue_New(t *testing.T) {
 	t.Parallel()
 
-	_, err := testNewDelayQueue[*Int](0)
+	_, err := testNewDelayQueue[*Int](-1)
 	assert.ErrorIs(t, err, errInvalidArgument)
 
-	_, err = testNewDelayQueue[*Int](-1)
-	assert.ErrorIs(t, err, errInvalidArgument)
+	q := testNewDelayQueueWithPreCheck[*Int](t, 0)
+	q.Close()
+	testAssertInternalStateOfQueueAfterClose(t, q)
 
-	q := testNewDelayQueueWithPreCheck[*Int](t, 1)
+	q = testNewDelayQueueWithPreCheck[*Int](t, 1)
 	// 代理协程必须关闭
 	q.Close()
 	testAssertInternalStateOfQueueAfterClose(t, q)
@@ -195,6 +196,7 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				// 代理协程必须关闭
 				q.Close()
 				testAssertInternalStateOfQueueAfterClose(t, q)
+				assert.Equal(t, capacity, q.Cap())
 			})
 		})
 
@@ -225,6 +227,7 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				// 代理协程必须关闭
 				q.Close()
 				testAssertInternalStateOfQueueAfterClose(t, q)
+				assert.Equal(t, capacity, q.Cap())
 			})
 
 		})
@@ -243,7 +246,7 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				for i := 0; i < n; i++ {
 					i := i
 					eg.Go(func() error {
-						return q.Enqueue(context.Background(), newInt(i, time.Millisecond))
+						return q.Enqueue(context.Background(), newInt(i, time.Millisecond*10+time.Millisecond*time.Duration(i)))
 					})
 				}
 
@@ -262,6 +265,7 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				// 代理协程必须关闭
 				q.Close()
 				testAssertInternalStateOfQueueAfterClose(t, q)
+				assert.Equal(t, n, q.Cap())
 			})
 		})
 
@@ -306,6 +310,7 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 				// 代理协程必须关闭
 				q.Close()
 				testAssertInternalStateOfQueueAfterClose(t, q)
+				assert.Equal(t, n, q.Cap())
 			})
 		})
 
@@ -419,6 +424,15 @@ func TestDelayQueue_Enqueue_Dequeue(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("无界队列", func(t *testing.T) {
+		t.Parallel()
+
+		capacity, numOfEnqueueGo, numOfDequeueGo := 0, 80, 50
+		testCallEnqueueAndDequeueConcurrently(t, capacity, numOfEnqueueGo, numOfDequeueGo, getDecreasingOrderExpireFunc(numOfEnqueueGo), backgroundCtxFunc, backgroundCtxFunc, nil, nil, func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueueGo int, numOfDequeueGo int) {
+			assert.Equal(t, numOfEnqueueGo-numOfDequeueGo, q.Len())
+		})
+	})
 }
 
 func TestDelayQueue_Close(t *testing.T) {
@@ -477,9 +491,11 @@ func testCallEnqueueSequentially(t *testing.T, capacity int, numOfEnqueue int, e
 	assert.Equal(t, expectedError, q.Enqueue(ctx, newInt(numOfEnqueue, time.Microsecond)))
 
 	lenAssertFunc(t, q, capacity, numOfEnqueue)
+
 	// 代理协程必须关闭
 	q.Close()
 	testAssertInternalStateOfQueueAfterClose(t, q)
+	assert.Equal(t, capacity, q.Cap())
 }
 
 func testCallEnqueueConcurrently(t *testing.T, capacity int, numOfEnqueueGo int, expectedErr error, lenAssertFunc func(t *testing.T, q *DelayQueue[*Int], capacity int, numOfEnqueueGo int)) {
@@ -504,6 +520,7 @@ func testCallEnqueueConcurrently(t *testing.T, capacity int, numOfEnqueueGo int,
 	// 代理协程必须关闭
 	q.Close()
 	testAssertInternalStateOfQueueAfterClose(t, q)
+	assert.Equal(t, capacity, q.Cap())
 }
 
 func testCallEnqueueAndDequeueConcurrently(t *testing.T, capacity int, numOfEnqueueGo int, numOfDequeueGo int, expireFunc func(i int) time.Duration,
@@ -554,10 +571,12 @@ func testCallEnqueueAndDequeueConcurrently(t *testing.T, capacity int, numOfEnqu
 	// 代理协程必须关闭
 	q.Close()
 	testAssertInternalStateOfQueueAfterClose(t, q)
+	assert.Equal(t, capacity, q.Cap())
 }
 
 func testPassCanceledCtxToEnqueueOrDequeueOperation(t *testing.T, op func(q *DelayQueue[*Int], i int, ctx context.Context) error) {
-	q := testNewDelayQueueWithPreCheck[*Int](t, 1)
+	capacity := 1
+	q := testNewDelayQueueWithPreCheck[*Int](t, capacity)
 
 	createContextFns := []func() (context.Context, context.CancelFunc){
 		func() (context.Context, context.CancelFunc) {
@@ -587,6 +606,7 @@ func testPassCanceledCtxToEnqueueOrDequeueOperation(t *testing.T, op func(q *Del
 	// 代理协程必须关闭
 	q.Close()
 	testAssertInternalStateOfQueueAfterClose(t, q)
+	assert.Equal(t, capacity, q.Cap())
 }
 
 func testContextTimeoutInEnqueueOrDequeueOperation(t *testing.T, op func(q *DelayQueue[*Int], i int, ctx context.Context) error) {
@@ -612,6 +632,7 @@ func testContextTimeoutInEnqueueOrDequeueOperation(t *testing.T, op func(q *Dela
 	// 代理协程必须关闭
 	q.Close()
 	testAssertInternalStateOfQueueAfterClose(t, q)
+	assert.Equal(t, n, q.Cap())
 }
 
 type Int struct {
@@ -639,6 +660,7 @@ func testNewDelayQueueWithPreCheck[T Delayable[T]](t *testing.T, capacity int) *
 	q, err := NewDelayQueue[T](capacity)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, q.Len())
+	assert.Equal(t, capacity, q.Cap())
 	// 代理协程必须启动
 	testAssertInternalStateOfQueueAfterNew[T](t, q)
 	return q
