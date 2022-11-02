@@ -27,6 +27,10 @@ import (
 )
 
 var (
+	stateOfProxyGoroutinesCreated int64 = 1
+	stateOfProxyGoroutinesRunning int64 = 2
+	stateOfProxyGoroutinesStopped int64 = 3
+
 	errInvalidArgument    = errors.New("ekit: 参数非法")
 	errQueueHasBeenClosed = errors.New("ekit: 队列已关闭")
 )
@@ -47,12 +51,11 @@ type DelayQueue[T Delayable[T]] struct {
 	startedProxiesWaitGroup *sync.WaitGroup
 	stoppedProxiesWaitGroup *sync.WaitGroup
 	quitSignalChan          chan struct{}
+	stateOfProxyGoroutines  int64
 	// enqueueProxy 协程相关
-	numOfEnqueueProxyGo int64
-	newElementsChan     chan T
-	enqueueErrorChan    chan error
+	newElementsChan  chan T
+	enqueueErrorChan chan error
 	// dequeueProxy 协程相关
-	numOfDequeueProxyGo         int64
 	expiredElements             chan T
 	wakeupSignalForDequeueProxy chan struct{}
 }
@@ -83,6 +86,7 @@ func NewDelayQueue[T Delayable[T]](capacity int) (*DelayQueue[T], error) {
 		startedProxiesWaitGroup: &sync.WaitGroup{},
 		stoppedProxiesWaitGroup: &sync.WaitGroup{},
 		quitSignalChan:          make(chan struct{}),
+		stateOfProxyGoroutines:  stateOfProxyGoroutinesCreated,
 		// enqueueProxy
 		newElementsChan:  make(chan T),
 		enqueueErrorChan: make(chan error),
@@ -102,8 +106,7 @@ func (d *DelayQueue[T]) startProxies() {
 	go d.enqueueProxy()
 	go d.dequeueProxy()
 	d.startedProxiesWaitGroup.Wait()
-	atomic.AddInt64(&d.numOfEnqueueProxyGo, 1)
-	atomic.AddInt64(&d.numOfDequeueProxyGo, 1)
+	atomic.StoreInt64(&d.stateOfProxyGoroutines, stateOfProxyGoroutinesRunning)
 	// log.Println("Proxies Started .....")
 }
 
@@ -283,7 +286,7 @@ func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 }
 
 func (d *DelayQueue[T]) isClosed() bool {
-	return atomic.LoadInt64(&d.numOfEnqueueProxyGo) == 0 && atomic.LoadInt64(&d.numOfDequeueProxyGo) == 0
+	return atomic.LoadInt64(&d.stateOfProxyGoroutines) == stateOfProxyGoroutinesStopped
 }
 
 func (d *DelayQueue[T]) Len() int {
@@ -296,8 +299,7 @@ func (d *DelayQueue[T]) Len() int {
 }
 
 func (d *DelayQueue[T]) Close() {
-	if atomic.CompareAndSwapInt64(&d.numOfEnqueueProxyGo, 1, 0) &&
-		atomic.CompareAndSwapInt64(&d.numOfDequeueProxyGo, 1, 0) {
+	if atomic.CompareAndSwapInt64(&d.stateOfProxyGoroutines, stateOfProxyGoroutinesRunning, stateOfProxyGoroutinesStopped) {
 		close(d.quitSignalChan)
 		d.stoppedProxiesWaitGroup.Wait()
 		// log.Println("Proxies Stopped .....")

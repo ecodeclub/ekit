@@ -645,11 +645,9 @@ func testNewDelayQueueWithPreCheck[T Delayable[T]](t *testing.T, capacity int) *
 }
 
 func testAssertInternalStateOfQueueAfterNew[T Delayable[T]](t *testing.T, q *DelayQueue[T]) {
-	assert.Equal(t, int64(1), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
-	assert.Equal(t, int64(1), atomic.LoadInt64(&q.numOfDequeueProxyGo))
+	assert.Equal(t, stateOfProxyGoroutinesRunning, atomic.LoadInt64(&q.stateOfProxyGoroutines))
 }
 
 func testAssertInternalStateOfQueueAfterClose[T Delayable[T]](t *testing.T, q *DelayQueue[T]) {
-	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfEnqueueProxyGo))
-	assert.Equal(t, int64(0), atomic.LoadInt64(&q.numOfDequeueProxyGo))
+	assert.Equal(t, stateOfProxyGoroutinesStopped, atomic.LoadInt64(&q.stateOfProxyGoroutines))
 }
