@@ -14,7 +14,9 @@
 
 package queue
 
-import "context"
+import (
+	"context"
+)
 
 // BlockingQueue 阻塞队列
 // 参考 Queue 普通队列
