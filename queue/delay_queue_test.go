@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 )
 
 func TestDelayQueue_Dequeue(t *testing.T) {
@@ -151,6 +152,50 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 		// 没有元素了，会超时
 		_, err = q.Dequeue(ctx)
 		require.Equal(t, context.DeadlineExceeded, err)
+	})
+
+	t.Run("dequeue two elements concurrently with larger delay intervals", func(t *testing.T) {
+		t.Parallel()
+
+		capacity := 2
+		q := NewDelayQueue[delayElem](capacity)
+
+		// 使队列出于有元素状态，元素间的截止日期有较大时间差
+		elem1 := delayElem{
+			val:      10001,
+			deadline: time.Now().Add(50 * time.Millisecond),
+		}
+		require.NoError(t, q.Enqueue(context.Background(), elem1))
+
+		elem2 := delayElem{
+			val:      10002,
+			deadline: time.Now().Add(500 * time.Millisecond),
+		}
+		require.NoError(t, q.Enqueue(context.Background(), elem2))
+
+		// 并发出队，使两个调用者协程并发地按照具有较小截止日期的元素的延迟时间进行等待
+		elemsChan := make(chan delayElem, capacity)
+		var eg errgroup.Group
+		for i := 0; i < capacity; i++ {
+			eg.Go(func() error {
+				ele, err := q.Dequeue(context.Background())
+				elemsChan <- ele
+				return err
+			})
+		}
+
+		assert.NoError(t, eg.Wait())
+
+		// 一定先拿出短时间的
+		ele := <-elemsChan
+		require.Equal(t, elem1.val, ele.val)
+		require.True(t, ele.deadline.Before(time.Now()))
+
+		// 再拿出长时间的，因为并发原因两个调用者协程可能都等待具有较小截止日期的元素
+		// 防止后者未经验元素是否过期直接将其出队
+		ele = <-elemsChan
+		require.Equal(t, elem2.val, ele.val)
+		require.True(t, ele.deadline.Before(time.Now()))
 	})
 }
 

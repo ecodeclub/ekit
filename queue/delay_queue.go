@@ -121,8 +121,15 @@ func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 				var t T
 				return t, ctx.Err()
 			case <-timer.C:
-				// 到了时间，直接返回
+				// 到了时间
 				d.mutex.Lock()
+				// 原队头可能已经被其他协程先出队，故再次检查队头
+				val, err := d.q.Peek()
+				if err != nil || val.Delay() > 0 {
+					d.mutex.Unlock()
+					continue
+				}
+				// 验证元素过期后将其出队
 				val, err = d.q.Dequeue()
 				d.dequeueSignal.broadcast()
 				return val, err
