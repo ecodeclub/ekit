@@ -160,7 +160,7 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 		capacity := 2
 		q := NewDelayQueue[delayElem](capacity)
 
-		// 使队列出于有元素状态，元素间的截止日期有较大时间差
+		// 使队列处于有元素状态，元素间的截止日期有较大时间差
 		elem1 := delayElem{
 			val:      10001,
 			deadline: time.Now().Add(50 * time.Millisecond),
@@ -173,7 +173,7 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 		}
 		require.NoError(t, q.Enqueue(context.Background(), elem2))
 
-		// 并发出队，使两个调用者协程并发地按照具有较小截止日期的元素的延迟时间进行等待
+		// 并发出队，使调用者协程并发地按照较小截止日期的元素的延迟时间进行等待
 		elemsChan := make(chan delayElem, capacity)
 		var eg errgroup.Group
 		for i := 0; i < capacity; i++ {
@@ -191,8 +191,8 @@ func TestDelayQueue_Dequeue(t *testing.T) {
 		require.Equal(t, elem1.val, ele.val)
 		require.True(t, ele.deadline.Before(time.Now()))
 
-		// 再拿出长时间的，因为并发原因两个调用者协程可能都等待具有较小截止日期的元素
-		// 防止后者未经验元素是否过期直接将其出队
+		// 再拿出长时间的，因为并发原因多个调用者协程可能都等待具有较小截止日期的元素
+		// 防止后者未验证元素是否过期而直接将其出队
 		ele = <-elemsChan
 		require.Equal(t, elem2.val, ele.val)
 		require.True(t, ele.deadline.Before(time.Now()))

@@ -71,7 +71,7 @@ func (d *DelayQueue[T]) Enqueue(ctx context.Context, t T) error {
 			d.enqueueSignal.broadcast()
 			return nil
 		case queue.ErrOutOfCapacity:
-			signal := d.dequeueSignal.SignalCh()
+			signal := d.dequeueSignal.signalCh()
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
@@ -110,7 +110,7 @@ func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 				// 理论上来说这里 err 不可能不为 nil
 				return val, err
 			}
-			signal := d.enqueueSignal.SignalCh()
+			signal := d.enqueueSignal.signalCh()
 			if timer == nil {
 				timer = time.NewTimer(delay)
 			} else {
@@ -137,7 +137,7 @@ func (d *DelayQueue[T]) Dequeue(ctx context.Context) (T, error) {
 				// 进入下一个循环。这里可能是有新的元素入队，也可能是到期了
 			}
 		case queue.ErrEmptyQueue:
-			signal := d.enqueueSignal.SignalCh()
+			signal := d.enqueueSignal.signalCh()
 			select {
 			case <-ctx.Done():
 				var t T
@@ -180,10 +180,10 @@ func (c *cond) broadcast() {
 	close(old)
 }
 
-// SignalCh 返回一个 channel，用于监听广播信号
+// signalCh 返回一个 channel，用于监听广播信号
 // 必须在锁范围内使用
 // 调用后，锁会被释放，这也是为了确保用户必然是在锁范围内调用的
-func (c *cond) SignalCh() <-chan struct{} {
+func (c *cond) signalCh() <-chan struct{} {
 	res := c.signal
 	c.l.Unlock()
 	return res
