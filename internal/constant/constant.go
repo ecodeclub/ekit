@@ -5,8 +5,3 @@ package constant
 const (
 	Caller = 1 // 栈深度，默认只打印一层就好
 )
-
-// packack internal error msg定义
-const (
-	errInvalidTypeFmt = ""
-)
