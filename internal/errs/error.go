@@ -16,9 +16,6 @@ package errs
 
 import (
 	"fmt"
-	"runtime"
-
-	"github.com/gotomicro/ekit/internal/constant"
 )
 
 // NewErrIndexOutOfRange 创建一个代表下标超出范围的错误
@@ -29,10 +26,4 @@ func NewErrIndexOutOfRange(length int, index int) error {
 // NewErrInvalidType 创建一个代表类型转换失败的错误
 func NewErrInvalidType(want, got string) error {
 	return fmt.Errorf("ekit: 类型转换失败，want:%s, got%s", want, got)
-}
-
-// WarpErr 转换通用error，文本error是无意义的，增加调用文件信息，方便定位问题
-func WarpErr(err error) error {
-	_, file, line, _ := runtime.Caller(constant.Caller)
-	return fmt.Errorf("%s:%d err:%+v", file, line, err)
 }

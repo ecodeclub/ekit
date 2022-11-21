@@ -8,18 +8,18 @@ import (
 )
 
 type AnyValue struct {
-	val any
-	err error
+	Val any
+	Err error
 }
 
 // Int 返回 int 数据
 func (av AnyValue) Int() (int, error) {
-	if av.err != nil {
-		return 0, av.err
+	if av.Err != nil {
+		return 0, av.Err
 	}
-	val, ok := av.val.(int)
+	val, ok := av.Val.(int)
 	if !ok {
-		return 0, errs.WarpErr(errs.NewErrInvalidType("int", reflect.TypeOf(val).Name()))
+		return 0, errs.NewErrInvalidType("int", reflect.TypeOf(av.Val).Name())
 	}
 	return val, nil
 }
@@ -35,12 +35,12 @@ func (a AnyValue) IntOr(def int) int {
 
 // Uint 返回 uint 数据
 func (av AnyValue) Uint() (uint, error) {
-	if av.err != nil {
-		return 0, av.err
+	if av.Err != nil {
+		return 0, av.Err
 	}
-	val, ok := av.val.(uint)
+	val, ok := av.Val.(uint)
 	if !ok {
-		return 0, errs.WarpErr(errs.NewErrInvalidType("uint", reflect.TypeOf(val).Name()))
+		return 0, errs.NewErrInvalidType("uint", reflect.TypeOf(av.Val).Name())
 	}
 	return val, nil
 }
@@ -56,12 +56,12 @@ func (a AnyValue) UintOr(def uint) uint {
 
 // Int32 返回 int32 数据
 func (av AnyValue) Int32() (int32, error) {
-	if av.err != nil {
-		return 0, av.err
+	if av.Err != nil {
+		return 0, av.Err
 	}
-	val, ok := av.val.(int32)
+	val, ok := av.Val.(int32)
 	if !ok {
-		return 0, errs.WarpErr(errs.NewErrInvalidType("int32", reflect.TypeOf(val).Name()))
+		return 0, errs.NewErrInvalidType("int32", reflect.TypeOf(av.Val).Name())
 	}
 	return val, nil
 }
@@ -77,12 +77,12 @@ func (a AnyValue) Int32Or(def int32) int32 {
 
 // Uint32 返回 uint32 数据
 func (av AnyValue) Uint32() (uint32, error) {
-	if av.err != nil {
-		return 0, av.err
+	if av.Err != nil {
+		return 0, av.Err
 	}
-	val, ok := av.val.(uint32)
+	val, ok := av.Val.(uint32)
 	if !ok {
-		return 0, errs.WarpErr(errs.NewErrInvalidType("uint32", reflect.TypeOf(val).Name()))
+		return 0, errs.NewErrInvalidType("uint32", reflect.TypeOf(av.Val).Name())
 	}
 	return val, nil
 }
@@ -98,12 +98,12 @@ func (a AnyValue) Uint32Or(def uint32) uint32 {
 
 // Int64 返回 int64 数据
 func (av AnyValue) Int64() (int64, error) {
-	if av.err != nil {
-		return 0, av.err
+	if av.Err != nil {
+		return 0, av.Err
 	}
-	val, ok := av.val.(int64)
+	val, ok := av.Val.(int64)
 	if !ok {
-		return 0, errs.WarpErr(errs.NewErrInvalidType("int64", reflect.TypeOf(val).Name()))
+		return 0, errs.NewErrInvalidType("int64", reflect.TypeOf(av.Val).Name())
 	}
 	return val, nil
 }
@@ -119,12 +119,12 @@ func (a AnyValue) Int64Or(def int64) int64 {
 
 // Uint64 返回 uint64 数据
 func (av AnyValue) Uint64() (uint64, error) {
-	if av.err != nil {
-		return 0, av.err
+	if av.Err != nil {
+		return 0, av.Err
 	}
-	val, ok := av.val.(uint64)
+	val, ok := av.Val.(uint64)
 	if !ok {
-		return 0, errs.WarpErr(errs.NewErrInvalidType("uint64", reflect.TypeOf(val).Name()))
+		return 0, errs.NewErrInvalidType("uint64", reflect.TypeOf(av.Val).Name())
 	}
 	return val, nil
 }
@@ -140,12 +140,12 @@ func (a AnyValue) Uint64Or(def uint64) uint64 {
 
 // Float32 返回 float32 数据
 func (av AnyValue) Float32() (float32, error) {
-	if av.err != nil {
-		return 0, av.err
+	if av.Err != nil {
+		return 0, av.Err
 	}
-	val, ok := av.val.(float32)
+	val, ok := av.Val.(float32)
 	if !ok {
-		return 0, errs.WarpErr(errs.NewErrInvalidType("float32", reflect.TypeOf(val).Name()))
+		return 0, errs.NewErrInvalidType("float32", reflect.TypeOf(av.Val).Name())
 	}
 	return val, nil
 }
@@ -161,12 +161,12 @@ func (a AnyValue) Float32Or(def float32) float32 {
 
 // Float64 返回 float64 数据
 func (av AnyValue) Float64() (float64, error) {
-	if av.err != nil {
-		return 0, av.err
+	if av.Err != nil {
+		return 0, av.Err
 	}
-	val, ok := av.val.(float64)
+	val, ok := av.Val.(float64)
 	if !ok {
-		return 0, errs.WarpErr(errs.NewErrInvalidType("float64", reflect.TypeOf(val).Name()))
+		return 0, errs.NewErrInvalidType("float64", reflect.TypeOf(av.Val).Name())
 	}
 	return val, nil
 }
@@ -182,12 +182,12 @@ func (a AnyValue) Float64Or(def float64) float64 {
 
 // String 返回 string 数据
 func (av AnyValue) String() (string, error) {
-	if av.err != nil {
-		return "", av.err
+	if av.Err != nil {
+		return "", av.Err
 	}
-	val, ok := av.val.(string)
+	val, ok := av.Val.(string)
 	if !ok {
-		return "", errs.WarpErr(errs.NewErrInvalidType("string", reflect.TypeOf(val).Name()))
+		return "", errs.NewErrInvalidType("string", reflect.TypeOf(av.Val).Name())
 	}
 	return val, nil
 }
@@ -203,12 +203,12 @@ func (a AnyValue) StringOr(def string) string {
 
 // Bytes 返回 []byte 数据
 func (av AnyValue) Bytes() ([]byte, error) {
-	if av.err != nil {
-		return nil, av.err
+	if av.Err != nil {
+		return nil, av.Err
 	}
-	val, ok := av.val.([]byte)
+	val, ok := av.Val.([]byte)
 	if !ok {
-		return nil, errs.WarpErr(errs.NewErrInvalidType("[]byte", reflect.TypeOf(val).Name()))
+		return nil, errs.NewErrInvalidType("[]byte", reflect.TypeOf(av.Val).Name())
 	}
 	return val, nil
 }
