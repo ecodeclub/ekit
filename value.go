@@ -32,7 +32,7 @@ func (av AnyValue) Int() (int, error) {
 	}
 	val, ok := av.Val.(int)
 	if !ok {
-		return 0, errs.NewErrInvalidType("int", reflect.TypeOf(av.Val).Name())
+		return 0, errs.NewErrInvalidType("int", reflect.TypeOf(av.Val).String())
 	}
 	return val, nil
 }
@@ -53,7 +53,7 @@ func (av AnyValue) Uint() (uint, error) {
 	}
 	val, ok := av.Val.(uint)
 	if !ok {
-		return 0, errs.NewErrInvalidType("uint", reflect.TypeOf(av.Val).Name())
+		return 0, errs.NewErrInvalidType("uint", reflect.TypeOf(av.Val).String())
 	}
 	return val, nil
 }
@@ -74,7 +74,7 @@ func (av AnyValue) Int32() (int32, error) {
 	}
 	val, ok := av.Val.(int32)
 	if !ok {
-		return 0, errs.NewErrInvalidType("int32", reflect.TypeOf(av.Val).Name())
+		return 0, errs.NewErrInvalidType("int32", reflect.TypeOf(av.Val).String())
 	}
 	return val, nil
 }
@@ -95,7 +95,7 @@ func (av AnyValue) Uint32() (uint32, error) {
 	}
 	val, ok := av.Val.(uint32)
 	if !ok {
-		return 0, errs.NewErrInvalidType("uint32", reflect.TypeOf(av.Val).Name())
+		return 0, errs.NewErrInvalidType("uint32", reflect.TypeOf(av.Val).String())
 	}
 	return val, nil
 }
@@ -116,7 +116,7 @@ func (av AnyValue) Int64() (int64, error) {
 	}
 	val, ok := av.Val.(int64)
 	if !ok {
-		return 0, errs.NewErrInvalidType("int64", reflect.TypeOf(av.Val).Name())
+		return 0, errs.NewErrInvalidType("int64", reflect.TypeOf(av.Val).String())
 	}
 	return val, nil
 }
@@ -137,7 +137,7 @@ func (av AnyValue) Uint64() (uint64, error) {
 	}
 	val, ok := av.Val.(uint64)
 	if !ok {
-		return 0, errs.NewErrInvalidType("uint64", reflect.TypeOf(av.Val).Name())
+		return 0, errs.NewErrInvalidType("uint64", reflect.TypeOf(av.Val).String())
 	}
 	return val, nil
 }
@@ -158,7 +158,7 @@ func (av AnyValue) Float32() (float32, error) {
 	}
 	val, ok := av.Val.(float32)
 	if !ok {
-		return 0, errs.NewErrInvalidType("float32", reflect.TypeOf(av.Val).Name())
+		return 0, errs.NewErrInvalidType("float32", reflect.TypeOf(av.Val).String())
 	}
 	return val, nil
 }
@@ -179,7 +179,7 @@ func (av AnyValue) Float64() (float64, error) {
 	}
 	val, ok := av.Val.(float64)
 	if !ok {
-		return 0, errs.NewErrInvalidType("float64", reflect.TypeOf(av.Val).Name())
+		return 0, errs.NewErrInvalidType("float64", reflect.TypeOf(av.Val).String())
 	}
 	return val, nil
 }
@@ -200,7 +200,7 @@ func (av AnyValue) String() (string, error) {
 	}
 	val, ok := av.Val.(string)
 	if !ok {
-		return "", errs.NewErrInvalidType("string", reflect.TypeOf(av.Val).Name())
+		return "", errs.NewErrInvalidType("string", reflect.TypeOf(av.Val).String())
 	}
 	return val, nil
 }
@@ -221,7 +221,7 @@ func (av AnyValue) Bytes() ([]byte, error) {
 	}
 	val, ok := av.Val.([]byte)
 	if !ok {
-		return nil, errs.NewErrInvalidType("[]byte", reflect.TypeOf(av.Val).Name())
+		return nil, errs.NewErrInvalidType("[]byte", reflect.TypeOf(av.Val).String())
 	}
 	return val, nil
 }

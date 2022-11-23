@@ -50,7 +50,7 @@ func TestAnyValue_Int(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("int", reflect.TypeOf("").Name()),
+			err: errs.NewErrInvalidType("int", reflect.TypeOf("").String()),
 		},
 	}
 	for _, tt := range tests {
@@ -134,9 +134,9 @@ func TestAnyValue_Uint(t *testing.T) {
 		{
 			name: "type error case:",
 			val: AnyValue{
-				Val: "",
+				Val: []string{"111"},
 			},
-			err: errs.NewErrInvalidType("uint", reflect.TypeOf("").Name()),
+			err: errs.NewErrInvalidType("uint", reflect.TypeOf([]string{"111"}).String()),
 		},
 	}
 	for _, tt := range tests {
@@ -222,7 +222,7 @@ func TestAnyValue_Int32(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("int32", reflect.TypeOf("").Name()),
+			err: errs.NewErrInvalidType("int32", reflect.TypeOf("").String()),
 		},
 	}
 	for _, tt := range tests {
@@ -308,7 +308,7 @@ func TestAnyValue_Uint32(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("uint32", reflect.TypeOf("").Name()),
+			err: errs.NewErrInvalidType("uint32", reflect.TypeOf("").String()),
 		},
 	}
 	for _, tt := range tests {
@@ -395,7 +395,7 @@ func TestAnyValue_Int64(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("int64", reflect.TypeOf("").Name()),
+			err: errs.NewErrInvalidType("int64", reflect.TypeOf("").String()),
 		},
 	}
 	for _, tt := range tests {
@@ -481,7 +481,7 @@ func TestAnyValue_Uint64(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("uint64", reflect.TypeOf("").Name()),
+			err: errs.NewErrInvalidType("uint64", reflect.TypeOf("").String()),
 		},
 	}
 	for _, tt := range tests {
@@ -567,7 +567,7 @@ func TestAnyValue_Float32(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("float32", reflect.TypeOf("").Name()),
+			err: errs.NewErrInvalidType("float32", reflect.TypeOf("").String()),
 		},
 	}
 	for _, tt := range tests {
@@ -654,7 +654,7 @@ func TestAnyValue_Float64(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("float64", reflect.TypeOf("").Name()),
+			err: errs.NewErrInvalidType("float64", reflect.TypeOf("").String()),
 		},
 	}
 	for _, tt := range tests {
@@ -740,7 +740,7 @@ func TestAnyValue_String(t *testing.T) {
 			val: AnyValue{
 				Val: 1,
 			},
-			err: errs.NewErrInvalidType("string", reflect.TypeOf(111).Name()),
+			err: errs.NewErrInvalidType("string", reflect.TypeOf(111).String()),
 		},
 	}
 	for _, tt := range tests {
@@ -826,7 +826,7 @@ func TestAnyValue_Bytes(t *testing.T) {
 			val: AnyValue{
 				Val: 1,
 			},
-			err: errs.NewErrInvalidType("[]byte", reflect.TypeOf(111).Name()),
+			err: errs.NewErrInvalidType("[]byte", reflect.TypeOf(111).String()),
 		},
 	}
 	for _, tt := range tests {
