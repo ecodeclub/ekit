@@ -1,5 +1,18 @@
-// Package Value 提供值相关的封装
-package value
+// Copyright 2021 gotomicro
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package ekit
 
 import (
 	"errors"
@@ -53,7 +66,7 @@ func TestAnyValue_Int(t *testing.T) {
 	}
 }
 
-func TestAnyValue_IntOr(t *testing.T) {
+func TestAnyValue_IntOrDefault(t *testing.T) {
 	tests := []struct {
 		name string
 		val  AnyValue
@@ -91,7 +104,7 @@ func TestAnyValue_IntOr(t *testing.T) {
 				Val: tt.val.Val,
 				Err: tt.val.Err,
 			}
-			assert.Equal(t, a.IntOr(tt.def), tt.want)
+			assert.Equal(t, a.IntOrDefault(tt.def), tt.want)
 		})
 	}
 }
@@ -139,7 +152,7 @@ func TestAnyValue_Uint(t *testing.T) {
 	}
 }
 
-func TestAnyValue_UintOr(t *testing.T) {
+func TestAnyValue_UintOrDefault(t *testing.T) {
 	tests := []struct {
 		name string
 		val  AnyValue
@@ -177,7 +190,7 @@ func TestAnyValue_UintOr(t *testing.T) {
 				Val: tt.val.Val,
 				Err: tt.val.Err,
 			}
-			assert.Equal(t, a.UintOr(tt.def), tt.want)
+			assert.Equal(t, a.UintOrDefault(tt.def), tt.want)
 		})
 	}
 }
@@ -225,7 +238,7 @@ func TestAnyValue_Int32(t *testing.T) {
 	}
 }
 
-func TestAnyValue_Int32Or(t *testing.T) {
+func TestAnyValue_Int32OrDefault(t *testing.T) {
 	tests := []struct {
 		name string
 		val  AnyValue
@@ -263,7 +276,7 @@ func TestAnyValue_Int32Or(t *testing.T) {
 				Val: tt.val.Val,
 				Err: tt.val.Err,
 			}
-			assert.Equal(t, a.Int32Or(tt.def), tt.want)
+			assert.Equal(t, a.Int32OrDefault(tt.def), tt.want)
 		})
 	}
 }
@@ -311,7 +324,7 @@ func TestAnyValue_Uint32(t *testing.T) {
 	}
 }
 
-func TestAnyValue_Uint32Or(t *testing.T) {
+func TestAnyValue_Uint32OrDefault(t *testing.T) {
 	tests := []struct {
 		name string
 		val  AnyValue
@@ -350,7 +363,7 @@ func TestAnyValue_Uint32Or(t *testing.T) {
 				Val: tt.val.Val,
 				Err: tt.val.Err,
 			}
-			assert.Equal(t, a.Uint32Or(tt.def), tt.want)
+			assert.Equal(t, a.Uint32OrDefault(tt.def), tt.want)
 		})
 	}
 }
@@ -398,7 +411,7 @@ func TestAnyValue_Int64(t *testing.T) {
 	}
 }
 
-func TestAnyValue_Int64Or(t *testing.T) {
+func TestAnyValue_Int64OrDefault(t *testing.T) {
 	tests := []struct {
 		name string
 		val  AnyValue
@@ -436,7 +449,7 @@ func TestAnyValue_Int64Or(t *testing.T) {
 				Val: tt.val.Val,
 				Err: tt.val.Err,
 			}
-			assert.Equal(t, a.Int64Or(tt.def), tt.want)
+			assert.Equal(t, a.Int64OrDefault(tt.def), tt.want)
 		})
 	}
 }
@@ -484,7 +497,7 @@ func TestAnyValue_Uint64(t *testing.T) {
 	}
 }
 
-func TestAnyValue_Uint64Or(t *testing.T) {
+func TestAnyValue_Uint64OrDefault(t *testing.T) {
 	tests := []struct {
 		name string
 		val  AnyValue
@@ -522,7 +535,7 @@ func TestAnyValue_Uint64Or(t *testing.T) {
 				Val: tt.val.Val,
 				Err: tt.val.Err,
 			}
-			assert.Equal(t, a.Uint64Or(tt.def), tt.want)
+			assert.Equal(t, a.Uint64OrDefault(tt.def), tt.want)
 		})
 	}
 }
@@ -570,7 +583,7 @@ func TestAnyValue_Float32(t *testing.T) {
 	}
 }
 
-func TestAnyValue_Float32Or(t *testing.T) {
+func TestAnyValue_Float32OrDefault(t *testing.T) {
 	tests := []struct {
 		name string
 		val  AnyValue
@@ -608,7 +621,7 @@ func TestAnyValue_Float32Or(t *testing.T) {
 				Val: tt.val.Val,
 				Err: tt.val.Err,
 			}
-			assert.Equal(t, a.Float32Or(tt.def), tt.want)
+			assert.Equal(t, a.Float32OrDefault(tt.def), tt.want)
 		})
 	}
 }
@@ -657,7 +670,7 @@ func TestAnyValue_Float64(t *testing.T) {
 	}
 }
 
-func TestAnyValue_Float64Or(t *testing.T) {
+func TestAnyValue_Float64OrDefault(t *testing.T) {
 	tests := []struct {
 		name string
 		val  AnyValue
@@ -695,7 +708,7 @@ func TestAnyValue_Float64Or(t *testing.T) {
 				Val: tt.val.Val,
 				Err: tt.val.Err,
 			}
-			assert.Equal(t, a.Float64Or(tt.def), tt.want)
+			assert.Equal(t, a.Float64OrDefault(tt.def), tt.want)
 		})
 	}
 }
@@ -743,7 +756,7 @@ func TestAnyValue_String(t *testing.T) {
 	}
 }
 
-func TestAnyValue_StringOr(t *testing.T) {
+func TestAnyValue_StringOrDefault(t *testing.T) {
 	tests := []struct {
 		name string
 		val  AnyValue
@@ -781,7 +794,7 @@ func TestAnyValue_StringOr(t *testing.T) {
 				Val: tt.val.Val,
 				Err: tt.val.Err,
 			}
-			assert.Equal(t, a.StringOr(tt.def), tt.want)
+			assert.Equal(t, a.StringOrDefault(tt.def), tt.want)
 		})
 	}
 }
@@ -829,7 +842,7 @@ func TestAnyValue_Bytes(t *testing.T) {
 	}
 }
 
-func TestAnyValue_BytesOr(t *testing.T) {
+func TestAnyValue_BytesOrDefault(t *testing.T) {
 	tests := []struct {
 		name string
 		val  AnyValue
@@ -867,7 +880,7 @@ func TestAnyValue_BytesOr(t *testing.T) {
 				Val: tt.val.Val,
 				Err: tt.val.Err,
 			}
-			assert.Equal(t, a.BytesOr(tt.def), tt.want)
+			assert.Equal(t, a.BytesOrDefault(tt.def), tt.want)
 		})
 	}
 }

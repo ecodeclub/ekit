@@ -1,5 +1,18 @@
-// Package value 提供值相关的封装
-package value
+// Copyright 2021 gotomicro
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package ekit
 
 import (
 	"reflect"
@@ -24,8 +37,8 @@ func (av AnyValue) Int() (int, error) {
 	return val, nil
 }
 
-// IntOr 返回 int 数据，或者默认值
-func (a AnyValue) IntOr(def int) int {
+// IntOrDefault 返回 int 数据，或者默认值
+func (a AnyValue) IntOrDefault(def int) int {
 	val, err := a.Int()
 	if err != nil {
 		return def
@@ -45,8 +58,8 @@ func (av AnyValue) Uint() (uint, error) {
 	return val, nil
 }
 
-// UintOr 返回 uint 数据，或者默认值
-func (a AnyValue) UintOr(def uint) uint {
+// UintOrDefault 返回 uint 数据，或者默认值
+func (a AnyValue) UintOrDefault(def uint) uint {
 	val, err := a.Uint()
 	if err != nil {
 		return def
@@ -66,8 +79,8 @@ func (av AnyValue) Int32() (int32, error) {
 	return val, nil
 }
 
-// Int32Or 返回 int32 数据，或者默认值
-func (a AnyValue) Int32Or(def int32) int32 {
+// Int32OrDefault 返回 int32 数据，或者默认值
+func (a AnyValue) Int32OrDefault(def int32) int32 {
 	val, err := a.Int32()
 	if err != nil {
 		return def
@@ -87,8 +100,8 @@ func (av AnyValue) Uint32() (uint32, error) {
 	return val, nil
 }
 
-// Uint32Or 返回 uint32 数据，或者默认值
-func (a AnyValue) Uint32Or(def uint32) uint32 {
+// Uint32OrDefault 返回 uint32 数据，或者默认值
+func (a AnyValue) Uint32OrDefault(def uint32) uint32 {
 	val, err := a.Uint32()
 	if err != nil {
 		return def
@@ -108,8 +121,8 @@ func (av AnyValue) Int64() (int64, error) {
 	return val, nil
 }
 
-// Int64Or 返回 int64 数据，或者默认值
-func (a AnyValue) Int64Or(def int64) int64 {
+// Int64OrDefault 返回 int64 数据，或者默认值
+func (a AnyValue) Int64OrDefault(def int64) int64 {
 	val, err := a.Int64()
 	if err != nil {
 		return def
@@ -129,8 +142,8 @@ func (av AnyValue) Uint64() (uint64, error) {
 	return val, nil
 }
 
-// Uint64Or 返回 uint64 数据，或者默认值
-func (a AnyValue) Uint64Or(def uint64) uint64 {
+// Uint64OrDefault 返回 uint64 数据，或者默认值
+func (a AnyValue) Uint64OrDefault(def uint64) uint64 {
 	val, err := a.Uint64()
 	if err != nil {
 		return def
@@ -150,8 +163,8 @@ func (av AnyValue) Float32() (float32, error) {
 	return val, nil
 }
 
-// Float32Or 返回 float32 数据，或者默认值
-func (a AnyValue) Float32Or(def float32) float32 {
+// Float32OrDefault 返回 float32 数据，或者默认值
+func (a AnyValue) Float32OrDefault(def float32) float32 {
 	val, err := a.Float32()
 	if err != nil {
 		return def
@@ -171,8 +184,8 @@ func (av AnyValue) Float64() (float64, error) {
 	return val, nil
 }
 
-// Float64Or 返回 float64 数据，或者默认值
-func (a AnyValue) Float64Or(def float64) float64 {
+// Float64OrDefault 返回 float64 数据，或者默认值
+func (a AnyValue) Float64OrDefault(def float64) float64 {
 	val, err := a.Float64()
 	if err != nil {
 		return def
@@ -192,8 +205,8 @@ func (av AnyValue) String() (string, error) {
 	return val, nil
 }
 
-// StringOr 返回 string 数据，或者默认值
-func (a AnyValue) StringOr(def string) string {
+// StringOrDefault 返回 string 数据，或者默认值
+func (a AnyValue) StringOrDefault(def string) string {
 	val, err := a.String()
 	if err != nil {
 		return def
@@ -213,8 +226,8 @@ func (av AnyValue) Bytes() ([]byte, error) {
 	return val, nil
 }
 
-// BytesOr 返回 []byte 数据，或者默认值
-func (a AnyValue) BytesOr(def []byte) []byte {
+// BytesOrDefault 返回 []byte 数据，或者默认值
+func (a AnyValue) BytesOrDefault(def []byte) []byte {
 	val, err := a.Bytes()
 	if err != nil {
 		return def

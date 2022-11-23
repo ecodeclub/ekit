@@ -25,5 +25,5 @@ func NewErrIndexOutOfRange(length int, index int) error {
 
 // NewErrInvalidType 创建一个代表类型转换失败的错误
 func NewErrInvalidType(want, got string) error {
-	return fmt.Errorf("ekit: 类型转换失败，want:%s, got%s", want, got)
+	return fmt.Errorf("ekit: 类型转换失败，want:%s, got:%s", want, got)
 }
