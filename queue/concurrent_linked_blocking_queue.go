@@ -16,21 +16,9 @@ package queue
 
 import (
 	"context"
+	"github.com/gotomicro/ekit/list"
 	"sync"
 )
-
-// 实现的单链表结构
-type Node[T any] struct {
-	data T
-	next *Node[T]
-}
-
-func NewNode[T any](data T) *Node[T] {
-	return &Node[T]{
-		data: data,
-		next: nil,
-	}
-}
 
 // ConcurrentLinkBlockingQueue 有界并发阻塞队列
 type ConcurrentLinkBlockingQueue[T any] struct {
@@ -38,13 +26,8 @@ type ConcurrentLinkBlockingQueue[T any] struct {
 
 	//最大容量
 	maxSize int
-
-	// 队头元素下标
-	head *Node[T]
-	// 队尾元素下标
-	tail *Node[T]
-	// 包含多少个元素
-	count int
+	//链表
+	linkedlist *list.LinkedList[T]
 
 	notEmpty *cond
 	notFull  *cond
@@ -55,16 +38,13 @@ type ConcurrentLinkBlockingQueue[T any] struct {
 // capacity 必须为正数
 func NewConcurrentLinkBlockingQueue[T any](capacity int) *ConcurrentLinkBlockingQueue[T] {
 	mutex := &sync.RWMutex{}
-	var t T
 	res := &ConcurrentLinkBlockingQueue[T]{
-		maxSize:  capacity,
-		mutex:    mutex,
-		notEmpty: newCond(mutex),
-		notFull:  newCond(mutex),
-		head:     &Node[T]{next: nil, data: t},
-		count:    0,
+		maxSize:    capacity,
+		mutex:      mutex,
+		notEmpty:   newCond(mutex),
+		notFull:    newCond(mutex),
+		linkedlist: list.NewLinkedListOf[T]([]T{}),
 	}
-	res.tail = res.head
 	return res
 }
 
@@ -77,7 +57,7 @@ func (c *ConcurrentLinkBlockingQueue[T]) Enqueue(ctx context.Context, t T) error
 		return ctx.Err()
 	}
 	c.mutex.Lock()
-	for c.count == c.maxSize {
+	for c.linkedlist.Len() == c.maxSize {
 		signal := c.notFull.signalCh()
 		select {
 		case <-ctx.Done():
@@ -88,10 +68,7 @@ func (c *ConcurrentLinkBlockingQueue[T]) Enqueue(ctx context.Context, t T) error
 		}
 	}
 
-	newNode := NewNode(t)
-	c.tail.next = newNode
-	c.tail = newNode
-	c.count++
+	c.linkedlist.Append(t)
 
 	// 这里会释放锁
 	c.notEmpty.broadcast()
@@ -108,7 +85,7 @@ func (c *ConcurrentLinkBlockingQueue[T]) Dequeue(ctx context.Context) (T, error)
 		return t, ctx.Err()
 	}
 	c.mutex.Lock()
-	for c.count == 0 {
+	for c.linkedlist.Len() == 0 {
 		signal := c.notEmpty.signalCh()
 		select {
 		case <-ctx.Done():
@@ -119,34 +96,20 @@ func (c *ConcurrentLinkBlockingQueue[T]) Dequeue(ctx context.Context) (T, error)
 		}
 	}
 
-	tmpNode := c.head.next
-	c.head.next = c.head.next.next
-	//只有一个元素时，需要更新tail
-	if c.tail == tmpNode {
-		c.tail = c.head
-	}
-
-	val := tmpNode.data
-	c.count--
-
+	val, err := c.linkedlist.Delete(0)
 	c.notFull.broadcast()
-	return val, nil
+	return val, err
 }
 
 func (c *ConcurrentLinkBlockingQueue[T]) Len() int {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return c.count
+	return c.linkedlist.Len()
 }
 
 func (c *ConcurrentLinkBlockingQueue[T]) AsSlice() []T {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	res := make([]T, 0, c.count)
-	tmpNode := c.head.next
-	for tmpNode != nil {
-		res = append(res, tmpNode.data)
-		tmpNode = tmpNode.next
-	}
+	res := c.linkedlist.AsSlice()
 	return res
 }

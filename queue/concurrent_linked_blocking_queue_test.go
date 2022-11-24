@@ -34,8 +34,6 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 		wantErr   error
 		wantSlice []int
 		wantLen   int
-		wantHead  *Node[int]
-		wantTail  *Node[int]
 	}{
 		{
 			name: "empty and enqueued",
@@ -46,8 +44,6 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 			timeout:   time.Second,
 			wantSlice: []int{123},
 			wantLen:   1,
-			wantTail:  &Node[int]{data: 123, next: nil},
-			wantHead:  &Node[int]{data: 0, next: &Node[int]{data: 123, next: nil}},
 		},
 		{
 			name: "invalid context",
@@ -58,8 +54,6 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 			timeout:   -time.Second,
 			wantSlice: []int{},
 			wantErr:   context.DeadlineExceeded,
-			wantTail:  &Node[int]{data: 0, next: nil},
-			wantHead:  &Node[int]{data: 0, next: nil},
 		},
 		{
 			// 入队之后就满了，恰好放在切片的最后一个位置
@@ -78,8 +72,6 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 			timeout:   time.Second,
 			wantSlice: []int{123, 234, 345},
 			wantLen:   3,
-			wantTail:  &Node[int]{data: 345, next: nil},
-			wantHead:  &Node[int]{data: 0, next: &Node[int]{data: 123, next: &Node[int]{data: 234, next: &Node[int]{data: 345, next: nil}}}},
 		},
 		{
 			// 入队之后就满了，恰好放在中间
@@ -108,8 +100,6 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 			timeout:   time.Second,
 			wantSlice: []int{345, 456, 567},
 			wantLen:   3,
-			wantTail:  &Node[int]{data: 567, next: nil},
-			wantHead:  &Node[int]{data: 0, next: &Node[int]{data: 345, next: &Node[int]{data: 456, next: &Node[int]{data: 567, next: nil}}}},
 		},
 		{
 			// 元素本身就是零值
@@ -128,8 +118,6 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 			timeout:   time.Second,
 			wantSlice: []int{0, 0, 0},
 			wantLen:   3,
-			wantTail:  &Node[int]{data: 0, next: nil},
-			wantHead:  &Node[int]{data: 0, next: &Node[int]{data: 0, next: &Node[int]{data: 0, next: &Node[int]{data: 0, next: nil}}}},
 		},
 	}
 
@@ -142,8 +130,6 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 			assert.Equal(t, tc.wantErr, err)
 			assert.Equal(t, tc.wantSlice, q.AsSlice())
 			assert.Equal(t, tc.wantLen, q.Len())
-			assert.Equal(t, tc.wantHead, q.head)
-			assert.Equal(t, tc.wantTail, q.tail)
 		})
 	}
 
@@ -193,8 +179,6 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 		wantVal   int
 		wantSlice []int
 		wantLen   int
-		wantHead  *Node[int]
-		wantTail  *Node[int]
 	}{
 		{
 			name: "dequeued",
@@ -212,8 +196,6 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 			timeout:   time.Second,
 			wantSlice: []int{234},
 			wantLen:   1,
-			wantTail:  &Node[int]{data: 234, next: nil},
-			wantHead:  &Node[int]{data: 0, next: &Node[int]{data: 234, next: nil}},
 		},
 		{
 			name: "invalid context",
@@ -231,8 +213,6 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 			timeout:   -time.Second,
 			wantSlice: []int{123, 234},
 			wantLen:   2,
-			wantTail:  &Node[int]{data: 234, next: nil},
-			wantHead:  &Node[int]{data: 0, next: &Node[int]{data: 123, next: &Node[int]{data: 234, next: nil}}},
 		},
 		{
 			name: "dequeue and empty first",
@@ -248,8 +228,6 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 			timeout:   time.Second,
 			wantSlice: []int{},
 			wantLen:   0,
-			wantTail:  &Node[int]{data: 0, next: nil},
-			wantHead:  &Node[int]{data: 0, next: nil},
 		},
 		{
 			name: "dequeue and empty middle",
@@ -270,8 +248,6 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 			timeout:   time.Second,
 			wantSlice: []int{},
 			wantLen:   0,
-			wantTail:  &Node[int]{data: 0, next: nil},
-			wantHead:  &Node[int]{data: 0, next: nil},
 		},
 		{
 			name: "dequeue and empty last",
@@ -297,8 +273,6 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 			timeout:   time.Second,
 			wantSlice: []int{},
 			wantLen:   0,
-			wantTail:  &Node[int]{data: 0, next: nil},
-			wantHead:  &Node[int]{data: 0, next: nil},
 		},
 	}
 
@@ -312,8 +286,6 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 			assert.Equal(t, tc.wantVal, val)
 			assert.Equal(t, tc.wantSlice, q.AsSlice())
 			assert.Equal(t, tc.wantLen, q.Len())
-			assert.Equal(t, tc.wantHead, q.head)
-			assert.Equal(t, tc.wantTail, q.tail)
 		})
 	}
 
