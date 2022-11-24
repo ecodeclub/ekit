@@ -68,11 +68,11 @@ func (c *ConcurrentLinkBlockingQueue[T]) Enqueue(ctx context.Context, t T) error
 		}
 	}
 
-	c.linkedlist.Append(t)
+	err := c.linkedlist.Append(t)
 
 	// 这里会释放锁
 	c.notEmpty.broadcast()
-	return nil
+	return err
 }
 
 // Dequeue 出队
