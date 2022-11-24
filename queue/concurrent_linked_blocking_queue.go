@@ -24,9 +24,9 @@ import (
 type ConcurrentLinkBlockingQueue[T any] struct {
 	mutex *sync.RWMutex
 
-	//最大容量
+	// 最大容量
 	maxSize int
-	//链表
+	// 链表
 	linkedlist *list.LinkedList[T]
 
 	notEmpty *cond
