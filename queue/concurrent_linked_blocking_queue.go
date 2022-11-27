@@ -57,7 +57,7 @@ func (c *ConcurrentLinkBlockingQueue[T]) Enqueue(ctx context.Context, t T) error
 		return ctx.Err()
 	}
 	c.mutex.Lock()
-	for c.maxSize <= 0 && c.linkedlist.Len() == c.maxSize {
+	for c.maxSize > 0 && c.linkedlist.Len() == c.maxSize {
 		signal := c.notFull.signalCh()
 		select {
 		case <-ctx.Done():
