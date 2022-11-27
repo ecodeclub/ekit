@@ -16,11 +16,14 @@ package queue
 
 import (
 	"context"
-	"github.com/gotomicro/ekit/list"
 	"sync"
+
+	"github.com/gotomicro/ekit/list"
 )
 
-// ConcurrentLinkBlockingQueue 有界并发阻塞队列
+// ConcurrentLinkBlockingQueue
+// 如果 maxSize 是正数。那么就是有界并发阻塞队列
+// 如果不是，就是无界并发阻塞队列, 在这种情况下，入队永远能够成功
 type ConcurrentLinkBlockingQueue[T any] struct {
 	mutex *sync.RWMutex
 
@@ -33,9 +36,8 @@ type ConcurrentLinkBlockingQueue[T any] struct {
 	notFull  *cond
 }
 
-// NewConcurrentLinkBlockingQueue 创建一个有界链式阻塞队列
+// NewConcurrentLinkBlockingQueue 创建链式阻塞队列 capacity <= 0 时，为无界队列
 // 容量会在最开始的时候就初始化好
-// capacity 必须为正数
 func NewConcurrentLinkBlockingQueue[T any](capacity int) *ConcurrentLinkBlockingQueue[T] {
 	mutex := &sync.RWMutex{}
 	res := &ConcurrentLinkBlockingQueue[T]{
@@ -43,21 +45,19 @@ func NewConcurrentLinkBlockingQueue[T any](capacity int) *ConcurrentLinkBlocking
 		mutex:      mutex,
 		notEmpty:   newCond(mutex),
 		notFull:    newCond(mutex),
-		linkedlist: list.NewLinkedListOf[T]([]T{}),
+		linkedlist: list.NewLinkedList[T](),
 	}
 	return res
 }
 
 // Enqueue 入队
-// 注意：目前我们还没实现超时控制，即我们只能部分利用 ctx 里面的超时或者取消机制
-// 核心在于当 goroutine 被阻塞之后，再无法监听超时或者取消
-// 只有在被唤醒之后我们才会再次检测是否已经超时或者取消
+// 注意：目前我们已经通过broadcast实现了超时控制
 func (c *ConcurrentLinkBlockingQueue[T]) Enqueue(ctx context.Context, t T) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 	c.mutex.Lock()
-	for c.linkedlist.Len() == c.maxSize {
+	for c.maxSize <= 0 && c.linkedlist.Len() == c.maxSize {
 		signal := c.notFull.signalCh()
 		select {
 		case <-ctx.Done():
@@ -76,9 +76,7 @@ func (c *ConcurrentLinkBlockingQueue[T]) Enqueue(ctx context.Context, t T) error
 }
 
 // Dequeue 出队
-// 注意：目前我们还没实现超时控制，即我们只能部分利用 ctx 里面的超时或者取消机制
-// 核心在于当 goroutine 被阻塞之后，再无法监听超时或者取消
-// 只有在被唤醒之后我们才会再次检测是否已经超时或者取消
+// 注意：目前我们已经通过broadcast实现了超时控制
 func (c *ConcurrentLinkBlockingQueue[T]) Dequeue(ctx context.Context) (T, error) {
 	if ctx.Err() != nil {
 		var t T

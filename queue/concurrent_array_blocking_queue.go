@@ -53,9 +53,7 @@ func NewConcurrentBlockingQueue[T any](capacity int) *ConcurrentArrayBlockingQue
 }
 
 // Enqueue 入队
-// 注意：目前我们还没实现超时控制，即我们只能部分利用 ctx 里面的超时或者取消机制
-// 核心在于当 goroutine 被阻塞之后，再无法监听超时或者取消
-// 只有在被唤醒之后我们才会再次检测是否已经超时或者取消
+// 注意：目前我们已经通过broadcast实现了超时控制
 func (c *ConcurrentArrayBlockingQueue[T]) Enqueue(ctx context.Context, t T) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -84,9 +82,7 @@ func (c *ConcurrentArrayBlockingQueue[T]) Enqueue(ctx context.Context, t T) erro
 }
 
 // Dequeue 出队
-// 注意：目前我们还没实现超时控制，即我们只能部分利用 ctx 里面的超时或者取消机制
-// 核心在于当 goroutine 被阻塞之后，再无法监听超时或者取消
-// 只有在被唤醒之后我们才会再次检测是否已经超时或者取消
+// 注意：目前我们已经通过broadcast实现了超时控制
 func (c *ConcurrentArrayBlockingQueue[T]) Dequeue(ctx context.Context) (T, error) {
 	if ctx.Err() != nil {
 		var t T

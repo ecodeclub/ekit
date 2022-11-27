@@ -73,52 +73,6 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 			wantSlice: []int{123, 234, 345},
 			wantLen:   3,
 		},
-		{
-			// 入队之后就满了，恰好放在中间
-			name: "enqueued full first index",
-			q: func() *ConcurrentLinkBlockingQueue[int] {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-				defer cancel()
-				q := NewConcurrentLinkBlockingQueue[int](3)
-				err := q.Enqueue(ctx, 123)
-				require.NoError(t, err)
-				err = q.Enqueue(ctx, 234)
-				require.NoError(t, err)
-				err = q.Enqueue(ctx, 345)
-				require.NoError(t, err)
-				val, err := q.Dequeue(ctx)
-				require.NoError(t, err)
-				require.Equal(t, 123, val)
-				val, err = q.Dequeue(ctx)
-				require.NoError(t, err)
-				require.Equal(t, 234, val)
-				err = q.Enqueue(ctx, 456)
-				require.NoError(t, err)
-				return q
-			},
-			val:       567,
-			timeout:   time.Second,
-			wantSlice: []int{345, 456, 567},
-			wantLen:   3,
-		},
-		{
-			// 元素本身就是零值
-			name: "all zero value ",
-			q: func() *ConcurrentLinkBlockingQueue[int] {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-				defer cancel()
-				q := NewConcurrentLinkBlockingQueue[int](3)
-				err := q.Enqueue(ctx, 0)
-				require.NoError(t, err)
-				err = q.Enqueue(ctx, 0)
-				require.NoError(t, err)
-				return q
-			},
-			val:       0,
-			timeout:   time.Second,
-			wantSlice: []int{0, 0, 0},
-			wantLen:   3,
-		},
 	}
 
 	for _, tc := range testCases {
@@ -166,6 +120,20 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 		require.NoError(t, err)
 		err = q.Enqueue(ctx, 456)
 		require.NoError(t, err)
+	})
+
+	// 无界的情况下，可以无限添加元素，当然小心内存, 以及goroutine调度导致的超时
+	// capacity <= 0 时，为无界队列
+	t.Run("capacity <= 0", func(t *testing.T) {
+		q := NewConcurrentLinkBlockingQueue[int](-1)
+		for i := 0; i < 1000000; i++ {
+			go func() {
+				ctx := context.Background()
+				val := rand.Int()
+				err := q.Enqueue(ctx, val)
+				require.NoError(t, err)
+			}()
+		}
 	})
 }
 
@@ -225,26 +193,6 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 				return q
 			},
 			wantVal:   123,
-			timeout:   time.Second,
-			wantSlice: []int{},
-			wantLen:   0,
-		},
-		{
-			name: "dequeue and empty middle",
-			q: func() *ConcurrentLinkBlockingQueue[int] {
-				q := NewConcurrentLinkBlockingQueue[int](3)
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-				defer cancel()
-				err := q.Enqueue(ctx, 123)
-				require.NoError(t, err)
-				err = q.Enqueue(ctx, 234)
-				require.NoError(t, err)
-				val, err := q.Dequeue(ctx)
-				require.NoError(t, err)
-				require.Equal(t, 123, val)
-				return q
-			},
-			wantVal:   234,
 			timeout:   time.Second,
 			wantSlice: []int{},
 			wantLen:   0,
