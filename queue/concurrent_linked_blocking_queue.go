@@ -21,7 +21,7 @@ import (
 	"github.com/gotomicro/ekit/list"
 )
 
-// ConcurrentLinkBlockingQueue
+// ConcurrentLinkBlockingQueue 基于链表的并发阻塞队列
 // 如果 maxSize 是正数。那么就是有界并发阻塞队列
 // 如果不是，就是无界并发阻塞队列, 在这种情况下，入队永远能够成功
 type ConcurrentLinkBlockingQueue[T any] struct {
@@ -37,7 +37,6 @@ type ConcurrentLinkBlockingQueue[T any] struct {
 }
 
 // NewConcurrentLinkBlockingQueue 创建链式阻塞队列 capacity <= 0 时，为无界队列
-// 容量会在最开始的时候就初始化好
 func NewConcurrentLinkBlockingQueue[T any](capacity int) *ConcurrentLinkBlockingQueue[T] {
 	mutex := &sync.RWMutex{}
 	res := &ConcurrentLinkBlockingQueue[T]{

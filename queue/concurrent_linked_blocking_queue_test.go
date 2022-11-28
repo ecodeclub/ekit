@@ -126,12 +126,15 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 	// capacity <= 0 时，为无界队列
 	t.Run("capacity <= 0", func(t *testing.T) {
 		q := NewConcurrentLinkBlockingQueue[int](-1)
-		for i := 0; i < 1000000; i++ {
+		for i := 0; i < 10; i++ {
 			go func() {
-				ctx := context.Background()
-				val := rand.Int()
-				err := q.Enqueue(ctx, val)
-				require.NoError(t, err)
+				for i := 0; i < 1000; i++ {
+					ctx := context.Background()
+					val := rand.Int()
+					err := q.Enqueue(ctx, val)
+					require.NoError(t, err)
+				}
+
 			}()
 		}
 	})
