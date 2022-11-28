@@ -17,49 +17,46 @@ package queue
 import (
 	"context"
 	"sync"
+
+	"github.com/gotomicro/ekit/list"
 )
 
-// ConcurrentArrayBlockingQueue 有界并发阻塞队列
-type ConcurrentArrayBlockingQueue[T any] struct {
-	data  []T
+// ConcurrentLinkBlockingQueue 基于链表的并发阻塞队列
+// 如果 maxSize 是正数。那么就是有界并发阻塞队列
+// 如果不是，就是无界并发阻塞队列, 在这种情况下，入队永远能够成功
+type ConcurrentLinkBlockingQueue[T any] struct {
 	mutex *sync.RWMutex
 
-	// 队头元素下标
-	head int
-	// 队尾元素下标
-	tail int
-	// 包含多少个元素
-	count int
+	// 最大容量
+	maxSize int
+	// 链表
+	linkedlist *list.LinkedList[T]
 
 	notEmpty *cond
 	notFull  *cond
-
-	// zero 不能作为返回值返回，防止用户篡改
-	zero T
 }
 
-// NewConcurrentBlockingQueue 创建一个有界阻塞队列
-// 容量会在最开始的时候就初始化好
-// capacity 必须为正数
-func NewConcurrentBlockingQueue[T any](capacity int) *ConcurrentArrayBlockingQueue[T] {
+// NewConcurrentLinkBlockingQueue 创建链式阻塞队列 capacity <= 0 时，为无界队列
+func NewConcurrentLinkBlockingQueue[T any](capacity int) *ConcurrentLinkBlockingQueue[T] {
 	mutex := &sync.RWMutex{}
-	res := &ConcurrentArrayBlockingQueue[T]{
-		data:     make([]T, capacity),
-		mutex:    mutex,
-		notEmpty: newCond(mutex),
-		notFull:  newCond(mutex),
+	res := &ConcurrentLinkBlockingQueue[T]{
+		maxSize:    capacity,
+		mutex:      mutex,
+		notEmpty:   newCond(mutex),
+		notFull:    newCond(mutex),
+		linkedlist: list.NewLinkedList[T](),
 	}
 	return res
 }
 
 // Enqueue 入队
 // 注意：目前我们已经通过broadcast实现了超时控制
-func (c *ConcurrentArrayBlockingQueue[T]) Enqueue(ctx context.Context, t T) error {
+func (c *ConcurrentLinkBlockingQueue[T]) Enqueue(ctx context.Context, t T) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 	c.mutex.Lock()
-	for c.count == len(c.data) {
+	for c.maxSize > 0 && c.linkedlist.Len() == c.maxSize {
 		signal := c.notFull.signalCh()
 		select {
 		case <-ctx.Done():
@@ -69,27 +66,23 @@ func (c *ConcurrentArrayBlockingQueue[T]) Enqueue(ctx context.Context, t T) erro
 			c.mutex.Lock()
 		}
 	}
-	c.data[c.tail] = t
-	c.tail++
-	c.count++
-	// c.tail 已经是最后一个了，重置下标
-	if c.tail == cap(c.data) {
-		c.tail = 0
-	}
+
+	err := c.linkedlist.Append(t)
+
 	// 这里会释放锁
 	c.notEmpty.broadcast()
-	return nil
+	return err
 }
 
 // Dequeue 出队
 // 注意：目前我们已经通过broadcast实现了超时控制
-func (c *ConcurrentArrayBlockingQueue[T]) Dequeue(ctx context.Context) (T, error) {
+func (c *ConcurrentLinkBlockingQueue[T]) Dequeue(ctx context.Context) (T, error) {
 	if ctx.Err() != nil {
 		var t T
 		return t, ctx.Err()
 	}
 	c.mutex.Lock()
-	for c.count == 0 {
+	for c.linkedlist.Len() == 0 {
 		signal := c.notEmpty.signalCh()
 		select {
 		case <-ctx.Done():
@@ -99,35 +92,21 @@ func (c *ConcurrentArrayBlockingQueue[T]) Dequeue(ctx context.Context) (T, error
 			c.mutex.Lock()
 		}
 	}
-	val := c.data[c.head]
-	// 为了释放内存，GC
-	c.data[c.head] = c.zero
-	c.count--
-	c.head++
-	// 重置下标
-	if c.head == cap(c.data) {
-		c.head = 0
-	}
+
+	val, err := c.linkedlist.Delete(0)
 	c.notFull.broadcast()
-	return val, nil
+	return val, err
 }
 
-func (c *ConcurrentArrayBlockingQueue[T]) Len() int {
+func (c *ConcurrentLinkBlockingQueue[T]) Len() int {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return c.count
+	return c.linkedlist.Len()
 }
 
-func (c *ConcurrentArrayBlockingQueue[T]) AsSlice() []T {
+func (c *ConcurrentLinkBlockingQueue[T]) AsSlice() []T {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	res := make([]T, 0, c.count)
-	cnt := 0
-	capacity := cap(c.data)
-	for cnt < c.count {
-		index := (c.head + cnt) % capacity
-		res = append(res, c.data[index])
-		cnt++
-	}
+	res := c.linkedlist.AsSlice()
 	return res
 }
