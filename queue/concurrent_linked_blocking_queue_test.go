@@ -28,7 +28,7 @@ import (
 func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 	testCases := []struct {
 		name      string
-		q         func() *ConcurrentLinkBlockingQueue[int]
+		q         func() *ConcurrentLinkedBlockingQueue[int]
 		val       int
 		timeout   time.Duration
 		wantErr   error
@@ -37,8 +37,8 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 	}{
 		{
 			name: "empty and enqueued",
-			q: func() *ConcurrentLinkBlockingQueue[int] {
-				return NewConcurrentLinkBlockingQueue[int](3)
+			q: func() *ConcurrentLinkedBlockingQueue[int] {
+				return NewConcurrentLinkedBlockingQueue[int](3)
 			},
 			val:       123,
 			timeout:   time.Second,
@@ -47,8 +47,8 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 		},
 		{
 			name: "invalid context",
-			q: func() *ConcurrentLinkBlockingQueue[int] {
-				return NewConcurrentLinkBlockingQueue[int](3)
+			q: func() *ConcurrentLinkedBlockingQueue[int] {
+				return NewConcurrentLinkedBlockingQueue[int](3)
 			},
 			val:       123,
 			timeout:   -time.Second,
@@ -58,10 +58,10 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 		{
 			// 入队之后就满了，恰好放在切片的最后一个位置
 			name: "enqueued full last index",
-			q: func() *ConcurrentLinkBlockingQueue[int] {
+			q: func() *ConcurrentLinkedBlockingQueue[int] {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
-				q := NewConcurrentLinkBlockingQueue[int](3)
+				q := NewConcurrentLinkedBlockingQueue[int](3)
 				err := q.Enqueue(ctx, 123)
 				require.NoError(t, err)
 				err = q.Enqueue(ctx, 234)
@@ -88,7 +88,7 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 	}
 
 	t.Run("enqueue timeout", func(t *testing.T) {
-		q := NewConcurrentLinkBlockingQueue[int](3)
+		q := NewConcurrentLinkedBlockingQueue[int](3)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		err := q.Enqueue(ctx, 123)
@@ -103,7 +103,7 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 
 	// 入队阻塞，而后出队，于是入队成功
 	t.Run("enqueue blocking and dequeue", func(t *testing.T) {
-		q := NewConcurrentLinkBlockingQueue[int](3)
+		q := NewConcurrentLinkedBlockingQueue[int](3)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		go func() {
@@ -125,7 +125,7 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 	// 无界的情况下，可以无限添加元素，当然小心内存, 以及goroutine调度导致的超时
 	// capacity <= 0 时，为无界队列
 	t.Run("capacity <= 0", func(t *testing.T) {
-		q := NewConcurrentLinkBlockingQueue[int](-1)
+		q := NewConcurrentLinkedBlockingQueue[int](-1)
 		for i := 0; i < 10; i++ {
 			go func() {
 				for i := 0; i < 1000; i++ {
@@ -143,7 +143,7 @@ func TestConcurrentLinkedBlockingQueue_Enqueue(t *testing.T) {
 func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 	testCases := []struct {
 		name      string
-		q         func() *ConcurrentLinkBlockingQueue[int]
+		q         func() *ConcurrentLinkedBlockingQueue[int]
 		val       int
 		timeout   time.Duration
 		wantErr   error
@@ -153,8 +153,8 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 	}{
 		{
 			name: "dequeued",
-			q: func() *ConcurrentLinkBlockingQueue[int] {
-				q := NewConcurrentLinkBlockingQueue[int](3)
+			q: func() *ConcurrentLinkedBlockingQueue[int] {
+				q := NewConcurrentLinkedBlockingQueue[int](3)
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				err := q.Enqueue(ctx, 123)
@@ -170,8 +170,8 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 		},
 		{
 			name: "invalid context",
-			q: func() *ConcurrentLinkBlockingQueue[int] {
-				q := NewConcurrentLinkBlockingQueue[int](3)
+			q: func() *ConcurrentLinkedBlockingQueue[int] {
+				q := NewConcurrentLinkedBlockingQueue[int](3)
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				err := q.Enqueue(ctx, 123)
@@ -187,8 +187,8 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 		},
 		{
 			name: "dequeue and empty first",
-			q: func() *ConcurrentLinkBlockingQueue[int] {
-				q := NewConcurrentLinkBlockingQueue[int](3)
+			q: func() *ConcurrentLinkedBlockingQueue[int] {
+				q := NewConcurrentLinkedBlockingQueue[int](3)
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				err := q.Enqueue(ctx, 123)
@@ -202,8 +202,8 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 		},
 		{
 			name: "dequeue and empty last",
-			q: func() *ConcurrentLinkBlockingQueue[int] {
-				q := NewConcurrentLinkBlockingQueue[int](3)
+			q: func() *ConcurrentLinkedBlockingQueue[int] {
+				q := NewConcurrentLinkedBlockingQueue[int](3)
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				err := q.Enqueue(ctx, 123)
@@ -241,7 +241,7 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 	}
 
 	t.Run("dequeue timeout", func(t *testing.T) {
-		q := NewConcurrentLinkBlockingQueue[int](3)
+		q := NewConcurrentLinkedBlockingQueue[int](3)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		val, err := q.Dequeue(ctx)
@@ -251,7 +251,7 @@ func TestConcurrentLinkedBlockingQueue_Dequeue(t *testing.T) {
 
 	// 出队阻塞，然后入队，然后出队成功
 	t.Run("dequeue blocking and enqueue", func(t *testing.T) {
-		q := NewConcurrentLinkBlockingQueue[int](3)
+		q := NewConcurrentLinkedBlockingQueue[int](3)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		go func() {
@@ -269,7 +269,7 @@ func TestConcurrentLinkedBlockingQueue(t *testing.T) {
 	// 并发测试，只是测试有没有死锁之类的问题
 	// 先进先出这个特性依赖于其它单元测试
 	// 也依赖于代码审查
-	q := NewConcurrentLinkBlockingQueue[int](100)
+	q := NewConcurrentLinkedBlockingQueue[int](100)
 	var wg sync.WaitGroup
 	wg.Add(1000)
 	for i := 0; i < 1000; i++ {
