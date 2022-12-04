@@ -15,10 +15,12 @@
 package queue
 
 import (
+	"context"
 	"math/rand"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,7 +47,9 @@ func TestConcurrentQueue_Enqueue(t *testing.T) {
 			name: "multiple",
 			q: func() *ConcurrentLinkedQueue[int] {
 				q := NewConcurrentLinkedQueue[int]()
-				err := q.Enqueue(123)
+				ctx, cancle := context.WithTimeout(context.Background(), time.Second)
+				defer cancle()
+				err := q.Enqueue(ctx, 123)
 				require.NoError(t, err)
 				return q
 			},
@@ -57,7 +61,9 @@ func TestConcurrentQueue_Enqueue(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			q := tc.q()
-			err := q.Enqueue(tc.val)
+			ctx, cancle := context.WithTimeout(context.Background(), time.Second)
+			defer cancle()
+			err := q.Enqueue(ctx, tc.val)
 			assert.Equal(t, tc.wantErr, err)
 			assert.Equal(t, tc.wantData, q.asSlice())
 		})
@@ -85,7 +91,9 @@ func TestConcurrentQueue_Dequeue(t *testing.T) {
 			name: "single",
 			q: func() *ConcurrentLinkedQueue[int] {
 				q := NewConcurrentLinkedQueue[int]()
-				err := q.Enqueue(123)
+				ctx, cancle := context.WithTimeout(context.Background(), time.Second)
+				defer cancle()
+				err := q.Enqueue(ctx, 123)
 				assert.NoError(t, err)
 				return q
 			},
@@ -95,9 +103,11 @@ func TestConcurrentQueue_Dequeue(t *testing.T) {
 			name: "multiple",
 			q: func() *ConcurrentLinkedQueue[int] {
 				q := NewConcurrentLinkedQueue[int]()
-				err := q.Enqueue(123)
+				ctx, cancle := context.WithTimeout(context.Background(), time.Second)
+				defer cancle()
+				err := q.Enqueue(ctx, 123)
 				assert.NoError(t, err)
-				err = q.Enqueue(234)
+				err = q.Enqueue(ctx, 234)
 				assert.NoError(t, err)
 				return q
 			},
@@ -108,14 +118,15 @@ func TestConcurrentQueue_Dequeue(t *testing.T) {
 			name: "enqueue and dequeue",
 			q: func() *ConcurrentLinkedQueue[int] {
 				q := NewConcurrentLinkedQueue[int]()
-				err := q.Enqueue(123)
+				ctx := context.Background()
+				err := q.Enqueue(ctx, 123)
 				assert.NoError(t, err)
-				err = q.Enqueue(234)
+				err = q.Enqueue(ctx, 234)
 				assert.NoError(t, err)
-				val, err := q.Dequeue()
+				val, err := q.Dequeue(ctx)
 				assert.Equal(t, 123, val)
 				assert.NoError(t, err)
-				err = q.Enqueue(345)
+				err = q.Enqueue(ctx, 345)
 				assert.NoError(t, err)
 				return q
 			},
@@ -127,7 +138,9 @@ func TestConcurrentQueue_Dequeue(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			q := tc.q()
-			val, err := q.Dequeue()
+			ctx, cancle := context.WithTimeout(context.Background(), time.Second)
+			defer cancle()
+			val, err := q.Dequeue(ctx)
 			assert.Equal(t, tc.wantErr, err)
 			assert.Equal(t, tc.wantVal, val)
 			assert.Equal(t, tc.wantData, q.asSlice())
@@ -145,8 +158,9 @@ func TestConcurrentLinkedQueue(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		go func() {
 			for j := 0; j < 1000; j++ {
+				ctx := context.Background()
 				val := rand.Int()
-				_ = q.Enqueue(val)
+				_ = q.Enqueue(ctx, val)
 			}
 		}()
 	}
@@ -157,7 +171,8 @@ func TestConcurrentLinkedQueue(t *testing.T) {
 				if atomic.LoadInt32(&cnt) >= 10000 {
 					return
 				}
-				_, err := q.Dequeue()
+				ctx := context.Background()
+				_, err := q.Dequeue(ctx)
 				if err == nil {
 					atomic.AddInt32(&cnt, 1)
 					wg.Done()
