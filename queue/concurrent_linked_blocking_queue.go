@@ -21,10 +21,10 @@ import (
 	"github.com/gotomicro/ekit/list"
 )
 
-// ConcurrentLinkBlockingQueue 基于链表的并发阻塞队列
+// ConcurrentLinkedBlockingQueue 基于链表的并发阻塞队列
 // 如果 maxSize 是正数。那么就是有界并发阻塞队列
 // 如果不是，就是无界并发阻塞队列, 在这种情况下，入队永远能够成功
-type ConcurrentLinkBlockingQueue[T any] struct {
+type ConcurrentLinkedBlockingQueue[T any] struct {
 	mutex *sync.RWMutex
 
 	// 最大容量
@@ -36,10 +36,10 @@ type ConcurrentLinkBlockingQueue[T any] struct {
 	notFull  *cond
 }
 
-// NewConcurrentLinkBlockingQueue 创建链式阻塞队列 capacity <= 0 时，为无界队列
-func NewConcurrentLinkBlockingQueue[T any](capacity int) *ConcurrentLinkBlockingQueue[T] {
+// NewConcurrentLinkedBlockingQueue 创建链式阻塞队列 capacity <= 0 时，为无界队列
+func NewConcurrentLinkedBlockingQueue[T any](capacity int) *ConcurrentLinkedBlockingQueue[T] {
 	mutex := &sync.RWMutex{}
-	res := &ConcurrentLinkBlockingQueue[T]{
+	res := &ConcurrentLinkedBlockingQueue[T]{
 		maxSize:    capacity,
 		mutex:      mutex,
 		notEmpty:   newCond(mutex),
@@ -51,7 +51,7 @@ func NewConcurrentLinkBlockingQueue[T any](capacity int) *ConcurrentLinkBlocking
 
 // Enqueue 入队
 // 注意：目前我们已经通过broadcast实现了超时控制
-func (c *ConcurrentLinkBlockingQueue[T]) Enqueue(ctx context.Context, t T) error {
+func (c *ConcurrentLinkedBlockingQueue[T]) Enqueue(ctx context.Context, t T) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -76,7 +76,7 @@ func (c *ConcurrentLinkBlockingQueue[T]) Enqueue(ctx context.Context, t T) error
 
 // Dequeue 出队
 // 注意：目前我们已经通过broadcast实现了超时控制
-func (c *ConcurrentLinkBlockingQueue[T]) Dequeue(ctx context.Context) (T, error) {
+func (c *ConcurrentLinkedBlockingQueue[T]) Dequeue(ctx context.Context) (T, error) {
 	if ctx.Err() != nil {
 		var t T
 		return t, ctx.Err()
@@ -98,13 +98,13 @@ func (c *ConcurrentLinkBlockingQueue[T]) Dequeue(ctx context.Context) (T, error)
 	return val, err
 }
 
-func (c *ConcurrentLinkBlockingQueue[T]) Len() int {
+func (c *ConcurrentLinkedBlockingQueue[T]) Len() int {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.linkedlist.Len()
 }
 
-func (c *ConcurrentLinkBlockingQueue[T]) AsSlice() []T {
+func (c *ConcurrentLinkedBlockingQueue[T]) AsSlice() []T {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	res := c.linkedlist.AsSlice()
