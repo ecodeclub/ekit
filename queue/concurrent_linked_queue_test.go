@@ -29,9 +29,11 @@ import (
 func TestConcurrentQueue_Enqueue(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		name     string
-		q        func() *ConcurrentLinkedQueue[int]
-		val      int
+		name string
+		q    func() *ConcurrentLinkedQueue[int]
+		val  int
+
+		timeout  time.Duration
 		wantData []int
 		wantErr  error
 	}{
@@ -40,6 +42,7 @@ func TestConcurrentQueue_Enqueue(t *testing.T) {
 			q: func() *ConcurrentLinkedQueue[int] {
 				return NewConcurrentLinkedQueue[int]()
 			},
+			timeout:  time.Second,
 			val:      123,
 			wantData: []int{123},
 		},
@@ -53,15 +56,26 @@ func TestConcurrentQueue_Enqueue(t *testing.T) {
 				require.NoError(t, err)
 				return q
 			},
+			timeout:  time.Second,
 			val:      234,
 			wantData: []int{123, 234},
+		},
+		{
+			// 已经超时了的 context 设置
+			name: "invalid contex",
+			q: func() *ConcurrentLinkedQueue[int] {
+				return NewConcurrentLinkedQueue[int]()
+			},
+			timeout: -time.Second,
+			val:     123,
+			wantErr: context.DeadlineExceeded,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			q := tc.q()
-			ctx, cancle := context.WithTimeout(context.Background(), time.Second)
+			ctx, cancle := context.WithTimeout(context.Background(), tc.timeout)
 			defer cancle()
 			err := q.Enqueue(ctx, tc.val)
 			assert.Equal(t, tc.wantErr, err)
@@ -75,6 +89,7 @@ func TestConcurrentQueue_Dequeue(t *testing.T) {
 	testCases := []struct {
 		name     string
 		q        func() *ConcurrentLinkedQueue[int]
+		timeout  time.Duration
 		wantVal  int
 		wantData []int
 		wantErr  error
@@ -85,6 +100,7 @@ func TestConcurrentQueue_Dequeue(t *testing.T) {
 				q := NewConcurrentLinkedQueue[int]()
 				return q
 			},
+			timeout: time.Second,
 			wantErr: errEmptyQueue,
 		},
 		{
@@ -97,6 +113,7 @@ func TestConcurrentQueue_Dequeue(t *testing.T) {
 				assert.NoError(t, err)
 				return q
 			},
+			timeout: time.Second,
 			wantVal: 123,
 		},
 		{
@@ -111,6 +128,7 @@ func TestConcurrentQueue_Dequeue(t *testing.T) {
 				assert.NoError(t, err)
 				return q
 			},
+			timeout:  time.Second,
 			wantVal:  123,
 			wantData: []int{234},
 		},
@@ -130,18 +148,36 @@ func TestConcurrentQueue_Dequeue(t *testing.T) {
 				assert.NoError(t, err)
 				return q
 			},
+			timeout:  time.Second,
 			wantVal:  234,
 			wantData: []int{345},
+		},
+		{
+			// context 本身已经过期了
+			name: "invalid context",
+			q: func() *ConcurrentLinkedQueue[int] {
+				q := NewConcurrentLinkedQueue[int]()
+				ctx, cancle := context.WithTimeout(context.Background(), time.Second)
+				defer cancle()
+				err := q.Enqueue(ctx, 123)
+				assert.NoError(t, err)
+				return q
+			},
+			timeout: -time.Second,
+			wantErr: context.DeadlineExceeded,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			q := tc.q()
-			ctx, cancle := context.WithTimeout(context.Background(), time.Second)
+			ctx, cancle := context.WithTimeout(context.Background(), tc.timeout)
 			defer cancle()
 			val, err := q.Dequeue(ctx)
 			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
 			assert.Equal(t, tc.wantVal, val)
 			assert.Equal(t, tc.wantData, q.asSlice())
 		})
