@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package errs
+package ekit
 
-import (
-	"fmt"
-)
+// Comparator 用于比较两个对象的大小 src < dst, 返回-1，src = dst, 返回0，src > dst, 返回1
+// 不要返回任何其它值！
+type Comparator[T any] func(src T, dst T) int
 
-// NewErrIndexOutOfRange 创建一个代表下标超出范围的错误
-func NewErrIndexOutOfRange(length int, index int) error {
-	return fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", length, index)
-}
-
-// NewErrInvalidType 创建一个代表类型转换失败的错误
-func NewErrInvalidType(want, got string) error {
-	return fmt.Errorf("ekit: 类型转换失败，want:%s, got:%s", want, got)
+func ComparatorRealNumber[T RealNumber](src T, dst T) int {
+	if src < dst {
+		return -1
+	} else if src == dst {
+		return 0
+	} else {
+		return 1
+	}
 }

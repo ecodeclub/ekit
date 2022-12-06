@@ -37,6 +37,11 @@ func TestEncryptColumn_Basic(t *testing.T) {
 		wantDeErr error
 	}{
 		{
+			name:      "wrong length key",
+			input:     &EncryptColumn[string]{Key: "ABC", Val: "abc", Valid: true},
+			wantEnErr: errKeyLengthInvalid,
+		},
+		{
 			name:   "int",
 			input:  &EncryptColumn[int32]{Key: "ABCDABCDABCDABCDABCDABCDABCDABCD", Val: 123, Valid: true},
 			output: &EncryptColumn[int32]{Key: "ABCDABCDABCDABCDABCDABCDABCDABCD"},

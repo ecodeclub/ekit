@@ -12,18 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package errs
+package slice
 
-import (
-	"fmt"
-)
-
-// NewErrIndexOutOfRange 创建一个代表下标超出范围的错误
-func NewErrIndexOutOfRange(length int, index int) error {
-	return fmt.Errorf("ekit: 下标超出范围，长度 %d, 下标 %d", length, index)
+func calCapacity(c, l int) (int, bool) {
+	if c <= 64 {
+		return c, false
+	}
+	if c > 2048 && (c/l >= 2) {
+		factor := 0.625
+		return int(float32(c) * float32(factor)), true
+	}
+	if c <= 2048 && (c/l >= 4) {
+		return c / 2, true
+	}
+	return c, false
 }
 
-// NewErrInvalidType 创建一个代表类型转换失败的错误
-func NewErrInvalidType(want, got string) error {
-	return fmt.Errorf("ekit: 类型转换失败，want:%s, got:%s", want, got)
+func Shrink[T any](src []T) []T {
+	c, l := cap(src), len(src)
+	n, changed := calCapacity(c, l)
+	if !changed {
+		return src
+	}
+	s := make([]T, 0, n)
+	s = append(s, src...)
+	return s
 }
