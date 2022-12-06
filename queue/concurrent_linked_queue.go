@@ -15,7 +15,6 @@
 package queue
 
 import (
-	"context"
 	"sync/atomic"
 	"unsafe"
 
@@ -39,14 +38,10 @@ func NewConcurrentLinkedQueue[T any]() *ConcurrentLinkedQueue[T] {
 	}
 }
 
-func (c *ConcurrentLinkedQueue[T]) Enqueue(ctx context.Context, t T) error {
+func (c *ConcurrentLinkedQueue[T]) Enqueue(t T) error {
 	newNode := &node[T]{val: t}
 	newPtr := unsafe.Pointer(newNode)
 	for {
-		// 判断是否超时
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
 		tailPtr := atomic.LoadPointer(&c.tail)
 		tail := (*node[T])(tailPtr)
 		tailNext := atomic.LoadPointer(&tail.next)
@@ -62,13 +57,8 @@ func (c *ConcurrentLinkedQueue[T]) Enqueue(ctx context.Context, t T) error {
 	}
 }
 
-func (c *ConcurrentLinkedQueue[T]) Dequeue(ctx context.Context) (T, error) {
+func (c *ConcurrentLinkedQueue[T]) Dequeue() (T, error) {
 	for {
-		// 判断是否超时
-		if ctx.Err() != nil {
-			var t T
-			return t, ctx.Err()
-		}
 		headPtr := atomic.LoadPointer(&c.head)
 		head := (*node[T])(headPtr)
 		tailPtr := atomic.LoadPointer(&c.tail)

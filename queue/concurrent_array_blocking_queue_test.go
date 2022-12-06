@@ -16,6 +16,7 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"sync"
 	"testing"
@@ -41,7 +42,7 @@ func TestConcurrentBlockingQueue_Enqueue(t *testing.T) {
 		{
 			name: "empty and enqueued",
 			q: func() *ConcurrentArrayBlockingQueue[int] {
-				return NewConcurrentBlockingQueue[int](3)
+				return NewConcurrentArrayBlockingQueue[int](3)
 			},
 			val:       123,
 			timeout:   time.Second,
@@ -54,7 +55,7 @@ func TestConcurrentBlockingQueue_Enqueue(t *testing.T) {
 		{
 			name: "invalid context",
 			q: func() *ConcurrentArrayBlockingQueue[int] {
-				return NewConcurrentBlockingQueue[int](3)
+				return NewConcurrentArrayBlockingQueue[int](3)
 			},
 			val:       123,
 			timeout:   -time.Second,
@@ -68,7 +69,7 @@ func TestConcurrentBlockingQueue_Enqueue(t *testing.T) {
 			q: func() *ConcurrentArrayBlockingQueue[int] {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
-				q := NewConcurrentBlockingQueue[int](3)
+				q := NewConcurrentArrayBlockingQueue[int](3)
 				err := q.Enqueue(ctx, 123)
 				require.NoError(t, err)
 				err = q.Enqueue(ctx, 234)
@@ -89,7 +90,7 @@ func TestConcurrentBlockingQueue_Enqueue(t *testing.T) {
 			q: func() *ConcurrentArrayBlockingQueue[int] {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
-				q := NewConcurrentBlockingQueue[int](3)
+				q := NewConcurrentArrayBlockingQueue[int](3)
 				err := q.Enqueue(ctx, 123)
 				require.NoError(t, err)
 				err = q.Enqueue(ctx, 234)
@@ -115,7 +116,7 @@ func TestConcurrentBlockingQueue_Enqueue(t *testing.T) {
 			q: func() *ConcurrentArrayBlockingQueue[int] {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
-				q := NewConcurrentBlockingQueue[int](3)
+				q := NewConcurrentArrayBlockingQueue[int](3)
 				err := q.Enqueue(ctx, 123)
 				require.NoError(t, err)
 				err = q.Enqueue(ctx, 234)
@@ -146,7 +147,7 @@ func TestConcurrentBlockingQueue_Enqueue(t *testing.T) {
 			q: func() *ConcurrentArrayBlockingQueue[int] {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
-				q := NewConcurrentBlockingQueue[int](3)
+				q := NewConcurrentArrayBlockingQueue[int](3)
 				err := q.Enqueue(ctx, 0)
 				require.NoError(t, err)
 				err = q.Enqueue(ctx, 0)
@@ -179,7 +180,7 @@ func TestConcurrentBlockingQueue_Enqueue(t *testing.T) {
 	}
 
 	t.Run("enqueue timeout", func(t *testing.T) {
-		q := NewConcurrentBlockingQueue[int](3)
+		q := NewConcurrentArrayBlockingQueue[int](3)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		err := q.Enqueue(ctx, 123)
@@ -194,7 +195,7 @@ func TestConcurrentBlockingQueue_Enqueue(t *testing.T) {
 
 	// 入队阻塞，而后出队，于是入队成功
 	t.Run("enqueue blocking and dequeue", func(t *testing.T) {
-		q := NewConcurrentBlockingQueue[int](3)
+		q := NewConcurrentArrayBlockingQueue[int](3)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		go func() {
@@ -231,7 +232,7 @@ func TestConcurrentBlockingQueue_Dequeue(t *testing.T) {
 		{
 			name: "dequeued",
 			q: func() *ConcurrentArrayBlockingQueue[int] {
-				q := NewConcurrentBlockingQueue[int](3)
+				q := NewConcurrentArrayBlockingQueue[int](3)
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				err := q.Enqueue(ctx, 123)
@@ -251,7 +252,7 @@ func TestConcurrentBlockingQueue_Dequeue(t *testing.T) {
 		{
 			name: "invalid context",
 			q: func() *ConcurrentArrayBlockingQueue[int] {
-				q := NewConcurrentBlockingQueue[int](3)
+				q := NewConcurrentArrayBlockingQueue[int](3)
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				err := q.Enqueue(ctx, 123)
@@ -271,7 +272,7 @@ func TestConcurrentBlockingQueue_Dequeue(t *testing.T) {
 		{
 			name: "dequeue and empty first",
 			q: func() *ConcurrentArrayBlockingQueue[int] {
-				q := NewConcurrentBlockingQueue[int](3)
+				q := NewConcurrentArrayBlockingQueue[int](3)
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				err := q.Enqueue(ctx, 123)
@@ -289,7 +290,7 @@ func TestConcurrentBlockingQueue_Dequeue(t *testing.T) {
 		{
 			name: "dequeue and empty middle",
 			q: func() *ConcurrentArrayBlockingQueue[int] {
-				q := NewConcurrentBlockingQueue[int](3)
+				q := NewConcurrentArrayBlockingQueue[int](3)
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				err := q.Enqueue(ctx, 123)
@@ -312,7 +313,7 @@ func TestConcurrentBlockingQueue_Dequeue(t *testing.T) {
 		{
 			name: "dequeue and empty last",
 			q: func() *ConcurrentArrayBlockingQueue[int] {
-				q := NewConcurrentBlockingQueue[int](3)
+				q := NewConcurrentArrayBlockingQueue[int](3)
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				err := q.Enqueue(ctx, 123)
@@ -356,7 +357,7 @@ func TestConcurrentBlockingQueue_Dequeue(t *testing.T) {
 	}
 
 	t.Run("dequeue timeout", func(t *testing.T) {
-		q := NewConcurrentBlockingQueue[int](3)
+		q := NewConcurrentArrayBlockingQueue[int](3)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		val, err := q.Dequeue(ctx)
@@ -366,7 +367,7 @@ func TestConcurrentBlockingQueue_Dequeue(t *testing.T) {
 
 	// 出队阻塞，然后入队，然后出队成功
 	t.Run("dequeue blocking and enqueue", func(t *testing.T) {
-		q := NewConcurrentBlockingQueue[int](3)
+		q := NewConcurrentArrayBlockingQueue[int](3)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		go func() {
@@ -384,7 +385,7 @@ func TestConcurrentArrayBlockingQueue(t *testing.T) {
 	// 并发测试，只是测试有没有死锁之类的问题
 	// 先进先出这个特性依赖于其它单元测试
 	// 也依赖于代码审查
-	q := NewConcurrentBlockingQueue[int](100)
+	q := NewConcurrentArrayBlockingQueue[int](100)
 	var wg sync.WaitGroup
 	wg.Add(1000)
 	for i := 0; i < 1000; i++ {
@@ -408,4 +409,25 @@ func TestConcurrentArrayBlockingQueue(t *testing.T) {
 		}
 	}()
 	wg.Wait()
+}
+
+func ExampleNewConcurrentArrayBlockingQueue() {
+	q := NewConcurrentArrayBlockingQueue[int](10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_ = q.Enqueue(ctx, 22)
+	val, err := q.Dequeue(ctx)
+	// 这是例子，实际中你不需要写得那么复杂
+	switch err {
+	case context.Canceled:
+		// 有人主动取消了，即调用了 cancel 方法。在这个例子里不会出现这个情况
+	case context.DeadlineExceeded:
+		// 超时了
+	case nil:
+		fmt.Println(val)
+	default:
+		// 其它乱七八糟的
+	}
+	// Output:
+	// 22
 }

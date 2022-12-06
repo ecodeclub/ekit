@@ -38,10 +38,10 @@ type ConcurrentArrayBlockingQueue[T any] struct {
 	zero T
 }
 
-// NewConcurrentBlockingQueue 创建一个有界阻塞队列
+// NewConcurrentArrayBlockingQueue 创建一个有界阻塞队列
 // 容量会在最开始的时候就初始化好
 // capacity 必须为正数
-func NewConcurrentBlockingQueue[T any](capacity int) *ConcurrentArrayBlockingQueue[T] {
+func NewConcurrentArrayBlockingQueue[T any](capacity int) *ConcurrentArrayBlockingQueue[T] {
 	mutex := &sync.RWMutex{}
 	res := &ConcurrentArrayBlockingQueue[T]{
 		data:     make([]T, capacity),
