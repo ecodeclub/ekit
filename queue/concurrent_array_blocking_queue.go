@@ -16,8 +16,9 @@ package queue
 
 import (
 	"context"
-	"golang.org/x/sync/semaphore"
 	"sync"
+
+	"golang.org/x/sync/semaphore"
 )
 
 // ConcurrentArrayBlockingQueue 有界并发阻塞队列
