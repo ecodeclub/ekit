@@ -78,7 +78,7 @@ func (c *ConcurrentArrayBlockingQueue[T]) Enqueue(ctx context.Context, t T) erro
 	// 拿到锁，先判断是否超时，防止在抢锁时已经超时
 	if ctx.Err() != nil {
 
-		//超时应该主动归还信号量，避免容量泄露
+		// 超时应该主动归还信号量，避免容量泄露
 		c.enqueueCap.Release(1)
 
 		return ctx.Err()
@@ -119,7 +119,7 @@ func (c *ConcurrentArrayBlockingQueue[T]) Dequeue(ctx context.Context) (T, error
 	// 拿到锁，先判断是否超时，防止在抢锁时已经超时
 	if ctx.Err() != nil {
 
-		//超时应该主动归还信号量，有元素消费不到
+		// 超时应该主动归还信号量，有元素消费不到
 		c.dequeueCap.Release(1)
 
 		return res, ctx.Err()
