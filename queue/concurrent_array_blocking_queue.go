@@ -32,8 +32,8 @@ type ConcurrentArrayBlockingQueue[T any] struct {
 	// 包含多少个元素
 	count int
 
-	eqSema *semaphore.Weighted
-	dqSema *semaphore.Weighted
+	enqueueCap *semaphore.Weighted
+	dequeueCap *semaphore.Weighted
 
 	// zero 不能作为返回值返回，防止用户篡改
 	zero T
@@ -45,18 +45,18 @@ type ConcurrentArrayBlockingQueue[T any] struct {
 func NewConcurrentArrayBlockingQueue[T any](capacity int) *ConcurrentArrayBlockingQueue[T] {
 	mutex := &sync.RWMutex{}
 
-	eqSema := semaphore.NewWeighted(int64(capacity))
-	dqSema := semaphore.NewWeighted(int64(capacity))
+	semaForEnqueue := semaphore.NewWeighted(int64(capacity))
+	semaForDequeue := semaphore.NewWeighted(int64(capacity))
 
 	// error暂时不处理，因为目前没办法处理，只能考虑panic掉
 	// 相当于将信号量置空
-	_ = dqSema.Acquire(context.TODO(), int64(capacity))
+	_ = semaForDequeue.Acquire(context.TODO(), int64(capacity))
 
 	res := &ConcurrentArrayBlockingQueue[T]{
-		data:   make([]T, capacity),
-		mutex:  mutex,
-		eqSema: eqSema,
-		dqSema: dqSema,
+		data:       make([]T, capacity),
+		mutex:      mutex,
+		enqueueCap: semaForEnqueue,
+		dequeueCap: semaForDequeue,
 	}
 	return res
 }
@@ -66,7 +66,7 @@ func NewConcurrentArrayBlockingQueue[T any](capacity int) *ConcurrentArrayBlocki
 func (c *ConcurrentArrayBlockingQueue[T]) Enqueue(ctx context.Context, t T) error {
 
 	// 能拿到，说明队列还有空位，可以入队，拿不到则阻塞
-	err := c.eqSema.Acquire(ctx, 1)
+	err := c.enqueueCap.Acquire(ctx, 1)
 
 	if err != nil {
 		return err
@@ -77,6 +77,10 @@ func (c *ConcurrentArrayBlockingQueue[T]) Enqueue(ctx context.Context, t T) erro
 
 	// 拿到锁，先判断是否超时，防止在抢锁时已经超时
 	if ctx.Err() != nil {
+
+		//超时应该主动归还信号量，避免容量泄露
+		c.enqueueCap.Release(1)
+
 		return ctx.Err()
 	}
 
@@ -90,7 +94,7 @@ func (c *ConcurrentArrayBlockingQueue[T]) Enqueue(ctx context.Context, t T) erro
 	}
 
 	// 往出队的sema放入一个元素，出队的goroutine可以拿到并出队
-	c.dqSema.Release(1)
+	c.dequeueCap.Release(1)
 
 	return nil
 
@@ -101,7 +105,7 @@ func (c *ConcurrentArrayBlockingQueue[T]) Enqueue(ctx context.Context, t T) erro
 func (c *ConcurrentArrayBlockingQueue[T]) Dequeue(ctx context.Context) (T, error) {
 
 	// 能拿到，说明队列有元素可以取，可以出队，拿不到则阻塞
-	err := c.dqSema.Acquire(ctx, 1)
+	err := c.dequeueCap.Acquire(ctx, 1)
 
 	var res T
 
@@ -114,6 +118,10 @@ func (c *ConcurrentArrayBlockingQueue[T]) Dequeue(ctx context.Context) (T, error
 
 	// 拿到锁，先判断是否超时，防止在抢锁时已经超时
 	if ctx.Err() != nil {
+
+		//超时应该主动归还信号量，有元素消费不到
+		c.dequeueCap.Release(1)
+
 		return res, ctx.Err()
 	}
 
@@ -128,7 +136,7 @@ func (c *ConcurrentArrayBlockingQueue[T]) Dequeue(ctx context.Context) (T, error
 	}
 
 	// 往入队的sema放入一个元素，入队的goroutine可以拿到并入队
-	c.eqSema.Release(1)
+	c.enqueueCap.Release(1)
 
 	return res, nil
 
