@@ -37,7 +37,10 @@ func TestMyHashMap(t *testing.T) {
 	}
 	myhashmap := NewHashMap[testData](10)
 	for _, kv := range testKV {
-		myhashmap.Put(kv.key, kv.val)
+		err := myhashmap.Put(kv.key, kv.val)
+		if err != nil {
+			panic(err)
+		}
 	}
 	wantHashMap := MyHashMap[testData]{
 		hashmap: map[uint64]*Node{
