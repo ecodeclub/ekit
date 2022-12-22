@@ -14,68 +14,80 @@
 
 package mapx
 
-type Node struct {
+import "github.com/gotomicro/ekit/syncx"
+
+type node[T HashKey, ValType any] struct {
 	key   HashKey
-	value any
-	next  *Node
+	value ValType
+	next  *node[T, ValType]
 }
 
-func NewNode(key HashKey, val any) *Node {
-	return &Node{
-		key:   key,
-		value: val,
-	}
+func (m *MyHashMap[T, ValType]) NewNode(key HashKey, val ValType) *node[T, ValType] {
+	new_node := m.nodePool.Get()
+	new_node.value = val
+	new_node.key = key
+	return new_node
 }
 
 type HashKey interface {
 	Code() uint64
-	Comparable(key any) bool
+	Equals(key any) bool
 }
 
-type MyHashMap[T HashKey] struct {
-	hashmap map[uint64]*Node
+type MyHashMap[T HashKey, ValType any] struct {
+	hashmap  map[uint64]*node[T, ValType]
+	nodePool *syncx.Pool[*node[T, ValType]]
 }
 
-func (m *MyHashMap[T]) Put(key T, val any) error {
+func (m *MyHashMap[T, ValType]) Put(key T, val ValType) error {
 	hash := key.Code()
 	root, ok := m.hashmap[hash]
 	if !ok {
 		hash = key.Code()
-		new_node := NewNode(key, val)
+		new_node := m.NewNode(key, val)
 		m.hashmap[hash] = new_node
 		return nil
 	}
-	var pre *Node
+	pre := root
 	for root != nil {
-		if root.key.Comparable(key) {
+		if root.key.Equals(key) {
 			root.value = val
 			return nil
 		}
 		pre = root
 		root = root.next
 	}
-	new_node := NewNode(key, val)
+	new_node := m.NewNode(key, val)
 	pre.next = new_node
 	return nil
 }
 
-func (m *MyHashMap[T]) Get(key T) (any, bool) {
+func (m *MyHashMap[T, ValType]) Get(key T) (ValType, bool) {
 	hash := key.Code()
 	root, ok := m.hashmap[hash]
+	var val ValType
 	if !ok {
-		return nil, false
+		return val, false
 	}
 	for root != nil {
-		if root.key.Comparable(key) {
+		if root.key.Equals(key) {
 			return root.value, true
 		}
 		root = root.next
 	}
-	return nil, false
+	return val, false
 }
 
-func NewHashMap[T HashKey](size int) *MyHashMap[T] {
-	return &MyHashMap[T]{
-		hashmap: make(map[uint64]*Node, size),
+func NewHashMap[T HashKey, ValType any](size int) *MyHashMap[T, ValType] {
+	return &MyHashMap[T, ValType]{
+		nodePool: syncx.NewPool[*node[T, ValType]](func() *node[T, ValType] {
+			return &node[T, ValType]{}
+		}),
+		hashmap: make(map[uint64]*node[T, ValType], size),
 	}
+}
+
+type HashMap[T HashKey, ValType any] interface {
+	Put(key T, val ValType) error
+	Get(key T) (ValType, bool)
 }

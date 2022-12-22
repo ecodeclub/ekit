@@ -8,7 +8,7 @@ import (
 func TestMyHashMap(t *testing.T) {
 	testKV := []struct {
 		key testData
-		val any
+		val int
 	}{
 		{
 			key: testData{
@@ -35,26 +35,25 @@ func TestMyHashMap(t *testing.T) {
 			val: 11,
 		},
 	}
-	myhashmap := NewHashMap[testData](10)
+	myhashmap := NewHashMap[testData, int](10)
 	for _, kv := range testKV {
 		err := myhashmap.Put(kv.key, kv.val)
 		if err != nil {
 			panic(err)
 		}
 	}
-	wantHashMap := MyHashMap[testData]{
-		hashmap: map[uint64]*Node{
-			1: &Node{
-				key:   testData{id: 1},
-				value: 1,
-				next: &Node{
-					key:   testData{id: 11},
-					value: 11,
-				},
+	wantHashMap := NewHashMap[testData, int](10)
+	wantHashMap.hashmap = map[uint64]*node[testData, int]{
+		1: &node[testData, int]{
+			key:   testData{id: 1},
+			value: 1,
+			next: &node[testData, int]{
+				key:   testData{id: 11},
+				value: 11,
 			},
-			2: NewNode(NewTestData(2), 2),
-			3: NewNode(NewTestData(3), 3),
 		},
+		2: wantHashMap.NewNode(NewTestData(2), 2),
+		3: wantHashMap.NewNode(NewTestData(3), 3),
 	}
 
 	assert.Equal(t, wantHashMap.hashmap, myhashmap.hashmap)
@@ -117,7 +116,7 @@ func (t testData) Code() uint64 {
 	return uint64(hash)
 }
 
-func (t testData) Comparable(key any) bool {
+func (t testData) Equals(key any) bool {
 	val, ok := key.(testData)
 	if !ok {
 		return false
