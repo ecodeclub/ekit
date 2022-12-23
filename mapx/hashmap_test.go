@@ -52,8 +52,8 @@ func TestMyHashMap(t *testing.T) {
 				value: 11,
 			},
 		},
-		2: wantHashMap.NewNode(NewTestData(2), 2),
-		3: wantHashMap.NewNode(NewTestData(3), 3),
+		2: wantHashMap.newNode(newTestData(2), 2),
+		3: wantHashMap.newNode(newTestData(3), 3),
 	}
 
 	assert.Equal(t, wantHashMap.hashmap, myhashmap.hashmap)
@@ -127,7 +127,7 @@ func (t testData) Equals(key any) bool {
 	return true
 }
 
-func NewTestData(id int) testData {
+func newTestData(id int) testData {
 	return testData{
 		id: id,
 	}

@@ -22,11 +22,11 @@ type node[T HashKey, ValType any] struct {
 	next  *node[T, ValType]
 }
 
-func (m *MyHashMap[T, ValType]) NewNode(key HashKey, val ValType) *node[T, ValType] {
-	new_node := m.nodePool.Get()
-	new_node.value = val
-	new_node.key = key
-	return new_node
+func (m *MyHashMap[T, ValType]) newNode(key HashKey, val ValType) *node[T, ValType] {
+	newNode := m.nodePool.Get()
+	newNode.value = val
+	newNode.key = key
+	return newNode
 }
 
 type HashKey interface {
@@ -44,7 +44,7 @@ func (m *MyHashMap[T, ValType]) Put(key T, val ValType) error {
 	root, ok := m.hashmap[hash]
 	if !ok {
 		hash = key.Code()
-		new_node := m.NewNode(key, val)
+		new_node := m.newNode(key, val)
 		m.hashmap[hash] = new_node
 		return nil
 	}
@@ -57,7 +57,7 @@ func (m *MyHashMap[T, ValType]) Put(key T, val ValType) error {
 		pre = root
 		root = root.next
 	}
-	new_node := m.NewNode(key, val)
+	new_node := m.newNode(key, val)
 	pre.next = new_node
 	return nil
 }
