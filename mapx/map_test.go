@@ -1,0 +1,62 @@
+// Copyright 2021 gotomicro
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package mapx
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestKeys(t *testing.T) {
+	testCases := []struct {
+		name    string
+		input   map[int]int
+		wantRes []int
+	}{
+		{
+			name:    "nil",
+			input:   nil,
+			wantRes: []int{},
+		},
+		{
+			name:    "empty",
+			input:   map[int]int{},
+			wantRes: []int{},
+		},
+		{
+			name: "single",
+			input: map[int]int{
+				1: 11,
+			},
+			wantRes: []int{1},
+		},
+		{
+			name: "multiple",
+			input: map[int]int{
+				1: 11,
+				2: 12,
+			},
+			wantRes: []int{1, 2},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			res := Keys[int, int](tc.input)
+			assert.ElementsMatch(t, tc.wantRes, res)
+		})
+	}
+}
