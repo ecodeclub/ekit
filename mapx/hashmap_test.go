@@ -152,14 +152,14 @@ func newHashInt(i int) hashInt {
 	return hashInt(i)
 }
 
-//goos: linux
-//goarch: amd64
-//pkg: github.com/gotomicro/ekit/mapx
-//cpu: Intel(R) Core(TM) i7-6700HQ CPU @ 2.60GHz
-//BenchmarkMyHashMap/hashmap_put-8                 4985634               374.1 ns/op            53 B/op          1 allocs/op
-//BenchmarkMyHashMap/map_put-8                     5465565               235.5 ns/op            49 B/op          0 allocs/op
-//BenchmarkMyHashMap/hashmap_get-8                 7080890               143.9 ns/op             5 B/op          0 allocs/op
-//BenchmarkMyHashMap/map_get-8                    18534306                86.94 ns/op            0 B/op          0 allocs/op
+// goos: linux
+// goarch: amd64
+// pkg: github.com/gotomicro/ekit/mapx
+// cpu: Intel(R) Core(TM) i7-6700HQ CPU @ 2.60GHz
+// BenchmarkMyHashMap/hashmap_put-8                 4985634               374.1 ns/op            53 B/op          1 allocs/op
+// BenchmarkMyHashMap/map_put-8                     5465565               235.5 ns/op            49 B/op          0 allocs/op
+// BenchmarkMyHashMap/hashmap_get-8                 7080890               143.9 ns/op             5 B/op          0 allocs/op
+// BenchmarkMyHashMap/map_get-8                    18534306                86.94 ns/op            0 B/op          0 allocs/op
 
 func BenchmarkMyHashMap(b *testing.B) {
 	hashmap := NewHashMap[hashInt, int](10)
