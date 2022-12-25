@@ -87,7 +87,9 @@ func NewHashMap[T HashKey, ValType any](size int) *MyHashMap[T, ValType] {
 	}
 }
 
-type HashMap[T HashKey, ValType any] interface {
+type mapi[T any, ValType any] interface {
 	Put(key T, val ValType) error
 	Get(key T) (ValType, bool)
 }
+
+var _ mapi[HashKey, any] = (*MyHashMap[HashKey, any])(nil)
