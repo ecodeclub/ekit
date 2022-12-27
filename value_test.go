@@ -884,3 +884,89 @@ func TestAnyValue_BytesOrDefault(t *testing.T) {
 		})
 	}
 }
+
+func TestAnyValue_Bool(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want bool
+		err  error
+	}{
+		{
+			name: "normal case:",
+			val: AnyValue{
+				Val: true,
+			},
+			want: true,
+			err:  nil,
+		},
+		{
+			name: "error case:",
+			val: AnyValue{
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: 1,
+			},
+			err: errs.NewErrInvalidType("bool", reflect.TypeOf(1).String()),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			av := AnyValue{
+				Val: tt.val.Val,
+				Err: tt.val.Err,
+			}
+			got, err := av.Bool()
+			assert.Equal(t, err, tt.err)
+			assert.Equal(t, got, tt.want)
+		})
+	}
+}
+
+func TestAnyValue_BoolOrDefault(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		def  bool
+		want bool
+	}{
+		{
+			name: "normal case:",
+			val: AnyValue{
+				Val: true,
+			},
+			want: true,
+		},
+		{
+			name: "default case:",
+			val: AnyValue{
+				Val: true,
+				Err: errors.New("error"),
+			},
+			def:  false,
+			want: false,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: 1,
+			},
+			def:  true,
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			av := AnyValue{
+				Val: tt.val.Val,
+				Err: tt.val.Err,
+			}
+			assert.Equal(t, av.BoolOrDefault(tt.def), tt.want)
+		})
+	}
+}
