@@ -16,30 +16,30 @@ package mapx
 
 import "github.com/gotomicro/ekit/syncx"
 
-type node[T HashKey, ValType any] struct {
-	key   HashKey
+type node[T Hashable, ValType any] struct {
+	key   Hashable
 	value ValType
 	next  *node[T, ValType]
 }
 
-func (m *MyHashMap[T, ValType]) newNode(key HashKey, val ValType) *node[T, ValType] {
+func (m *HashMap[T, ValType]) newNode(key Hashable, val ValType) *node[T, ValType] {
 	newNode := m.nodePool.Get()
 	newNode.value = val
 	newNode.key = key
 	return newNode
 }
 
-type HashKey interface {
+type Hashable interface {
 	Code() uint64
 	Equals(key any) bool
 }
 
-type MyHashMap[T HashKey, ValType any] struct {
+type HashMap[T Hashable, ValType any] struct {
 	hashmap  map[uint64]*node[T, ValType]
 	nodePool *syncx.Pool[*node[T, ValType]]
 }
 
-func (m *MyHashMap[T, ValType]) Put(key T, val ValType) error {
+func (m *HashMap[T, ValType]) Put(key T, val ValType) error {
 	hash := key.Code()
 	root, ok := m.hashmap[hash]
 	if !ok {
@@ -62,7 +62,7 @@ func (m *MyHashMap[T, ValType]) Put(key T, val ValType) error {
 	return nil
 }
 
-func (m *MyHashMap[T, ValType]) Get(key T) (ValType, bool) {
+func (m *HashMap[T, ValType]) Get(key T) (ValType, bool) {
 	hash := key.Code()
 	root, ok := m.hashmap[hash]
 	var val ValType
@@ -78,8 +78,8 @@ func (m *MyHashMap[T, ValType]) Get(key T) (ValType, bool) {
 	return val, false
 }
 
-func NewHashMap[T HashKey, ValType any](size int) *MyHashMap[T, ValType] {
-	return &MyHashMap[T, ValType]{
+func NewHashMap[T Hashable, ValType any](size int) *HashMap[T, ValType] {
+	return &HashMap[T, ValType]{
 		nodePool: syncx.NewPool[*node[T, ValType]](func() *node[T, ValType] {
 			return &node[T, ValType]{}
 		}),
@@ -92,4 +92,4 @@ type mapi[T any, ValType any] interface {
 	Get(key T) (ValType, bool)
 }
 
-var _ mapi[HashKey, any] = (*MyHashMap[HashKey, any])(nil)
+var _ mapi[Hashable, any] = (*HashMap[Hashable, any])(nil)

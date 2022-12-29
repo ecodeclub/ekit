@@ -163,7 +163,7 @@ func newHashInt(i int) hashInt {
 
 func BenchmarkMyHashMap(b *testing.B) {
 	hashmap := NewHashMap[hashInt, int](10)
-	Map := make(map[uint64]int, 10)
+	m := make(map[uint64]int, 10)
 	b.Run("hashmap_put", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_ = hashmap.Put(newHashInt(i), i)
@@ -171,7 +171,7 @@ func BenchmarkMyHashMap(b *testing.B) {
 	})
 	b.Run("map_put", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			Map[uint64(i)] = i
+			m[uint64(i)] = i
 		}
 	})
 	b.Run("hashmap_get", func(b *testing.B) {
@@ -182,7 +182,7 @@ func BenchmarkMyHashMap(b *testing.B) {
 
 	b.Run("map_get", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_ = Map[uint64(i)]
+			_ = m[uint64(i)]
 		}
 	})
 
