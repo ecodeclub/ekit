@@ -1,11 +1,26 @@
+// Copyright 2021 gotomicro
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package mapx
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestMyHashMap(t *testing.T) {
+func TestHashMap(t *testing.T) {
 	testKV := []struct {
 		key testData
 		val int
@@ -34,6 +49,12 @@ func TestMyHashMap(t *testing.T) {
 			},
 			val: 11,
 		},
+		{
+			key: testData{
+				id: 1,
+			},
+			val: 101,
+		},
 	}
 	myhashmap := NewHashMap[testData, int](10)
 	for _, kv := range testKV {
@@ -42,11 +63,12 @@ func TestMyHashMap(t *testing.T) {
 			panic(err)
 		}
 	}
+
 	wantHashMap := NewHashMap[testData, int](10)
 	wantHashMap.hashmap = map[uint64]*node[testData, int]{
 		1: &node[testData, int]{
 			key:   testData{id: 1},
-			value: 1,
+			value: 101,
 			next: &node[testData, int]{
 				key:   testData{id: 11},
 				value: 11,
@@ -68,7 +90,7 @@ func TestMyHashMap(t *testing.T) {
 			key: testData{
 				id: 1,
 			},
-			wantVal: 1,
+			wantVal: 101,
 			isFound: true,
 		},
 		{
