@@ -128,6 +128,140 @@ func TestHashMap(t *testing.T) {
 	}
 
 }
+func TestHashMap_Delete(t *testing.T) {
+	testKV := []struct {
+		key testData
+		val int
+	}{
+		{
+			key: testData{
+				id: 1,
+			},
+			val: 1,
+		},
+		{
+			key: testData{
+				id: 2,
+			},
+			val: 2,
+		},
+		{
+			key: testData{
+				id: 11,
+			},
+			val: 11,
+		},
+		{
+			key: testData{
+				id: 21,
+			},
+			val: 21,
+		},
+	}
+	myhashmap := NewHashMap[testData, int](10)
+	for _, kv := range testKV {
+		err := myhashmap.Put(kv.key, kv.val)
+		if err != nil {
+			panic(err)
+		}
+	}
+	testcases := []struct {
+		name        string
+		deleteKey   testData
+		wantVal     any
+		wantHashMap func() map[uint64]*node[testData, int]
+		IsFound     bool
+	}{
+		{
+			name: "delete single link element",
+			deleteKey: testData{
+				id: 2,
+			},
+			wantVal: 2,
+			wantHashMap: func() map[uint64]*node[testData, int] {
+				h := map[uint64]*node[testData, int]{
+					1: &node[testData, int]{
+						key:   testData{id: 1},
+						value: 1,
+						next: &node[testData, int]{
+							key:   testData{id: 11},
+							value: 11,
+							next: &node[testData, int]{
+								key:   testData{id: 21},
+								value: 21,
+							},
+						},
+					},
+				}
+				return h
+			},
+			IsFound: true,
+		},
+		{
+			name: "delete middle element",
+			deleteKey: testData{
+				id: 11,
+			},
+			wantVal: 11,
+			IsFound: true,
+			wantHashMap: func() map[uint64]*node[testData, int] {
+				h := map[uint64]*node[testData, int]{
+					1: &node[testData, int]{
+						key:   testData{id: 1},
+						value: 1,
+						next: &node[testData, int]{
+							key:   testData{id: 21},
+							value: 21,
+						},
+					},
+				}
+				return h
+			},
+		},
+		{
+			name: "delete end element",
+			deleteKey: testData{
+				id: 21,
+			},
+			wantVal: 21,
+			IsFound: true,
+			wantHashMap: func() map[uint64]*node[testData, int] {
+				h := map[uint64]*node[testData, int]{
+					1: &node[testData, int]{
+						key:   testData{id: 1},
+						value: 1,
+					},
+				}
+				return h
+			},
+		},
+		{
+			name: "hash not found",
+			deleteKey: testData{
+				id: 9,
+			},
+			IsFound: false,
+		},
+		{
+			name: "key not found",
+			deleteKey: testData{
+				id: 31,
+			},
+			IsFound: false,
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			val, ok := myhashmap.Delete(tc.deleteKey)
+			assert.Equal(t, tc.IsFound, ok)
+			if !ok {
+				return
+			}
+			assert.Equal(t, tc.wantVal, val)
+			assert.Equal(t, tc.wantHashMap(), myhashmap.hashmap)
+		})
+	}
+}
 
 type testData struct {
 	id int

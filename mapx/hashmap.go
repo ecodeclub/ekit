@@ -93,3 +93,28 @@ type mapi[T any, ValType any] interface {
 }
 
 var _ mapi[Hashable, any] = (*HashMap[Hashable, any])(nil)
+
+func (m *HashMap[T, ValType]) Delete(key T) (ValType, bool) {
+	root, ok := m.hashmap[key.Code()]
+	if !ok {
+		var t ValType
+		return t, false
+	}
+	pre := root
+	num := 0
+	for root != nil {
+		if root.key.Equals(key) {
+			if num == 0 {
+				delete(m.hashmap, key.Code())
+				return root.value, true
+			}
+			pre.next = root.next
+			return root.value, true
+		}
+		num++
+		pre = root
+		root = root.next
+	}
+	var t ValType
+	return t, false
+}
