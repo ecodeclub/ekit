@@ -94,6 +94,7 @@ type mapi[T any, ValType any] interface {
 
 var _ mapi[Hashable, any] = (*HashMap[Hashable, any])(nil)
 
+// Delete方法第一个返回值为删除key的值，第二个是hashmap是否真的有这个key
 func (m *HashMap[T, ValType]) Delete(key T) (ValType, bool) {
 	root, ok := m.hashmap[key.Code()]
 	if !ok {
@@ -104,12 +105,17 @@ func (m *HashMap[T, ValType]) Delete(key T) (ValType, bool) {
 	num := 0
 	for root != nil {
 		if root.key.Equals(key) {
-			if num == 0 {
+			if num == 0 && root.next == nil {
 				delete(m.hashmap, key.Code())
-				return root.value, true
+			} else if num == 0 && root.next != nil {
+				m.hashmap[key.Code()] = root.next
+			} else {
+				pre.next = root.next
 			}
-			pre.next = root.next
-			return root.value, true
+			val := root.value
+			root.formatting()
+			m.nodePool.Put(root)
+			return val, true
 		}
 		num++
 		pre = root
@@ -117,4 +123,12 @@ func (m *HashMap[T, ValType]) Delete(key T) (ValType, bool) {
 	}
 	var t ValType
 	return t, false
+}
+
+func (n *node[T, ValType]) formatting() {
+	var val ValType
+	var t T
+	n.key = t
+	n.value = val
+	n.next = nil
 }

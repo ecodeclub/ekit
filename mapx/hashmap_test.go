@@ -17,6 +17,8 @@ package mapx
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,7 +62,7 @@ func TestHashMap(t *testing.T) {
 	for _, kv := range testKV {
 		err := myhashmap.Put(kv.key, kv.val)
 		if err != nil {
-			panic(err)
+			require.NoError(t, err)
 		}
 	}
 
@@ -129,136 +131,212 @@ func TestHashMap(t *testing.T) {
 
 }
 func TestHashMap_Delete(t *testing.T) {
-	testKV := []struct {
-		key testData
-		val int
+	testcases := []struct {
+		name        string
+		key         testData
+		setHashMap  func() map[uint64]*node[testData, int]
+		wantHashMap func() map[uint64]*node[testData, int]
+		wantVal     int
+		isFound     bool
 	}{
 		{
+			name: "hash not found",
+			setHashMap: func() map[uint64]*node[testData, int] {
+				return map[uint64]*node[testData, int]{}
+			},
+			isFound: false,
 			key: testData{
 				id: 1,
 			},
-			val: 1,
 		},
 		{
-			key: testData{
-				id: 2,
+			name: "key not found",
+			setHashMap: func() map[uint64]*node[testData, int] {
+				return map[uint64]*node[testData, int]{
+					1: &node[testData, int]{
+						key: testData{
+							id: 1,
+						},
+						value: 1,
+					},
+				}
 			},
-			val: 2,
-		},
-		{
+			isFound: false,
 			key: testData{
 				id: 11,
 			},
-			val: 11,
 		},
 		{
-			key: testData{
-				id: 21,
-			},
-			val: 21,
-		},
-	}
-	myhashmap := NewHashMap[testData, int](10)
-	for _, kv := range testKV {
-		err := myhashmap.Put(kv.key, kv.val)
-		if err != nil {
-			panic(err)
-		}
-	}
-	testcases := []struct {
-		name        string
-		deleteKey   testData
-		wantVal     any
-		wantHashMap func() map[uint64]*node[testData, int]
-		IsFound     bool
-	}{
-		{
-			name: "delete single link element",
-			deleteKey: testData{
-				id: 2,
-			},
-			wantVal: 2,
-			wantHashMap: func() map[uint64]*node[testData, int] {
-				h := map[uint64]*node[testData, int]{
+			name: "many link elements delete first",
+			setHashMap: func() map[uint64]*node[testData, int] {
+				return map[uint64]*node[testData, int]{
 					1: &node[testData, int]{
-						key:   testData{id: 1},
+						key: testData{
+							id: 1,
+						},
 						value: 1,
 						next: &node[testData, int]{
-							key:   testData{id: 11},
+							key: testData{
+								id: 11,
+							},
 							value: 11,
 							next: &node[testData, int]{
-								key:   testData{id: 21},
+								key: testData{
+									id: 21,
+								},
 								value: 21,
 							},
 						},
 					},
 				}
-				return h
 			},
-			IsFound: true,
-		},
-		{
-			name: "delete middle element",
-			deleteKey: testData{
-				id: 11,
+			isFound: true,
+			key: testData{
+				id: 1,
 			},
-			wantVal: 11,
-			IsFound: true,
+			wantVal: 1,
 			wantHashMap: func() map[uint64]*node[testData, int] {
-				h := map[uint64]*node[testData, int]{
+				return map[uint64]*node[testData, int]{
 					1: &node[testData, int]{
-						key:   testData{id: 1},
-						value: 1,
+						key: testData{
+							id: 11,
+						},
+						value: 11,
 						next: &node[testData, int]{
-							key:   testData{id: 21},
+							key: testData{
+								id: 21,
+							},
 							value: 21,
 						},
 					},
 				}
-				return h
 			},
 		},
 		{
-			name: "delete end element",
-			deleteKey: testData{
-				id: 21,
+			name: "delete only one link element",
+			key: testData{
+				id: 1,
 			},
-			wantVal: 21,
-			IsFound: true,
-			wantHashMap: func() map[uint64]*node[testData, int] {
-				h := map[uint64]*node[testData, int]{
+			setHashMap: func() map[uint64]*node[testData, int] {
+				return map[uint64]*node[testData, int]{
 					1: &node[testData, int]{
-						key:   testData{id: 1},
+						key: testData{
+							id: 1,
+						},
 						value: 1,
 					},
 				}
-				return h
 			},
+			wantHashMap: func() map[uint64]*node[testData, int] {
+				return map[uint64]*node[testData, int]{}
+			},
+			wantVal: 1,
+			isFound: true,
 		},
 		{
-			name: "hash not found",
-			deleteKey: testData{
-				id: 9,
+			name: "many link elements delete middle",
+			key: testData{
+				id: 11,
 			},
-			IsFound: false,
+			setHashMap: func() map[uint64]*node[testData, int] {
+				return map[uint64]*node[testData, int]{
+					1: &node[testData, int]{
+						key: testData{
+							id: 1,
+						},
+						value: 1,
+						next: &node[testData, int]{
+							key: testData{
+								id: 11,
+							},
+							value: 11,
+							next: &node[testData, int]{
+								key: testData{
+									id: 21,
+								},
+								value: 21,
+							},
+						},
+					},
+				}
+			},
+			wantHashMap: func() map[uint64]*node[testData, int] {
+				return map[uint64]*node[testData, int]{
+					1: &node[testData, int]{
+						key: testData{
+							id: 1,
+						},
+						value: 1,
+						next: &node[testData, int]{
+							key: testData{
+								id: 21,
+							},
+							value: 21,
+						},
+					},
+				}
+			},
+			isFound: true,
+			wantVal: 11,
 		},
 		{
-			name: "key not found",
-			deleteKey: testData{
-				id: 31,
+			name: "many link elements delete end",
+			key: testData{
+				id: 21,
 			},
-			IsFound: false,
+			setHashMap: func() map[uint64]*node[testData, int] {
+				return map[uint64]*node[testData, int]{
+					1: &node[testData, int]{
+						key: testData{
+							id: 1,
+						},
+						value: 1,
+						next: &node[testData, int]{
+							key: testData{
+								id: 11,
+							},
+							value: 11,
+							next: &node[testData, int]{
+								key: testData{
+									id: 21,
+								},
+								value: 21,
+							},
+						},
+					},
+				}
+			},
+			wantHashMap: func() map[uint64]*node[testData, int] {
+				return map[uint64]*node[testData, int]{
+					1: &node[testData, int]{
+						key: testData{
+							id: 1,
+						},
+						value: 1,
+						next: &node[testData, int]{
+							key: testData{
+								id: 11,
+							},
+							value: 11,
+						},
+					},
+				}
+			},
+			isFound: true,
+			wantVal: 21,
 		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			val, ok := myhashmap.Delete(tc.deleteKey)
-			assert.Equal(t, tc.IsFound, ok)
+			h := NewHashMap[testData, int](10)
+			h.hashmap = tc.setHashMap()
+			val, ok := h.Delete(tc.key)
+			assert.Equal(t, tc.isFound, ok)
 			if !ok {
 				return
 			}
 			assert.Equal(t, tc.wantVal, val)
-			assert.Equal(t, tc.wantHashMap(), myhashmap.hashmap)
+			assert.Equal(t, tc.wantHashMap(), h.hashmap)
 		})
 	}
 }
