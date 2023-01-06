@@ -44,8 +44,8 @@ func (m *HashMap[T, ValType]) Put(key T, val ValType) error {
 	root, ok := m.hashmap[hash]
 	if !ok {
 		hash = key.Code()
-		new_node := m.newNode(key, val)
-		m.hashmap[hash] = new_node
+		newNode := m.newNode(key, val)
+		m.hashmap[hash] = newNode
 		return nil
 	}
 	pre := root
@@ -57,8 +57,8 @@ func (m *HashMap[T, ValType]) Put(key T, val ValType) error {
 		pre = root
 		root = root.next
 	}
-	new_node := m.newNode(key, val)
-	pre.next = new_node
+	newNode := m.newNode(key, val)
+	pre.next = newNode
 	return nil
 }
 
