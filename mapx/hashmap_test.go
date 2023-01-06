@@ -199,6 +199,25 @@ func TestHashMap_Keys_Values(t *testing.T) {
 			wantKeys:   []Hashable{testData{id: 1}},
 			wantValues: []int{11},
 		},
+		{
+			name: "multi with same key",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				for _, val := range []int{1, 2} {
+					err := testHashMap.Put(testData{
+						id: val,
+					}, val*10)
+					require.NoError(t, err)
+				}
+				err := testHashMap.Put(testData{
+					id: 1,
+				}, 11)
+				require.NoError(t, err)
+				return testHashMap
+			},
+			wantKeys:   []Hashable{testData{id: 1}, testData{id: 2}},
+			wantValues: []int{11, 20},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
