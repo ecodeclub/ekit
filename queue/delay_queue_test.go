@@ -16,6 +16,7 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -307,4 +308,44 @@ type delayElem struct {
 
 func (d delayElem) Delay() time.Duration {
 	return time.Until(d.deadline)
+}
+
+func ExampleNewDelayQueue() {
+	q := NewDelayQueue[delayElem](10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	now := time.Now()
+	_ = q.Enqueue(ctx, delayElem{
+		// 3 秒后过期
+		deadline: now.Add(time.Second * 3),
+		val:      3,
+	})
+
+	_ = q.Enqueue(ctx, delayElem{
+		// 2 秒后过期
+		deadline: now.Add(time.Second * 2),
+		val:      2,
+	})
+
+	_ = q.Enqueue(ctx, delayElem{
+		// 1 秒后过期
+		deadline: now.Add(time.Second * 1),
+		val:      1,
+	})
+
+	var vals []int
+	val, _ := q.Dequeue(ctx)
+	vals = append(vals, val.val)
+	val, _ = q.Dequeue(ctx)
+	vals = append(vals, val.val)
+	val, _ = q.Dequeue(ctx)
+	vals = append(vals, val.val)
+	fmt.Println(vals)
+	duration := time.Since(now)
+	if duration > time.Second*3 {
+		fmt.Println("delay!")
+	}
+	// Output:
+	// [1 2 3]
+	// delay!
 }

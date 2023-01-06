@@ -15,6 +15,7 @@
 package queue
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 
@@ -39,14 +40,14 @@ func TestNewConcurrentPriorityQueue(t *testing.T) {
 	}{
 		{
 			name:     "无边界",
-			q:        NewConcurrentPriorityQueue(0, compare()),
+			q:        NewConcurrentPriorityQueue(0, ekit.ComparatorRealNumber[int]),
 			capacity: 0,
 			data:     []int{6, 5, 4, 3, 2, 1},
 			expect:   []int{1, 2, 3, 4, 5, 6},
 		},
 		{
 			name:     "有边界 ",
-			q:        NewConcurrentPriorityQueue(6, compare()),
+			q:        NewConcurrentPriorityQueue(6, ekit.ComparatorRealNumber[int]),
 			capacity: 6,
 			data:     []int{6, 5, 4, 3, 2, 1},
 			expect:   []int{1, 2, 3, 4, 5, 6},
@@ -105,7 +106,7 @@ func TestConcurrentPriorityQueue_Enqueue(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			q := NewConcurrentPriorityQueue[int](tc.capacity, compare())
+			q := NewConcurrentPriorityQueue[int](tc.capacity, ekit.ComparatorRealNumber[int])
 			wg := sync.WaitGroup{}
 			wg.Add(tc.concurrency)
 			errChan := make(chan error, tc.capacity)
@@ -170,7 +171,7 @@ func TestConcurrentPriorityQueue_Dequeue(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			q := NewConcurrentPriorityQueue[int](tc.total, compare())
+			q := NewConcurrentPriorityQueue[int](tc.total, ekit.ComparatorRealNumber[int])
 			for i := tc.total; i > 0; i-- {
 				require.NoError(t, q.Enqueue(i))
 			}
@@ -263,7 +264,7 @@ func TestConcurrentPriorityQueue_EnqueueDequeue(t *testing.T) {
 	for _, tt := range testCases {
 		tc := tt
 		t.Run(tc.name, func(t *testing.T) {
-			q := NewConcurrentPriorityQueue[int](0, compare())
+			q := NewConcurrentPriorityQueue[int](0, ekit.ComparatorRealNumber[int])
 			errChan := make(chan error, tc.dequeue)
 			wg := sync.WaitGroup{}
 			wg.Add(tc.enqueue + tc.dequeue)
@@ -292,14 +293,19 @@ func TestConcurrentPriorityQueue_EnqueueDequeue(t *testing.T) {
 	}
 }
 
-func compare() ekit.Comparator[int] {
-	return func(a, b int) int {
-		if a < b {
-			return -1
-		}
-		if a == b {
-			return 0
-		}
-		return 1
-	}
+func ExampleNewConcurrentPriorityQueue() {
+	q := NewConcurrentPriorityQueue[int](10, ekit.ComparatorRealNumber[int])
+	_ = q.Enqueue(3)
+	_ = q.Enqueue(2)
+	_ = q.Enqueue(1)
+	var vals []int
+	val, _ := q.Dequeue()
+	vals = append(vals, val)
+	val, _ = q.Dequeue()
+	vals = append(vals, val)
+	val, _ = q.Dequeue()
+	vals = append(vals, val)
+	fmt.Println(vals)
+	// Output:
+	// [1 2 3]
 }
