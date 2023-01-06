@@ -83,8 +83,8 @@ func (m *HashMap[T, ValType]) Get(key T) (ValType, bool) {
 func (m *HashMap[T, ValType]) Keys() []Hashable {
 	// 默认初始化结果大小为hashmap的容量大小，也就是假设hash没有冲突，每个bucket存在一个元素
 	res := make([]Hashable, 0, len(m.hashmap))
-	for _, bucket := range m.hashmap {
-		res = append(res, bucket.key)
+	for _, bucketNode := range m.hashmap {
+		res = append(res, bucketNode.key)
 	}
 	return res
 }
@@ -94,8 +94,8 @@ func (m *HashMap[T, ValType]) Keys() []Hashable {
 func (m *HashMap[T, ValType]) Values() []ValType {
 	// 默认初始化结果大小为hashmap的容量大小，也就是假设hash没有冲突，每个bucket存在一个元素
 	res := make([]ValType, 0, len(m.hashmap))
-	for _, bucket := range m.hashmap {
-		res = append(res, bucket.value)
+	for _, bucketNode := range m.hashmap {
+		res = append(res, bucketNode.value)
 	}
 	return res
 }
