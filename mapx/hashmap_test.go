@@ -17,6 +17,8 @@ package mapx
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -127,6 +129,91 @@ func TestHashMap(t *testing.T) {
 		})
 	}
 
+}
+
+func TestHashMap_Keys_Values(t *testing.T) {
+	testCases := []struct {
+		name       string
+		genHashMap func() *HashMap[testData, int]
+		wantKeys   []Hashable
+		wantValues []int
+	}{
+		{
+			name: "empty",
+			genHashMap: func() *HashMap[testData, int] {
+				return &HashMap[testData, int]{}
+			},
+			wantKeys:   []Hashable{},
+			wantValues: []int{},
+		},
+		{
+			name: "size==0 empty",
+			genHashMap: func() *HashMap[testData, int] {
+				return NewHashMap[testData, int](0)
+			},
+			wantKeys:   []Hashable{},
+			wantValues: []int{},
+		},
+		{
+			name: "single",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				err := testHashMap.Put(testData{
+					id: 1,
+				}, 1)
+				require.NoError(t, err)
+				return testHashMap
+			},
+			wantKeys:   []Hashable{testData{id: 1}},
+			wantValues: []int{1},
+		},
+		{
+			name: "multi",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				for _, val := range []int{1, 2} {
+					err := testHashMap.Put(testData{
+						id: val,
+					}, val)
+					require.NoError(t, err)
+				}
+				return testHashMap
+			},
+			wantKeys:   []Hashable{testData{id: 1}, testData{id: 2}},
+			wantValues: []int{1, 2},
+		},
+		{
+			name: "same key",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				err := testHashMap.Put(testData{
+					id: 1,
+				}, 1)
+				require.NoError(t, err)
+				err = testHashMap.Put(testData{
+					id: 1,
+				}, 11)
+				require.NoError(t, err)
+				return testHashMap
+			},
+			wantKeys:   []Hashable{testData{id: 1}},
+			wantValues: []int{11},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actualKeys := tc.genHashMap().Keys()
+			actualValues := tc.genHashMap().Values()
+			// 断言key的数量一致
+			assert.Equal(t, len(tc.wantKeys), len(actualKeys))
+			// 断言value的数量一致
+			assert.Equal(t, len(tc.wantValues), len(actualValues))
+			// 断言keys的元素一致
+			assert.ElementsMatch(t, tc.wantKeys, actualKeys)
+			// 断言value的元素一致
+			assert.ElementsMatch(t, tc.wantValues, actualValues)
+		})
+	}
 }
 
 type testData struct {

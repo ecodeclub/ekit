@@ -78,6 +78,28 @@ func (m *HashMap[T, ValType]) Get(key T) (ValType, bool) {
 	return val, false
 }
 
+// Keys 返回 hashmap 里面的所有的 key。
+// 注意：key 的顺序是随机。
+func (m *HashMap[T, ValType]) Keys() []Hashable {
+	// 默认初始化结果大小为hashmap的容量大小，也就是假设hash没有冲突，每个bucket存在一个元素
+	res := make([]Hashable, 0, len(m.hashmap))
+	for _, bucket := range m.hashmap {
+		res = append(res, bucket.key)
+	}
+	return res
+}
+
+// Values 返回 hashmap 里面的所有的 value。
+// 注意：value 的顺序是随机。
+func (m *HashMap[T, ValType]) Values() []ValType {
+	// 默认初始化结果大小为hashmap的容量大小，也就是假设hash没有冲突，每个bucket存在一个元素
+	res := make([]ValType, 0, len(m.hashmap))
+	for _, bucket := range m.hashmap {
+		res = append(res, bucket.value)
+	}
+	return res
+}
+
 func NewHashMap[T Hashable, ValType any](size int) *HashMap[T, ValType] {
 	return &HashMap[T, ValType]{
 		nodePool: syncx.NewPool[*node[T, ValType]](func() *node[T, ValType] {
