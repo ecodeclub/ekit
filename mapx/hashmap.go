@@ -81,7 +81,7 @@ func (m *HashMap[T, ValType]) Get(key T) (ValType, bool) {
 // Keys 返回 Hashmap 里面的所有的 key。
 // 注意：key 的顺序是随机的。
 func (m *HashMap[T, ValType]) Keys() []Hashable {
-	res := make([]Hashable, 0, len(m.hashmap))
+	res := make([]Hashable, 0)
 	for _, bucketNode := range m.hashmap {
 		res = append(res, bucketNode.key)
 	}
@@ -91,7 +91,7 @@ func (m *HashMap[T, ValType]) Keys() []Hashable {
 // Values 返回 Hashmap 里面的所有的 value。
 // 注意：value 的顺序是随机的。
 func (m *HashMap[T, ValType]) Values() []ValType {
-	res := make([]ValType, 0, len(m.hashmap))
+	res := make([]ValType, 0)
 	for _, bucketNode := range m.hashmap {
 		res = append(res, bucketNode.value)
 	}
