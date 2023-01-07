@@ -72,10 +72,10 @@ func TestTreeMap_Put(t *testing.T) {
 		{
 			name:    "disorder-same",
 			treeMap: NewTreeMap[int, string](compare()),
-			k:       []int{1, 2, 2, 0, 3, 3},
+			k:       []int{1, 3, 2, 0, 2, 3},
 			v:       []string{"1", "2", "998", "0", "3", "997"},
 			wantKey: []int{0, 1, 2, 3},
-			wantVal: []string{"0", "1", "998", "997"},
+			wantVal: []string{"0", "1", "3", "997"},
 			wantErr: nil,
 		},
 	}
@@ -95,6 +95,161 @@ func TestTreeMap_Put(t *testing.T) {
 	}
 }
 
+func TestTreeMap_PutAll(t *testing.T) {
+	tests := []struct {
+		name    string
+		m       map[int]string
+		treeMap *TreeMap[int, string]
+		wantKey []int
+		wantVal []string
+		wantErr error
+	}{
+		{
+			name:    "nil",
+			treeMap: NewTreeMap[int, string](compare()),
+			m:       nil,
+			wantKey: nil,
+			wantVal: nil,
+			wantErr: nil,
+		},
+		{
+			name:    "empty",
+			treeMap: NewTreeMap[int, string](compare()),
+			m:       map[int]string{},
+			wantKey: nil,
+			wantVal: nil,
+			wantErr: nil,
+		},
+		{
+			name:    "single",
+			treeMap: NewTreeMap[int, string](compare()),
+			m: map[int]string{
+				0: "0",
+			},
+			wantKey: []int{0},
+			wantVal: []string{"0"},
+			wantErr: nil,
+		},
+		{
+			name:    "multiple",
+			treeMap: NewTreeMap[int, string](compare()),
+			m: map[int]string{
+				0: "0",
+				1: "1",
+				2: "2",
+			},
+			wantKey: []int{0, 1, 2},
+			wantVal: []string{"0", "1", "2"},
+			wantErr: nil,
+		},
+		{
+			name:    "disorder",
+			treeMap: NewTreeMap[int, string](compare()),
+			m: map[int]string{
+				1: "1",
+				2: "2",
+				0: "0",
+				3: "3",
+				5: "5",
+				4: "4",
+			},
+			wantKey: []int{0, 1, 2, 3, 4, 5},
+			wantVal: []string{"0", "1", "2", "3", "4", "5"},
+			wantErr: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.treeMap.PutAll(tt.m)
+			if err != nil {
+				assert.Equal(t, tt.wantErr, err)
+				return
+			}
+			keys, val := tt.treeMap.keyValue()
+			assert.ElementsMatch(t, tt.wantKey, keys)
+			assert.ElementsMatch(t, tt.wantVal, val)
+		})
+	}
+}
+
+func TestTreeMap_Get(t *testing.T) {
+	var tests = []struct {
+		name    string
+		m       map[int]int
+		findKey int
+		treeMap *TreeMap[int, int]
+		wantVal int
+		wantErr error
+	}{
+		{
+			name:    "empty-TreeMap",
+			treeMap: NewTreeMap[int, int](compare()),
+			m:       map[int]int{},
+			findKey: 0,
+			wantVal: 0,
+			wantErr: errors.New("ekit: TreeMap未找到指定Key"),
+		},
+		{
+			name: "compare-nil",
+			treeMap: &TreeMap[int, int]{
+				compare: nil,
+			},
+			m:       map[int]int{},
+			findKey: 0,
+			wantVal: 0,
+			wantErr: errors.New("ekit: Comparator不能为nil"),
+		},
+		{
+			name:    "find",
+			treeMap: NewTreeMap[int, int](compare()),
+			m: map[int]int{
+				1: 1,
+				2: 2,
+				0: 0,
+				3: 3,
+				5: 5,
+				4: 4,
+			},
+			findKey: 2,
+			wantVal: 2,
+			wantErr: nil,
+		},
+		{
+			name:    "not-find",
+			treeMap: NewTreeMap[int, int](compare()),
+			m: map[int]int{
+				1: 1,
+				2: 2,
+				0: 0,
+				3: 3,
+				5: 5,
+				4: 4,
+			},
+			findKey: 6,
+			wantVal: 0,
+			wantErr: errors.New("ekit: TreeMap未找到指定Key"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.treeMap.compare == nil {
+				val, err := tt.treeMap.Get(tt.findKey)
+				if err != nil {
+					assert.Equal(t, tt.wantErr, err)
+					assert.Equal(t, tt.wantVal, val)
+					return
+				}
+			} else {
+				tt.treeMap.PutAll(tt.m)
+				val, err := tt.treeMap.Get(tt.findKey)
+				assert.Equal(t, tt.wantErr, err)
+				assert.Equal(t, tt.wantVal, val)
+			}
+
+		})
+	}
+}
+
 type kv[Key comparable, Val any] struct {
 	ks   []Key
 	vals []Val
@@ -103,10 +258,13 @@ type kv[Key comparable, Val any] struct {
 func (treeMap *TreeMap[int, string]) keyValue() ([]int, []string) {
 	treeNode := treeMap.root
 	m := &kv[int, string]{}
-
-	midOrder(treeNode, m)
-	return m.ks, m.vals
+	if treeMap.size > 0 {
+		midOrder(treeNode, m)
+		return m.ks, m.vals
+	}
+	return nil, nil
 }
+
 func midOrder[Key comparable, Val any](node *treeNode[Key, Val], m *kv[Key, Val]) {
 	//先遍历左子树
 	if node.left != nil {
@@ -123,78 +281,6 @@ func midOrder[Key comparable, Val any](node *treeNode[Key, Val], m *kv[Key, Val]
 	}
 }
 
-//func TestTreeMap_PutAll(t *testing.T) {
-//	type fields struct {
-//		compare ekit.Comparator
-//		root    *treeNode[Key, Val]
-//		size    int
-//	}
-//	type args struct {
-//		m map[Key]Val
-//	}
-//	tests := []struct {
-//		name    string
-//		fields  fields
-//		args    args
-//		wantErr assert.ErrorAssertionFunc
-//	}{
-//		// TODO: Add test cases.
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			treeMap := &TreeMap{
-//				compare: tt.fields.compare,
-//				root:    tt.fields.root,
-//				size:    tt.fields.size,
-//			}
-//			tt.wantErr(t, treeMap.PutAll(tt.args.m), fmt.Sprintf("PutAll(%v)", tt.args.m))
-//		})
-//	}
-//}
-
-//
-//func Test_treeNode_setValue(t *testing.T) {
-//	type fields struct {
-//		values Val
-//		key    Key
-//		left   *treeNode[Key, Val]
-//		right  *treeNode[Key, Val]
-//		parent *treeNode[Key, Val]
-//		color  bool
-//	}
-//	type args struct {
-//		val any
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//	}{
-//		// TODO: Add test cases.
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			node := &treeNode{
-//				values: tt.fields.values,
-//				key:    tt.fields.key,
-//				left:   tt.fields.left,
-//				right:  tt.fields.right,
-//				parent: tt.fields.parent,
-//				color:  tt.fields.color,
-//			}
-//			node.setValue(tt.args.val)
-//		})
-//	}
-//}
-
 func compare() ekit.Comparator[int] {
-	return func(a, b int) int {
-		if a < b {
-			return -1
-		}
-		if a == b {
-			return 0
-		}
-		return 1
-	}
+	return ekit.ComparatorRealNumber[int]
 }
