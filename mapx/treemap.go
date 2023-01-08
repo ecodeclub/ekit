@@ -31,13 +31,22 @@ var (
 
 // TreeMap 是基于红黑树实现的Map
 // 需要注意TreeMap是有序的所以必须传入比较器
-type TreeMap[Key comparable, Val any] struct {
+// compare	比较器
+// root	根节点
+type TreeMap[Key ekit.RealNumber, Val any] struct {
 	compare ekit.Comparator[Key]
 	root    *treeNode[Key, Val]
 	size    int
 }
 
-type treeNode[Key comparable, Val any] struct {
+//	treeNode TreeMap上的节点，基于红黑树设计
+//	values 节点值,可以为nil
+//	key 节点必须为可比较类型
+//	left 左子节点
+//	right  右子节点
+//  parent 父节点
+//  color 着色 Black：true,Red :false
+type treeNode[Key ekit.RealNumber, Val any] struct {
 	values Val
 	key    Key
 	left   *treeNode[Key, Val]
@@ -50,15 +59,39 @@ func (node *treeNode[Key, Val]) setValue(val Val) {
 	node.values = val
 }
 
-// NewTreeMap 传入比较器构建TreeMap
-func NewTreeMap[Key comparable, Val any](compare ekit.Comparator[Key]) *TreeMap[Key, Val] {
+// BuildTreeMap TreeMap构造方法
+// 支持传入compare比较器，并根据传入的m构建TreeMap
+// 需注意比较器compare不能为nil
+func BuildTreeMap[Key ekit.RealNumber, Val any](compare ekit.Comparator[Key], m map[Key]Val) (*TreeMap[Key, Val], error) {
+	treeMap := NewTreeMap[Key, Val]()
+	if err := treeMap.SetComparable(compare); err != nil {
+		return nil, err
+	}
+	if err := treeMap.PutAll(m); err != nil {
+		return nil, err
+	}
+	return treeMap, nil
+}
+
+// NewTreeMap TreeMap构造方法,创建一个的TreeMap
+// 需注意比较器默认为ekit.ComparatorRealNumber
+func NewTreeMap[Key ekit.RealNumber, Val any]() *TreeMap[Key, Val] {
 	treeMap := &TreeMap[Key, Val]{
-		compare: compare,
+		compare: ekit.ComparatorRealNumber[Key],
 	}
 	return treeMap
 }
 
-// PutAll 将一个可比较Key的map塞入TreeMap
+func (treeMap *TreeMap[Key, Val]) SetComparable(compare ekit.Comparator[Key]) error {
+	if compare != nil {
+		treeMap.compare = compare
+		return nil
+	} else {
+		return errTreeMapComparatorIsNull
+	}
+}
+
+// PutAll 将一个可比较Key的map传入TreeMap
 // 需注意如果map中的Key已存在TreeMap将被替换
 // 错误：TreeMap中比较器为nil将会返回error
 func (treeMap *TreeMap[Key, Val]) PutAll(m map[Key]Val) error {
@@ -264,7 +297,3 @@ func (treeMap *TreeMap[Key, Val]) rotateRight(node *treeNode[Key, Val]) {
 		node.parent = l
 	}
 }
-
-//func (treeMap *TreeMap[Key, Val]) Get(k Key) error {
-//
-//}
