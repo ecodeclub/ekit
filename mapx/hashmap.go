@@ -83,7 +83,12 @@ func (m *HashMap[T, ValType]) Get(key T) (ValType, bool) {
 func (m *HashMap[T, ValType]) Keys() []Hashable {
 	res := make([]Hashable, 0)
 	for _, bucketNode := range m.hashmap {
-		res = append(res, bucketNode.key)
+		curNode := bucketNode
+		// key需要一直添加进res中，直到当前节点的next取到为nil
+		for curNode != nil {
+			res = append(res, curNode.key)
+			curNode = curNode.next
+		}
 	}
 	return res
 }
@@ -93,7 +98,12 @@ func (m *HashMap[T, ValType]) Keys() []Hashable {
 func (m *HashMap[T, ValType]) Values() []ValType {
 	res := make([]ValType, 0)
 	for _, bucketNode := range m.hashmap {
-		res = append(res, bucketNode.value)
+		curNode := bucketNode
+		// value需要一直添加进res中，直到当前节点的next取到为nil
+		for curNode != nil {
+			res = append(res, curNode.value)
+			curNode = curNode.next
+		}
 	}
 	return res
 }
