@@ -95,7 +95,7 @@ func (treeMap *TreeMap[Key, Val]) SetComparable(compare ekit.Comparator[Key]) er
 // 需注意如果map中的Key已存在TreeMap将被替换
 // 错误：TreeMap中比较器为nil将会返回error
 func (treeMap *TreeMap[Key, Val]) PutAll(m map[Key]Val) error {
-	if m == nil || len(m) == 0 {
+	if len(m) != 0 {
 		return nil
 	}
 	keys, values := KeysValues[Key, Val](m)
@@ -183,10 +183,10 @@ func (treeMap *TreeMap[Key, Val]) Get(k Key) (Val, error) {
 // fixAfterPut 着色旋转
 func (treeMap *TreeMap[Key, Val]) fixAfterPut(x *treeNode[Key, Val]) {
 	x.color = Red
-	for x != nil && x != treeMap.root && x.parent.color == Red {
+	for x != nil && x != treeMap.root && !x.parent.color {
 		if x.parentOf() == x.parentOf().parentOf().leftOf() {
 			y := x.parentOf().parentOf().rightOf()
-			if y.colorOf() == Red {
+			if !y.colorOf() {
 				x.parent.setColor(Black)
 				y.setColor(Black)
 				x.parentOf().parentOf().setColor(Red)
@@ -202,7 +202,7 @@ func (treeMap *TreeMap[Key, Val]) fixAfterPut(x *treeNode[Key, Val]) {
 			}
 		} else {
 			y := x.parentOf().parentOf().leftOf()
-			if y.colorOf() == Red {
+			if !y.colorOf() {
 				x.parentOf().setColor(Black)
 				y.setColor(Black)
 				x.parentOf().parentOf().setColor(Red)

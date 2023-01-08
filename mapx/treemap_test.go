@@ -299,16 +299,13 @@ func (treeMap *TreeMap[int, string]) keyValue() ([]int, []string) {
 }
 
 func midOrder[Key ekit.RealNumber, Val any](node *treeNode[Key, Val], m *kv[Key, Val]) {
-	//先遍历左子树
 	if node.left != nil {
 		midOrder(node.left, m)
 	}
-	//再遍历自己
 	if node != nil {
 		m.ks = append(m.ks, node.key)
 		m.vals = append(m.vals, node.values)
 	}
-	//最后遍历右子树
 	if node.right != nil {
 		midOrder(node.right, m)
 	}
@@ -318,16 +315,16 @@ func compare() ekit.Comparator[int] {
 	return ekit.ComparatorRealNumber[int]
 }
 
-//goos: windows
-//goarch: amd64
-//pkg: github.com/gotomicro/ekit/mapx
-//cpu: Intel(R) Core(TM) i5-7500 CPU @ 3.40GHz
-//BenchmarkTreeMap/treeMap_put-4           1500000               308.7 ns/op            96 B/op          2 allocs/op
-//BenchmarkTreeMap/map_put-4               1500000               147.6 ns/op            60 B/op          0 allocs/op
-//BenchmarkTreeMap/hashMap_put-4           1500000               336.9 ns/op            98 B/op          2 allocs/op
-//BenchmarkTreeMap/treeMap_get-4           1500000               134.0 ns/op             0 B/op          0 allocs/op
-//BenchmarkTreeMap/map_get-4               1500000                54.48 ns/op            0 B/op          0 allocs/op
-//BenchmarkTreeMap/hashMap_get-4           1500000               116.4 ns/op             7 B/op          0 allocs/op
+// goos: windows
+// goarch: amd64
+// pkg: github.com/gotomicro/ekit/mapx
+// cpu: Intel(R) Core(TM) i5-7500 CPU @ 3.40GHz
+// BenchmarkTreeMap/treeMap_put-4           1500000               308.7 ns/op            96 B/op          2 allocs/op
+// BenchmarkTreeMap/map_put-4               1500000               147.6 ns/op            60 B/op          0 allocs/op
+// BenchmarkTreeMap/hashMap_put-4           1500000               336.9 ns/op            98 B/op          2 allocs/op
+// BenchmarkTreeMap/treeMap_get-4           1500000               134.0 ns/op             0 B/op          0 allocs/op
+// BenchmarkTreeMap/map_get-4               1500000                54.48 ns/op            0 B/op          0 allocs/op
+// BenchmarkTreeMap/hashMap_get-4           1500000               116.4 ns/op             7 B/op          0 allocs/op
 func BenchmarkTreeMap(b *testing.B) {
 	hashmap := NewHashMap[hashInt, int](10)
 	treeMap := NewTreeMap[uint64, int]()
