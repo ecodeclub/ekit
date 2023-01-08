@@ -96,13 +96,12 @@ func (treeMap *TreeMap[Key, Val]) SetComparable(compare ekit.Comparator[Key]) er
 // 错误：TreeMap中比较器为nil将会返回error
 func (treeMap *TreeMap[Key, Val]) PutAll(m map[Key]Val) error {
 	if len(m) != 0 {
-		return nil
-	}
-	keys, values := KeysValues[Key, Val](m)
-	for i := 0; i < len(keys); i++ {
-		err := treeMap.Put(keys[i], values[i])
-		if err != nil {
-			return err
+		keys, values := KeysValues[Key, Val](m)
+		for i := 0; i < len(keys); i++ {
+			err := treeMap.Put(keys[i], values[i])
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
