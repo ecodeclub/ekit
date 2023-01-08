@@ -223,7 +223,8 @@ func (treeMap *TreeMap[Key, Val]) fixAfterPut(x *treeNode[Key, Val]) {
 
 func (node *treeNode[Key, Val]) colorOf() bool {
 	if node == nil {
-		return Black //空的叶子节点均为黑色
+		//空的叶子节点均为黑色
+		return Black
 	}
 	return node.color
 }
