@@ -305,13 +305,21 @@ func compare() ekit.Comparator[int] {
 //goarch: amd64
 //pkg: github.com/gotomicro/ekit/mapx
 //cpu: Intel(R) Core(TM) i5-7500 CPU @ 3.40GHz
-//BenchmarkTreeMap/treeMap_put-4             10000               195.4 ns/op            95 B/op          1 allocs/op
-//BenchmarkTreeMap/treeMap_get-4             10000               100.9 ns/op             0 B/op          0 allocs/op
+//BenchmarkTreeMap/treeMap_put-4           1500000               320.5 ns/op            96 B/op          2 allocs/op
+//BenchmarkTreeMap/map_put-4               1500000               141.6 ns/op            60 B/op          0 allocs/op
+//BenchmarkTreeMap/treeMap_get-4           1500000               132.4 ns/op             0 B/op          0 allocs/op
+//BenchmarkTreeMap/map_get-4               1500000                54.79 ns/op            0 B/op          0 allocs/op
 func BenchmarkTreeMap(b *testing.B) {
 	treeMap := NewTreeMap[uint64, int]()
+	m := make(map[uint64]int, 10)
 	b.Run("treeMap_put", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_ = treeMap.Put(uint64(i), i)
+		}
+	})
+	b.Run("map_put", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			m[uint64(i)] = i
 		}
 	})
 	b.Run("treeMap_get", func(b *testing.B) {
@@ -319,5 +327,9 @@ func BenchmarkTreeMap(b *testing.B) {
 			_, _ = treeMap.Get(uint64(i))
 		}
 	})
-
+	b.Run("map_get", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_ = m[uint64(i)]
+		}
+	})
 }
