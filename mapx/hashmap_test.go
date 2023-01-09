@@ -439,15 +439,14 @@ func TestHashMap_Keys_Values(t *testing.T) {
 			genHashMap: func() *HashMap[testData, int] {
 				testHashMap := NewHashMap[testData, int](10)
 				for _, val := range []int{1, 2} {
-					// 插入的node为(1,1)(10,10)(2,2)(20,20)
 					err := testHashMap.Put(newTestData(val), val)
 					require.NoError(t, err)
-					err = testHashMap.Put(newTestData(val*10), val*10)
+					err = testHashMap.Put(newTestData(val*10+val), val*10)
 					require.NoError(t, err)
 				}
 				return testHashMap
 			},
-			wantKeys:   []Hashable{newTestData(1), newTestData(10), newTestData(2), newTestData(20)},
+			wantKeys:   []Hashable{newTestData(1), newTestData(11), newTestData(22), newTestData(2)},
 			wantValues: []int{1, 10, 2, 20},
 		},
 	}
