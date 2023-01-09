@@ -33,20 +33,20 @@ var (
 // 需要注意TreeMap是有序的所以必须传入比较器
 // compare	比较器
 // root	根节点
-type TreeMap[Key ekit.RealNumber, Val any] struct {
+type TreeMap[Key comparable, Val any] struct {
 	compare ekit.Comparator[Key]
 	root    *treeNode[Key, Val]
 	size    int
 }
 
-//	treeNode TreeMap上的节点，基于红黑树设计
-//	values 节点值,可以为nil
-//	key 节点必须为可比较类型
-//	left 左子节点
-//	right  右子节点
-//  parent 父节点
-//  color 着色 Black：true,Red :false
-type treeNode[Key ekit.RealNumber, Val any] struct {
+//		treeNode TreeMap上的节点，基于红黑树设计
+//		values 节点值,可以为nil
+//		key 节点必须为可比较类型
+//		left 左子节点
+//		right  右子节点
+//	 parent 父节点
+//	 color 着色 Black：true,Red :false
+type treeNode[Key comparable, Val any] struct {
 	values Val
 	key    Key
 	left   *treeNode[Key, Val]
@@ -62,7 +62,7 @@ func (node *treeNode[Key, Val]) setValue(val Val) {
 // BuildTreeMap TreeMap构造方法
 // 支持传入compare比较器，并根据传入的m构建TreeMap
 // 需注意比较器compare不能为nil
-func BuildTreeMap[Key ekit.RealNumber, Val any](compare ekit.Comparator[Key], m map[Key]Val) (*TreeMap[Key, Val], error) {
+func BuildTreeMap[Key comparable, Val any](compare ekit.Comparator[Key], m map[Key]Val) (*TreeMap[Key, Val], error) {
 	treeMap := NewTreeMap[Key, Val]()
 	if err := treeMap.SetComparable(compare); err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func BuildTreeMap[Key ekit.RealNumber, Val any](compare ekit.Comparator[Key], m 
 
 // NewTreeMap TreeMap构造方法,创建一个的TreeMap
 // 需注意比较器默认为ekit.ComparatorRealNumber
-func NewTreeMap[Key ekit.RealNumber, Val any]() *TreeMap[Key, Val] {
+func NewTreeMap[Key comparable, Val any]() *TreeMap[Key, Val] {
 	treeMap := &TreeMap[Key, Val]{
 		compare: ekit.ComparatorRealNumber[Key],
 	}
