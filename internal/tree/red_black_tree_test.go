@@ -75,7 +75,7 @@ func nodeCheck[T any](node *TreeNode[T], count int, num int) bool {
 }
 
 func TestRedBlackTree_Add(t *testing.T) {
-	isRedBlackTreecase := []struct {
+	isRedBlackTreeCase := []struct {
 		name string
 		node *TreeNode[int]
 		want bool
@@ -209,7 +209,7 @@ func TestRedBlackTree_Add(t *testing.T) {
 			want: false,
 		},
 	}
-	for _, tt := range isRedBlackTreecase {
+	for _, tt := range isRedBlackTreeCase {
 		t.Run(tt.name, func(t *testing.T) {
 			res := isRedBlackTree[int](tt.node)
 			assert.Equal(t, tt.want, res)
