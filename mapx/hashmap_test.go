@@ -357,7 +357,7 @@ func TestHashMap_Keys_Values(t *testing.T) {
 			wantValues: []int{},
 		},
 		{
-			name: "size==0 empty",
+			name: "size is zero empty",
 			genHashMap: func() *HashMap[testData, int] {
 				return NewHashMap[testData, int](0)
 			},
@@ -365,7 +365,7 @@ func TestHashMap_Keys_Values(t *testing.T) {
 			wantValues: []int{},
 		},
 		{
-			name: "single",
+			name: "single key",
 			genHashMap: func() *HashMap[testData, int] {
 				testHashMap := NewHashMap[testData, int](10)
 				err := testHashMap.Put(newTestData(1), 1)
@@ -376,7 +376,7 @@ func TestHashMap_Keys_Values(t *testing.T) {
 			wantValues: []int{1},
 		},
 		{
-			name: "multi",
+			name: "multiple keys",
 			genHashMap: func() *HashMap[testData, int] {
 				testHashMap := NewHashMap[testData, int](10)
 				for _, val := range []int{1, 2} {
@@ -419,7 +419,7 @@ func TestHashMap_Keys_Values(t *testing.T) {
 			wantValues: []int{11, 20},
 		},
 		{
-			name: "same code of different keys",
+			name: "single key collision",
 			genHashMap: func() *HashMap[testData, int] {
 				testHashMap := NewHashMap[testData, int](10)
 				err := testHashMap.Put(newTestData(1), 11)
@@ -439,7 +439,7 @@ func TestHashMap_Keys_Values(t *testing.T) {
 			genHashMap: func() *HashMap[testData, int] {
 				testHashMap := NewHashMap[testData, int](10)
 				for _, val := range []int{1, 2} {
-					// val为1、2、10、20
+					// 插入的node为(1,1)(10,10)(2,2)(20,20)
 					err := testHashMap.Put(newTestData(val), val)
 					require.NoError(t, err)
 					err = testHashMap.Put(newTestData(val*10), val*10)
