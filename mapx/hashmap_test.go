@@ -341,6 +341,131 @@ func TestHashMap_Delete(t *testing.T) {
 	}
 }
 
+func TestHashMap_Keys_Values(t *testing.T) {
+	testCases := []struct {
+		name       string
+		genHashMap func() *HashMap[testData, int]
+		wantKeys   []Hashable
+		wantValues []int
+	}{
+		{
+			name: "empty",
+			genHashMap: func() *HashMap[testData, int] {
+				return &HashMap[testData, int]{}
+			},
+			wantKeys:   []Hashable{},
+			wantValues: []int{},
+		},
+		{
+			name: "size is zero empty",
+			genHashMap: func() *HashMap[testData, int] {
+				return NewHashMap[testData, int](0)
+			},
+			wantKeys:   []Hashable{},
+			wantValues: []int{},
+		},
+		{
+			name: "single key",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				err := testHashMap.Put(newTestData(1), 1)
+				require.NoError(t, err)
+				return testHashMap
+			},
+			wantKeys:   []Hashable{newTestData(1)},
+			wantValues: []int{1},
+		},
+		{
+			name: "multiple keys",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				for _, val := range []int{1, 2} {
+					err := testHashMap.Put(newTestData(val), val)
+					require.NoError(t, err)
+				}
+				return testHashMap
+			},
+			wantKeys:   []Hashable{newTestData(1), newTestData(2)},
+			wantValues: []int{1, 2},
+		},
+		{
+			name: "same key",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				err := testHashMap.Put(newTestData(1), 1)
+				require.NoError(t, err)
+				// 验证id相同，覆盖的场景
+				err = testHashMap.Put(newTestData(1), 11)
+				require.NoError(t, err)
+				return testHashMap
+			},
+			wantKeys:   []Hashable{newTestData(1)},
+			wantValues: []int{11},
+		},
+		{
+			name: "multi with same key",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				for _, val := range []int{1, 2} {
+					// val为1、2
+					err := testHashMap.Put(newTestData(val), val*10)
+					require.NoError(t, err)
+				}
+				err := testHashMap.Put(newTestData(1), 11)
+				require.NoError(t, err)
+				return testHashMap
+			},
+			wantKeys:   []Hashable{newTestData(1), newTestData(2)},
+			wantValues: []int{11, 20},
+		},
+		{
+			name: "single key collision",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				err := testHashMap.Put(newTestData(1), 11)
+				require.NoError(t, err)
+				// 验证id不同，但是code一致，进入同一个bucket中，会取出bucket中所有的value
+				err = testHashMap.Put(newTestData(11), 111)
+				require.NoError(t, err)
+				err = testHashMap.Put(newTestData(111), 1111)
+				require.NoError(t, err)
+				return testHashMap
+			},
+			wantKeys:   []Hashable{newTestData(1), newTestData(11), newTestData(111)},
+			wantValues: []int{11, 1111, 111},
+		},
+		{
+			name: "multiple keys collision",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				for _, val := range []int{1, 2} {
+					err := testHashMap.Put(newTestData(val), val)
+					require.NoError(t, err)
+					err = testHashMap.Put(newTestData(val*10+val), val*10)
+					require.NoError(t, err)
+				}
+				return testHashMap
+			},
+			wantKeys:   []Hashable{newTestData(1), newTestData(11), newTestData(22), newTestData(2)},
+			wantValues: []int{1, 10, 2, 20},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actualKeys := tc.genHashMap().Keys()
+			actualValues := tc.genHashMap().Values()
+			// 断言key的数量一致
+			assert.Equal(t, len(tc.wantKeys), len(actualKeys))
+			// 断言value的数量一致
+			assert.Equal(t, len(tc.wantValues), len(actualValues))
+			// 断言keys的元素一致
+			assert.ElementsMatch(t, tc.wantKeys, actualKeys)
+			// 断言value的元素一致
+			assert.ElementsMatch(t, tc.wantValues, actualValues)
+		})
+	}
+}
+
 type testData struct {
 	id int
 }
@@ -355,10 +480,7 @@ func (t testData) Equals(key any) bool {
 	if !ok {
 		return false
 	}
-	if t.id != val.id {
-		return false
-	}
-	return true
+	return t.id == val.id
 }
 
 func newTestData(id int) testData {

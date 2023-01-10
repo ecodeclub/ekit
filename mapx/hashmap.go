@@ -44,8 +44,8 @@ func (m *HashMap[T, ValType]) Put(key T, val ValType) error {
 	root, ok := m.hashmap[hash]
 	if !ok {
 		hash = key.Code()
-		new_node := m.newNode(key, val)
-		m.hashmap[hash] = new_node
+		newNode := m.newNode(key, val)
+		m.hashmap[hash] = newNode
 		return nil
 	}
 	pre := root
@@ -57,8 +57,8 @@ func (m *HashMap[T, ValType]) Put(key T, val ValType) error {
 		pre = root
 		root = root.next
 	}
-	new_node := m.newNode(key, val)
-	pre.next = new_node
+	newNode := m.newNode(key, val)
+	pre.next = newNode
 	return nil
 }
 
@@ -76,6 +76,34 @@ func (m *HashMap[T, ValType]) Get(key T) (ValType, bool) {
 		root = root.next
 	}
 	return val, false
+}
+
+// Keys 返回 Hashmap 里面的所有的 key。
+// 注意：key 的顺序是随机的。
+func (m *HashMap[T, ValType]) Keys() []Hashable {
+	res := make([]Hashable, 0)
+	for _, bucketNode := range m.hashmap {
+		curNode := bucketNode
+		for curNode != nil {
+			res = append(res, curNode.key)
+			curNode = curNode.next
+		}
+	}
+	return res
+}
+
+// Values 返回 Hashmap 里面的所有的 value。
+// 注意：value 的顺序是随机的。
+func (m *HashMap[T, ValType]) Values() []ValType {
+	res := make([]ValType, 0)
+	for _, bucketNode := range m.hashmap {
+		curNode := bucketNode
+		for curNode != nil {
+			res = append(res, curNode.value)
+			curNode = curNode.next
+		}
+	}
+	return res
 }
 
 func NewHashMap[T Hashable, ValType any](size int) *HashMap[T, ValType] {
