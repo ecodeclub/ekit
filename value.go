@@ -20,6 +20,7 @@ import (
 	"github.com/gotomicro/ekit/internal/errs"
 )
 
+// AnyValue 类型转换结构定义
 type AnyValue struct {
 	Val any
 	Err error
@@ -38,8 +39,8 @@ func (av AnyValue) Int() (int, error) {
 }
 
 // IntOrDefault 返回 int 数据，或者默认值
-func (a AnyValue) IntOrDefault(def int) int {
-	val, err := a.Int()
+func (av AnyValue) IntOrDefault(def int) int {
+	val, err := av.Int()
 	if err != nil {
 		return def
 	}
@@ -59,8 +60,8 @@ func (av AnyValue) Uint() (uint, error) {
 }
 
 // UintOrDefault 返回 uint 数据，或者默认值
-func (a AnyValue) UintOrDefault(def uint) uint {
-	val, err := a.Uint()
+func (av AnyValue) UintOrDefault(def uint) uint {
+	val, err := av.Uint()
 	if err != nil {
 		return def
 	}
@@ -80,8 +81,8 @@ func (av AnyValue) Int32() (int32, error) {
 }
 
 // Int32OrDefault 返回 int32 数据，或者默认值
-func (a AnyValue) Int32OrDefault(def int32) int32 {
-	val, err := a.Int32()
+func (av AnyValue) Int32OrDefault(def int32) int32 {
+	val, err := av.Int32()
 	if err != nil {
 		return def
 	}
@@ -101,8 +102,8 @@ func (av AnyValue) Uint32() (uint32, error) {
 }
 
 // Uint32OrDefault 返回 uint32 数据，或者默认值
-func (a AnyValue) Uint32OrDefault(def uint32) uint32 {
-	val, err := a.Uint32()
+func (av AnyValue) Uint32OrDefault(def uint32) uint32 {
+	val, err := av.Uint32()
 	if err != nil {
 		return def
 	}
@@ -122,8 +123,8 @@ func (av AnyValue) Int64() (int64, error) {
 }
 
 // Int64OrDefault 返回 int64 数据，或者默认值
-func (a AnyValue) Int64OrDefault(def int64) int64 {
-	val, err := a.Int64()
+func (av AnyValue) Int64OrDefault(def int64) int64 {
+	val, err := av.Int64()
 	if err != nil {
 		return def
 	}
@@ -143,8 +144,8 @@ func (av AnyValue) Uint64() (uint64, error) {
 }
 
 // Uint64OrDefault 返回 uint64 数据，或者默认值
-func (a AnyValue) Uint64OrDefault(def uint64) uint64 {
-	val, err := a.Uint64()
+func (av AnyValue) Uint64OrDefault(def uint64) uint64 {
+	val, err := av.Uint64()
 	if err != nil {
 		return def
 	}
@@ -164,8 +165,8 @@ func (av AnyValue) Float32() (float32, error) {
 }
 
 // Float32OrDefault 返回 float32 数据，或者默认值
-func (a AnyValue) Float32OrDefault(def float32) float32 {
-	val, err := a.Float32()
+func (av AnyValue) Float32OrDefault(def float32) float32 {
+	val, err := av.Float32()
 	if err != nil {
 		return def
 	}
@@ -185,8 +186,8 @@ func (av AnyValue) Float64() (float64, error) {
 }
 
 // Float64OrDefault 返回 float64 数据，或者默认值
-func (a AnyValue) Float64OrDefault(def float64) float64 {
-	val, err := a.Float64()
+func (av AnyValue) Float64OrDefault(def float64) float64 {
+	val, err := av.Float64()
 	if err != nil {
 		return def
 	}
@@ -206,8 +207,8 @@ func (av AnyValue) String() (string, error) {
 }
 
 // StringOrDefault 返回 string 数据，或者默认值
-func (a AnyValue) StringOrDefault(def string) string {
-	val, err := a.String()
+func (av AnyValue) StringOrDefault(def string) string {
+	val, err := av.String()
 	if err != nil {
 		return def
 	}
@@ -227,8 +228,29 @@ func (av AnyValue) Bytes() ([]byte, error) {
 }
 
 // BytesOrDefault 返回 []byte 数据，或者默认值
-func (a AnyValue) BytesOrDefault(def []byte) []byte {
-	val, err := a.Bytes()
+func (av AnyValue) BytesOrDefault(def []byte) []byte {
+	val, err := av.Bytes()
+	if err != nil {
+		return def
+	}
+	return val
+}
+
+// Bool 返回 bool 数据
+func (av AnyValue) Bool() (bool, error) {
+	if av.Err != nil {
+		return false, av.Err
+	}
+	val, ok := av.Val.(bool)
+	if !ok {
+		return false, errs.NewErrInvalidType("bool", reflect.TypeOf(av.Val).String())
+	}
+	return val, nil
+}
+
+// BoolOrDefault 返回 bool 数据，或者默认值
+func (av AnyValue) BoolOrDefault(def bool) bool {
+	val, err := av.Bool()
 	if err != nil {
 		return def
 	}
