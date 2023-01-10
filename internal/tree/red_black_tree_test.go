@@ -2,9 +2,10 @@ package tree
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/gotomicro/ekit"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNewRedBlackTree(t *testing.T) {

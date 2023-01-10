@@ -16,6 +16,7 @@ package mapx
 
 import (
 	"errors"
+
 	"github.com/gotomicro/ekit"
 )
 
