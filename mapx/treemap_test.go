@@ -381,16 +381,16 @@ func (treeMap *TreeMap[int, string]) keyValue() ([]int, []string) {
 }
 
 func midOrder[Key any, Val any](node *tree.RBNode[Key, Val], m *kv[Key, Val]) {
-	//先遍历左子树
+	// 先遍历左子树
 	if node.Left() != nil {
 		midOrder(node.Left(), m)
 	}
-	//再遍历自己
+	// 再遍历自己
 	if node != nil {
 		m.ks = append(m.ks, node.Key)
 		m.vals = append(m.vals, node.Value)
 	}
-	//最后遍历右子树
+	// 最后遍历右子树
 	if node.Right() != nil {
 		midOrder(node.Right(), m)
 	}

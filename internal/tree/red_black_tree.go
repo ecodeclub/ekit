@@ -27,8 +27,8 @@ const (
 
 var (
 	errRBTreeSameRBNode = errors.New("ekit: RBTree不能添加重复节点Key")
-	//errRBTreeNotRBNode  = errors.New("ekit: RBTree不存在节点Key")
-	//errRBTreeCantRepaceNil = errors.New("ekit: RBTree不能将节点替换为nil")
+	// errRBTreeNotRBNode  = errors.New("ekit: RBTree不存在节点Key")
+	// errRBTreeCantRepaceNil = errors.New("ekit: RBTree不能将节点替换为nil")
 )
 
 type RBTree[T any, V any] struct {
