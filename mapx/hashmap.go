@@ -44,8 +44,8 @@ func (m *HashMap[T, ValType]) Put(key T, val ValType) error {
 	root, ok := m.hashmap[hash]
 	if !ok {
 		hash = key.Code()
-		new_node := m.newNode(key, val)
-		m.hashmap[hash] = new_node
+		newNode := m.newNode(key, val)
+		m.hashmap[hash] = newNode
 		return nil
 	}
 	pre := root
@@ -57,8 +57,8 @@ func (m *HashMap[T, ValType]) Put(key T, val ValType) error {
 		pre = root
 		root = root.next
 	}
-	new_node := m.newNode(key, val)
-	pre.next = new_node
+	newNode := m.newNode(key, val)
+	pre.next = newNode
 	return nil
 }
 
@@ -78,6 +78,34 @@ func (m *HashMap[T, ValType]) Get(key T) (ValType, bool) {
 	return val, false
 }
 
+// Keys 返回 Hashmap 里面的所有的 key。
+// 注意：key 的顺序是随机的。
+func (m *HashMap[T, ValType]) Keys() []Hashable {
+	res := make([]Hashable, 0)
+	for _, bucketNode := range m.hashmap {
+		curNode := bucketNode
+		for curNode != nil {
+			res = append(res, curNode.key)
+			curNode = curNode.next
+		}
+	}
+	return res
+}
+
+// Values 返回 Hashmap 里面的所有的 value。
+// 注意：value 的顺序是随机的。
+func (m *HashMap[T, ValType]) Values() []ValType {
+	res := make([]ValType, 0)
+	for _, bucketNode := range m.hashmap {
+		curNode := bucketNode
+		for curNode != nil {
+			res = append(res, curNode.value)
+			curNode = curNode.next
+		}
+	}
+	return res
+}
+
 func NewHashMap[T Hashable, ValType any](size int) *HashMap[T, ValType] {
 	return &HashMap[T, ValType]{
 		nodePool: syncx.NewPool[*node[T, ValType]](func() *node[T, ValType] {
@@ -93,3 +121,42 @@ type mapi[T any, ValType any] interface {
 }
 
 var _ mapi[Hashable, any] = (*HashMap[Hashable, any])(nil)
+
+// Delete 第一个返回值为删除key的值，第二个是hashmap是否真的有这个key
+func (m *HashMap[T, ValType]) Delete(key T) (ValType, bool) {
+	root, ok := m.hashmap[key.Code()]
+	if !ok {
+		var t ValType
+		return t, false
+	}
+	pre := root
+	num := 0
+	for root != nil {
+		if root.key.Equals(key) {
+			if num == 0 && root.next == nil {
+				delete(m.hashmap, key.Code())
+			} else if num == 0 && root.next != nil {
+				m.hashmap[key.Code()] = root.next
+			} else {
+				pre.next = root.next
+			}
+			val := root.value
+			root.formatting()
+			m.nodePool.Put(root)
+			return val, true
+		}
+		num++
+		pre = root
+		root = root.next
+	}
+	var t ValType
+	return t, false
+}
+
+func (n *node[T, ValType]) formatting() {
+	var val ValType
+	var t T
+	n.key = t
+	n.value = val
+	n.next = nil
+}
