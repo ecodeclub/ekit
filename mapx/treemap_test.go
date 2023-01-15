@@ -138,10 +138,7 @@ func TestPutAll(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			treeMap, _ := NewTreeMap[int, int](compare())
-			err := PutAll(treeMap, tt.m)
-			if err != nil {
-				return
-			}
+			PutAll(treeMap, tt.m)
 			if !tree.IsRedBlackTree(treeMap.Root()) {
 				panic(errors.New("不是红黑树"))
 			}
@@ -200,10 +197,7 @@ func TestTreeMap_Get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			treeMap, _ := NewTreeMap[int, int](compare())
-			err := PutAll(treeMap, tt.m)
-			if err != nil {
-				return
-			}
+			PutAll(treeMap, tt.m)
 			val, b := treeMap.Get(tt.findKey)
 			assert.Equal(t, tt.wantBool, b)
 			assert.Equal(t, tt.wantVal, val)

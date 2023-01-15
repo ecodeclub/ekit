@@ -463,35 +463,68 @@ func TestRBTree_deleteNode(t *testing.T) {
 			wantError: errors.New("未找到节点0"),
 		},
 		{
-			name:   "左右非空子节点,删除节点为黑色",
+			name:   "本身为右节点,左右非空子节点,删除节点为黑色",
 			delKey: 11,
-			Key:    []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
 			want:   true,
 		},
 		{
-			name:   "左右只有一个非空子节点,删除节点为黑色",
+			name:   "本身为右节点,左右只有一个非空子节点,删除节点为黑色",
 			delKey: 11,
-			Key:    []int{4, 5, 6, 7, 8, 9, 11, 12},
+			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 11, 12},
 			want:   true,
 		},
 		{
-			name:   "左右均为空节点,删除节点为黑色",
-			delKey: 12,
-			Key:    []int{4, 5, 6, 7, 8, 9, 12},
+			name:   "本身为右节点,左右均为空节点,删除节点为黑色",
+			delKey: 6,
+			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 11, 12},
 			want:   true,
-		}, {
-			name:   "左右非空子节点,删除节点为红色",
+		},
+		{
+			name:   "本身为左节点,左右非空子节点,删除节点为黑色",
+			delKey: 3,
+			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			want:   true,
+		},
+		{
+			name:   "本身为左节点,左右只有一个非空子节点,删除节点为黑色",
+			delKey: 3,
+			Key:    []int{2, 3, 5, 6, 7, 8, 9, 11, 12},
+			want:   true,
+		},
+		{
+			name:   "本身为左节点,左右均为空节点,删除节点为黑色",
+			delKey: 8,
+			Key:    []int{2, 3, 5, 6, 7, 8, 9, 11, 12},
+			want:   true,
+		},
+		{
+			name:   "本身为左节点,左右非空子节点,删除节点为红色",
 			delKey: 5,
+			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			want:   true,
+		},
+		{
+			name: "本身为左节点,左右只有一个非空子节点,删除节点为红色(无法正确构造)",
+		},
+		{
+			name:   "本身为左节点,左右均为空节点,删除节点为红色",
+			delKey: 2,
+			Key:    []int{2, 3, 5, 6, 7, 8, 9, 11, 12},
+			want:   true,
+		},
+		{
+			name:   "删除root节点",
+			delKey: 7,
 			Key:    []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			want:   true,
 		},
-		// 此状态无法构造出正确的红黑树
-		// {
-		//	name:   "左右只有一个非空子节点,删除节点为红色",
-		//	delKey: 5,
-		//	Key:    []int{4, 5, 6, 7, 8, 9, 11, 12},
-		//	want:   true,
-		// },
+		{
+			name:   "删除root节点",
+			delKey: 7,
+			Key:    []int{7},
+			want:   true,
+		},
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
@@ -579,43 +612,47 @@ func TestRBTree_getTreeNode(t *testing.T) {
 
 func TestRBTree_rotateLeft(t *testing.T) {
 	tcase := []struct {
-		name        string
-		key         []int
-		wantKey     int
-		wantLeftKey int
-		isRBTree    bool
+		name           string
+		key            []int
+		wantParent     int
+		wantLeftChild  int
+		wantRightChild int
+		rotaNode       int
 	}{
 		{
-			name:     "nod-nil",
-			key:      nil,
-			isRBTree: true,
+			name:       "only-root",
+			key:        []int{1},
+			wantParent: 1,
+			rotaNode:   1,
 		},
 		{
-			name:     "only-root",
-			key:      []int{1},
-			wantKey:  1,
-			isRBTree: true,
+			name:           "节点有2个子节点，并且本身是右节点",
+			key:            []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			rotaNode:       9,
+			wantParent:     11,
+			wantLeftChild:  8,
+			wantRightChild: 10,
 		},
 		{
-			name:        "right node have two child nods",
-			key:         []int{1, 2, 3, 4, 5},
-			wantKey:     4,
-			wantLeftKey: 2,
-			isRBTree:    false,
+			name:          "节点有2个子节点，并且本身是左节点",
+			key:           []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			rotaNode:      5,
+			wantParent:    6,
+			wantLeftChild: 4,
 		},
 		{
-			name:        "right node have a child nod",
-			key:         []int{1, 2, 3, 4},
-			wantKey:     3,
-			wantLeftKey: 2,
-			isRBTree:    false,
+			name:          "节点有1个子节点",
+			key:           []int{1, 2, 3, 4},
+			rotaNode:      2,
+			wantParent:    3,
+			wantLeftChild: 1,
 		},
 		{
-			name:        "right node have nil child nod",
-			key:         []int{1, 2, 3},
-			wantKey:     3,
-			wantLeftKey: 2,
-			isRBTree:    false,
+			name:          "节点没有子节点",
+			key:           []int{1, 2, 3},
+			rotaNode:      2,
+			wantParent:    3,
+			wantLeftChild: 1,
 		},
 	}
 	for _, tt := range tcase {
@@ -630,13 +667,15 @@ func TestRBTree_rotateLeft(t *testing.T) {
 					panic(err)
 				}
 			}
-			assert.Equal(t, true, IsRedBlackTree[int](rbTree.root))
-			rbTree.rotateLeft(rbTree.root)
-			assert.Equal(t, tt.isRBTree, IsRedBlackTree[int](rbTree.root))
-			if rbTree.root != nil {
-				assert.Equal(t, tt.wantKey, rbTree.Root().Key)
-				if rbTree.Root().getLeft() != nil {
-					assert.Equal(t, tt.wantLeftKey, rbTree.Root().getLeft().Key)
+			rotaNode := rbTree.getRBNode(tt.rotaNode)
+			rbTree.rotateLeft(rotaNode)
+			if rotaNode.getParent() != nil {
+				assert.Equal(t, tt.wantParent, rotaNode.getParent().Key)
+				if rotaNode.getLeft() != nil {
+					assert.Equal(t, tt.wantLeftChild, rotaNode.getLeft().Key)
+				}
+				if rotaNode.getRight() != nil {
+					assert.Equal(t, tt.wantRightChild, rotaNode.getRight().Key)
 				}
 			}
 		})
@@ -645,43 +684,46 @@ func TestRBTree_rotateLeft(t *testing.T) {
 
 func TestRBTree_rotateRight(t *testing.T) {
 	tcase := []struct {
-		name         string
-		key          []int
-		wantKey      int
-		wantRightKey int
-		isRBTree     bool
+		name           string
+		key            []int
+		wantParent     int
+		wantLeftChild  int
+		wantRightChild int
+		rotaNode       int
 	}{
 		{
-			name:     "nod-nil",
-			key:      nil,
-			isRBTree: true,
+			name:       "only-root",
+			key:        []int{1},
+			wantParent: 1,
+			rotaNode:   1,
 		},
 		{
-			name:     "only-root",
-			key:      []int{1},
-			wantKey:  1,
-			isRBTree: true,
+			name:           "节点有2个子节点，并且本身是右节点",
+			key:            []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			rotaNode:       9,
+			wantParent:     8,
+			wantRightChild: 11,
 		},
 		{
-			name:         "right node have two child nods",
-			key:          []int{4, 5, 3, 2, 1},
-			wantKey:      2,
-			wantRightKey: 4,
-			isRBTree:     false,
+			name:           "节点有2个子节点，并且本身是左节点",
+			key:            []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			rotaNode:       5,
+			wantParent:     4,
+			wantRightChild: 6,
 		},
 		{
-			name:         "right node have a child nod",
-			key:          []int{4, 5, 3, 2},
-			wantKey:      3,
-			wantRightKey: 4,
-			isRBTree:     false,
+			name:           "有一个子节点",
+			key:            []int{4, 5, 3, 2},
+			rotaNode:       4,
+			wantParent:     3,
+			wantRightChild: 5,
 		},
 		{
-			name:         "right node have nil child nod",
-			key:          []int{4, 5, 3},
-			wantKey:      3,
-			wantRightKey: 4,
-			isRBTree:     false,
+			name:           "没有子节点",
+			key:            []int{4, 5, 3},
+			rotaNode:       4,
+			wantParent:     3,
+			wantRightChild: 5,
 		},
 	}
 	for _, tt := range tcase {
@@ -696,13 +738,15 @@ func TestRBTree_rotateRight(t *testing.T) {
 					panic(err)
 				}
 			}
-			assert.Equal(t, true, IsRedBlackTree[int](rbTree.root))
-			rbTree.rotateRight(rbTree.root)
-			assert.Equal(t, tt.isRBTree, IsRedBlackTree[int](rbTree.root))
-			if rbTree.root != nil {
-				assert.Equal(t, tt.wantKey, rbTree.Root().Key)
-				if rbTree.Root().getRight() != nil {
-					assert.Equal(t, tt.wantRightKey, rbTree.Root().getRight().Key)
+			rotaNode := rbTree.getRBNode(tt.rotaNode)
+			rbTree.rotateRight(rotaNode)
+			if rotaNode.getParent() != nil {
+				assert.Equal(t, tt.wantParent, rotaNode.getParent().Key)
+				if rotaNode.getLeft() != nil {
+					assert.Equal(t, tt.wantLeftChild, rotaNode.getLeft().Key)
+				}
+				if rotaNode.getRight() != nil {
+					assert.Equal(t, tt.wantRightChild, rotaNode.getRight().Key)
 				}
 			}
 		})
@@ -1183,6 +1227,7 @@ func TestRBTree_Root(t *testing.T) {
 		},
 		{
 			name:    "case1",
+			rbTree:  NewRBTree[int, int](compare()),
 			k:       []int{1, 2, 3, 4},
 			rootKey: 2,
 			size:    4,
@@ -1190,21 +1235,20 @@ func TestRBTree_Root(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			redBlackTree := NewRBTree[int, string](compare())
 			for i := 0; i < len(tt.k); i++ {
-				err := redBlackTree.Add(&RBNode[int, string]{
+				err := tt.rbTree.Add(&RBNode[int, int]{
 					Key: tt.k[i],
 				})
 				if err != nil {
 					panic(err)
 				}
 			}
-			assert.Equal(t, tt.size, redBlackTree.Size())
-			root := redBlackTree.Root()
+			assert.Equal(t, tt.size, tt.rbTree.Size())
+			root := tt.rbTree.Root()
 			if root == nil {
 				return
 			}
-			assert.Equal(t, tt.rootKey, redBlackTree.Root().Key)
+			assert.Equal(t, tt.rootKey, tt.rbTree.Root().Key)
 
 		})
 	}
@@ -1425,6 +1469,12 @@ func TestRBTree_getSuccessor(t *testing.T) {
 			wantKey:   4,
 		},
 		{
+			name:      "have right successor",
+			k:         []int{5, 4, 7, 6, 3, 2},
+			successor: 5,
+			wantKey:   6,
+		},
+		{
 			name:      "have no-right successor",
 			k:         []int{5, 4, 6, 3, 2},
 			successor: 4,
@@ -1449,5 +1499,83 @@ func TestRBTree_getSuccessor(t *testing.T) {
 			}
 			assert.Equal(t, tt.wantKey, successorNode.Key)
 		})
+	}
+}
+
+func TestRBTree_fixAddLeftBlack(t *testing.T) {
+	tests := []struct {
+		name    string
+		k       []int
+		addNode int
+		want    int
+	}{
+		{
+			name:    "nod is right",
+			k:       []int{2, 1, 3},
+			addNode: 3,
+			want:    2,
+		},
+		{
+			name:    "node is left",
+			k:       []int{2, 1},
+			addNode: 1,
+			want:    1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			redBlackTree := NewRBTree[int, string](compare())
+			for i := 0; i < len(tt.k); i++ {
+				err := redBlackTree.Add(&RBNode[int, string]{
+					Key: tt.k[i],
+				})
+				if err != nil {
+					return
+				}
+			}
+			node := redBlackTree.getRBNode(tt.addNode)
+			x := redBlackTree.fixAddLeftBlack(node)
+			assert.Equal(t, tt.want, x.Key)
+		})
+
+	}
+}
+
+func TestRBTree_fixAddRightBlack(t *testing.T) {
+	tests := []struct {
+		name    string
+		k       []int
+		addNode int
+		want    int
+	}{
+		{
+			name:    "nod is left",
+			k:       []int{2, 1},
+			addNode: 1,
+			want:    2,
+		},
+		{
+			name:    "node is right",
+			k:       []int{2, 1, 3},
+			addNode: 3,
+			want:    3,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			redBlackTree := NewRBTree[int, string](compare())
+			for i := 0; i < len(tt.k); i++ {
+				err := redBlackTree.Add(&RBNode[int, string]{
+					Key: tt.k[i],
+				})
+				if err != nil {
+					return
+				}
+			}
+			node := redBlackTree.getRBNode(tt.addNode)
+			x := redBlackTree.fixAddRightBlack(node)
+			assert.Equal(t, tt.want, x.Key)
+		})
+
 	}
 }

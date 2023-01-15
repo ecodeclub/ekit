@@ -46,10 +46,7 @@ func BuildTreeMap[T comparable, V any](compare ekit.Comparator[T], m map[T]V) (*
 	if err != nil {
 		return treeMap, err
 	}
-	err = PutAll(treeMap, m)
-	if err != nil {
-		return nil, err
-	}
+	PutAll(treeMap, m)
 	return treeMap, nil
 }
 
@@ -65,17 +62,13 @@ func NewTreeMap[T any, V any](compare ekit.Comparator[T]) (*TreeMap[T, V], error
 
 // PutAll 将map传入TreeMap
 // 需注意如果map中的Key已存在TreeMap将被替换
-func PutAll[T comparable, V any](treeMap *TreeMap[T, V], m map[T]V) error {
+func PutAll[T comparable, V any](treeMap *TreeMap[T, V], m map[T]V) {
 	if len(m) != 0 {
 		keys, values := KeysValues[T, V](m)
 		for i := 0; i < len(keys); i++ {
-			err := treeMap.Put(keys[i], values[i])
-			if err != nil {
-				return err
-			}
+			_ = treeMap.Put(keys[i], values[i])
 		}
 	}
-	return nil
 }
 
 // Put 在TreeMap插入指定Key的节点
@@ -83,13 +76,13 @@ func PutAll[T comparable, V any](treeMap *TreeMap[T, V], m map[T]V) error {
 // 错误：
 // TreeMap中比较器为nil将会返回error
 func (treeMap *TreeMap[T, V]) Put(k T, v V) error {
-	oldNode := treeMap.Find(k)
-	if oldNode == nil {
-		node := tree.NewRBNode[T, V](k, v)
-		return treeMap.Add(node)
+	node := tree.NewRBNode[T, V](k, v)
+	err := treeMap.Add(node)
+	if err != nil {
+		oldNode := treeMap.Find(k)
+		oldNode.SetValue(v)
 	}
-	oldNode.SetValue(v)
-	return nil
+	return err
 }
 
 // Get 在TreeMap找到指定Key的节点,返回Val
