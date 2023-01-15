@@ -78,11 +78,11 @@ func PutAll[T comparable, V any](treeMap *TreeMap[T, V], m map[T]V) {
 func (treeMap *TreeMap[T, V]) Put(k T, v V) error {
 	node := tree.NewRBNode[T, V](k, v)
 	err := treeMap.Add(node)
-	if err != nil {
+	if err == tree.ErrRBTreeSameRBNode {
 		oldNode := treeMap.Find(k)
 		oldNode.SetValue(v)
 	}
-	return err
+	return nil
 }
 
 // Get 在TreeMap找到指定Key的节点,返回Val

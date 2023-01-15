@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	errRBTreeSameRBNode = errors.New("ekit: RBTree不能添加重复节点Key")
+	ErrRBTreeSameRBNode = errors.New("ekit: RBTree不能添加重复节点Key")
 	// errRBTreeNotRBNode  = errors.New("ekit: RBTree不存在节点Key")
 	// errRBTreeCantRepaceNil = errors.New("ekit: RBTree不能将节点替换为nil")
 )
@@ -112,7 +112,7 @@ func (redBlackTree *RBTree[T, V]) addNode(node *RBNode[T, V]) error {
 		} else if cmp > 0 {
 			t = t.right
 		} else if cmp == 0 {
-			return errRBTreeSameRBNode
+			return ErrRBTreeSameRBNode
 		}
 	}
 	tempNode := &RBNode[T, V]{
