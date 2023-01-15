@@ -72,6 +72,11 @@ func TestRBTree_Add(t *testing.T) {
 			node: &RBNode[int, string]{left: nil, right: nil, color: Black},
 			want: true,
 		},
+		{
+			name: "root",
+			node: &RBNode[int, string]{left: nil, right: nil, color: Red},
+			want: false,
+		},
 		//			 root(b)
 		//			/
 		//		   a(b)
@@ -469,7 +474,7 @@ func TestRBTree_deleteNode(t *testing.T) {
 			want:   true,
 		},
 		{
-			name:   "本身为右节点,左右只有一个非空子节点,删除节点为黑色",
+			name:   "本身为右节点,右只有一个非空子节点,删除节点为黑色",
 			delKey: 11,
 			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 11, 12},
 			want:   true,
@@ -499,9 +504,9 @@ func TestRBTree_deleteNode(t *testing.T) {
 			want:   true,
 		},
 		{
-			name:   "本身为左节点,左右非空子节点,删除节点为红色",
-			delKey: 5,
-			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			name:   "本身是左节点,只有左边子节点,删除节点为黑色",
+			delKey: 3,
+			Key:    []int{5, 3, 4, 6, 2},
 			want:   true,
 		},
 		// name: "本身为左节点,左右只有一个非空子节点,删除节点为红色(无法正确构造)"
@@ -521,6 +526,12 @@ func TestRBTree_deleteNode(t *testing.T) {
 			name:   "删除root节点",
 			delKey: 7,
 			Key:    []int{7},
+			want:   true,
+		},
+		{
+			name:   "root",
+			delKey: 2,
+			Key:    []int{2, 1},
 			want:   true,
 		},
 	}
@@ -1277,6 +1288,12 @@ func Test_nodeCheck(t *testing.T) {
 			count: 1,
 			want:  true,
 		},
+		{
+			name:  "连续红色",
+			node:  &RBNode[int, string]{left: &RBNode[int, string]{left: nil, right: nil, parent: &RBNode[int, string]{left: nil, right: nil, color: Red}, color: Red}, right: nil, color: Black},
+			count: 1,
+			want:  false,
+		},
 		//			 root(b)
 		//			/
 		//		   a(r)
@@ -1575,5 +1592,125 @@ func TestRBTree_fixAddRightBlack(t *testing.T) {
 			assert.Equal(t, tt.want, x.Key)
 		})
 
+	}
+}
+
+func TestRBTree_fixAfterDeleteLeft(t *testing.T) {
+	tcase := []struct {
+		name      string
+		delKey    int
+		Key       []int
+		want      int
+		wantError error
+	}{
+		{
+			name:   "兄弟节点是红色并且兄弟左节点左侧是黑色",
+			delKey: 10,
+			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			want:   11,
+		},
+		{
+			name:   "兄弟节点是黑色,兄弟节点左测是黑色",
+			delKey: 2,
+			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			want:   3,
+		},
+		{
+			name:   "兄弟节点是黑色,兄弟节点左测不是黑色",
+			delKey: 8,
+			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			want:   5,
+		},
+		{
+			name:   "兄弟节点是红色,兄弟节点左测是黑色",
+			delKey: 1,
+			Key:    []int{2, 1, 3},
+			want:   2,
+		},
+		{
+			name:   "节点左旋之后兄弟节点是红色",
+			delKey: 21,
+			Key:    []int{15, 20, 10, 16, 21, 8, 14, 7},
+			want:   15,
+		},
+	}
+	for _, tt := range tcase {
+		t.Run(tt.name, func(t *testing.T) {
+			rbTree := NewRBTree[int, string](compare())
+			for i := 0; i < len(tt.Key); i++ {
+				node := &RBNode[int, string]{
+					Key: tt.Key[i],
+				}
+				err := rbTree.Add(node)
+				if err != nil {
+					panic(err)
+				}
+
+			}
+			delNode := rbTree.getRBNode(tt.delKey)
+			if delNode == nil {
+				assert.Equal(t, tt.wantError, errors.New("未找到节点0"))
+			} else {
+				x := rbTree.fixAfterDeleteLeft(delNode)
+				assert.Equal(t, tt.want, x.Key)
+			}
+		})
+	}
+}
+
+func TestRBTree_fixAfterDeleteRight(t *testing.T) {
+	tcase := []struct {
+		name      string
+		delKey    int
+		Key       []int
+		want      int
+		wantError error
+	}{
+		{
+			name:   "兄弟节点是红色并且兄弟左节点左侧是黑色",
+			delKey: 12,
+			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			want:   11,
+		},
+		{
+			name:   "兄弟节点是黑色,兄弟节点左测是黑色",
+			delKey: 11,
+			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 0},
+			want:   9,
+		},
+		{
+			name:   "兄弟节点是黑色,兄弟节点左测不是黑色",
+			delKey: 4,
+			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 0},
+			want:   5,
+		},
+		{
+			name:   "兄弟节点是红色,兄弟节点左测是黑色",
+			delKey: 3,
+			Key:    []int{2, 1, 3},
+			want:   2,
+		},
+	}
+	for _, tt := range tcase {
+		t.Run(tt.name, func(t *testing.T) {
+			rbTree := NewRBTree[int, string](compare())
+			for i := 0; i < len(tt.Key); i++ {
+				node := &RBNode[int, string]{
+					Key: tt.Key[i],
+				}
+				err := rbTree.Add(node)
+				if err != nil {
+					panic(err)
+				}
+
+			}
+			delNode := rbTree.getRBNode(tt.delKey)
+			if delNode == nil {
+				assert.Equal(t, tt.wantError, errors.New("未找到节点0"))
+			} else {
+				x := rbTree.fixAfterDeleteRight(delNode)
+				assert.Equal(t, tt.want, x.Key)
+			}
+		})
 	}
 }

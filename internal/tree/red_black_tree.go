@@ -326,7 +326,7 @@ func (redBlackTree *RBTree[T, V]) fixAfterDelete(x *RBNode[T, V]) {
 
 // fixAfterDeleteLeft 处理x为左子节点时的平衡处理
 func (redBlackTree *RBTree[T, V]) fixAfterDeleteLeft(x *RBNode[T, V]) *RBNode[T, V] {
-	sib := x.getParent().getRight()
+	sib := x.getParent().Right()
 	if !sib.getColor() {
 		sib.setColor(Black)
 		sib.getParent().setColor(Red)
@@ -354,7 +354,7 @@ func (redBlackTree *RBTree[T, V]) fixAfterDeleteLeft(x *RBNode[T, V]) *RBNode[T,
 
 // fixAfterDeleteRight 处理x为右子节点时的平衡处理
 func (redBlackTree *RBTree[T, V]) fixAfterDeleteRight(x *RBNode[T, V]) *RBNode[T, V] {
-	sib := x.getBrother()
+	sib := x.getParent().Left()
 	if !sib.getColor() {
 		sib.setColor(Black)
 		x.getParent().setColor(Red)
