@@ -389,3 +389,52 @@ func midOrder[Key any, Val any](node *tree.RBNode[Key, Val], m *kv[Key, Val]) {
 		midOrder(node.Right(), m)
 	}
 }
+
+// goos: windows
+// goarch: amd64
+// pkg: github.com/gotomicro/ekit/mapx
+// cpu: Intel(R) Core(TM) i5-7500 CPU @ 3.40GHz
+// BenchmarkTreeMap/treeMap_put-4             10000               250.6 ns/op            95 B/op          1 allocs/op
+// BenchmarkTreeMap/map_put-4                 10000               103.0 ns/op            68 B/op          0 allocs/op
+// BenchmarkTreeMap/hashMap_put-4             10000               250.6 ns/op           107 B/op          1 allocs/op
+// BenchmarkTreeMap/treeMap_get-4             10000                52.16 ns/op            0 B/op          0 allocs/op
+// BenchmarkTreeMap/map_get-4                 10000               0 B/op          0 allocs/op
+// BenchmarkTreeMap/hashMap_get-4             10000                52.89 ns/op            7 B/op          0 allocs/op
+// PASS
+// ok      github.com/gotomicro/ekit/mapx  0.797s
+func BenchmarkTreeMap(b *testing.B) {
+	hashmap := NewHashMap[hashInt, int](10)
+	treeMap, _ := NewTreeMap[uint64, int](ekit.ComparatorRealNumber[uint64])
+	m := make(map[uint64]int, 10)
+	b.Run("treeMap_put", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_ = treeMap.Put(uint64(i), i)
+		}
+	})
+	b.Run("map_put", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			m[uint64(i)] = i
+		}
+	})
+	b.Run("hashMap_put", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_ = hashmap.Put(hashInt(uint64(i)), i)
+		}
+	})
+	b.Run("treeMap_get", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_, _ = treeMap.Get(uint64(i))
+		}
+	})
+	b.Run("map_get", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_ = m[uint64(i)]
+		}
+	})
+	b.Run("hashMap_get", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_, _ = hashmap.Get(hashInt(uint64(i)))
+		}
+	})
+
+}
