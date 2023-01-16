@@ -20,9 +20,11 @@ import (
 	"github.com/gotomicro/ekit"
 )
 
+type color bool
+
 const (
-	Red   = false
-	Black = true
+	Red   color = false
+	Black color = true
 )
 
 var (
@@ -45,7 +47,7 @@ func (rb *RBTree[K, V]) Size() int {
 }
 
 type rbNode[K any, V any] struct {
-	color               bool
+	color               color
 	key                 K
 	value               V
 	left, right, parent *rbNode[K, V]
@@ -451,14 +453,14 @@ func (rb *RBTree[K, V]) rotateRight(node *rbNode[K, V]) {
 
 }
 
-func (node *rbNode[K, V]) getColor() bool {
+func (node *rbNode[K, V]) getColor() color {
 	if node == nil {
 		return Black
 	}
 	return node.color
 }
 
-func (node *rbNode[K, V]) setColor(color bool) {
+func (node *rbNode[K, V]) setColor(color color) {
 	if node == nil {
 		return
 	}

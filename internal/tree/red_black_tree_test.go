@@ -745,7 +745,7 @@ func TestRBNode_getColor(t *testing.T) {
 	tcase := []struct {
 		name      string
 		node      *rbNode[int, int]
-		wantColor bool
+		wantColor color
 	}{
 		{
 			name:      "nod-nil",
@@ -877,8 +877,8 @@ func TestRBNode_setColor(t *testing.T) {
 	tcase := []struct {
 		name      string
 		node      *rbNode[int, int]
-		color     bool
-		wantColor bool
+		color     color
+		wantColor color
 	}{
 		{
 			name:      "nod-nil",

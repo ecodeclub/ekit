@@ -37,7 +37,7 @@ func NewTreeMapWithMap[K comparable, V any](compare ekit.Comparator[K], m map[K]
 	if err != nil {
 		return treeMap, err
 	}
-	PutAll(treeMap, m)
+	putAll(treeMap, m)
 	return treeMap, nil
 }
 
@@ -52,13 +52,11 @@ func NewTreeMap[K any, V any](compare ekit.Comparator[K]) (*TreeMap[K, V], error
 	}, nil
 }
 
-// PutAll 将map传入TreeMap
+// putAll 将map传入TreeMap
 // 需注意如果map中的key已存在,value将被替换
-func PutAll[K comparable, V any](treeMap *TreeMap[K, V], m map[K]V) {
-	if len(m) != 0 {
-		for k, v := range m {
-			_ = treeMap.Put(k, v)
-		}
+func putAll[K comparable, V any](treeMap *TreeMap[K, V], m map[K]V) {
+	for k, v := range m {
+		_ = treeMap.Put(k, v)
 	}
 }
 
