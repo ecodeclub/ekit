@@ -30,9 +30,9 @@ type TreeMap[K any, V any] struct {
 	*tree.RBTree[K, V]
 }
 
-// BuildTreeMap TreeMap构造方法
+// NewTreeMapWithMap TreeMap构造方法
 // 支持通过传入的map构造生成TreeMap
-func BuildTreeMap[K comparable, V any](compare ekit.Comparator[K], m map[K]V) (*TreeMap[K, V], error) {
+func NewTreeMapWithMap[K comparable, V any](compare ekit.Comparator[K], m map[K]V) (*TreeMap[K, V], error) {
 	treeMap, err := NewTreeMap[K, V](compare)
 	if err != nil {
 		return treeMap, err
@@ -56,9 +56,8 @@ func NewTreeMap[K any, V any](compare ekit.Comparator[K]) (*TreeMap[K, V], error
 // 需注意如果map中的key已存在,value将被替换
 func PutAll[K comparable, V any](treeMap *TreeMap[K, V], m map[K]V) {
 	if len(m) != 0 {
-		keys, values := KeysValues[K, V](m)
-		for i := 0; i < len(keys); i++ {
-			_ = treeMap.Put(keys[i], values[i])
+		for k, v := range m {
+			_ = treeMap.Put(k, v)
 		}
 	}
 }
@@ -68,7 +67,7 @@ func PutAll[K comparable, V any](treeMap *TreeMap[K, V], m map[K]V) {
 func (treeMap *TreeMap[K, V]) Put(key K, value V) error {
 	err := treeMap.Add(key, value)
 	if err == tree.ErrRBTreeSameRBNode {
-		return treeMap.SetValue(key, value)
+		return treeMap.Set(key, value)
 	}
 	return nil
 }
@@ -76,12 +75,8 @@ func (treeMap *TreeMap[K, V]) Put(key K, value V) error {
 // Get 在TreeMap找到指定Key的节点,返回Val
 // TreeMap未找到指定节点将会返回false
 func (treeMap *TreeMap[K, V]) Get(key K) (V, bool) {
-	var defaultV V
-	node := treeMap.Find(key)
-	for node != nil {
-		return node.Value(), true
-	}
-	return defaultV, false
+	v, err := treeMap.Find(key)
+	return v, err == nil
 }
 
 // Remove TreeMap中删除指定key的节点
