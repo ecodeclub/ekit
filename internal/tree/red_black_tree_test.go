@@ -1425,7 +1425,7 @@ func TestRBNode_SetValue(t *testing.T) {
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.node.setValue(tt.value)
+			tt.node.setNodeValue(tt.value)
 			assert.Equal(t, tt.wantNode, tt.node)
 		})
 	}
