@@ -26,75 +26,76 @@ import (
 func TestBuildTreeMap(t *testing.T) {
 	tests := []struct {
 		name       string
-		m          map[int]string
+		m          map[int]int
 		comparable ekit.Comparator[int]
-		want       bool
+		wantKey    []int
+		wantVal    []int
 		wantErr    error
 	}{
 		{
 			name:       "nil",
 			m:          nil,
 			comparable: nil,
-			want:       false,
+			wantKey:    nil,
+			wantVal:    nil,
 			wantErr:    errors.New("ekit: Comparator不能为nil"),
 		},
 		{
 			name:       "empty",
-			m:          map[int]string{},
+			m:          map[int]int{},
 			comparable: compare(),
-			want:       true,
+			wantKey:    nil,
+			wantVal:    nil,
 			wantErr:    nil,
 		},
 		{
 			name: "single",
-			m: map[int]string{
-				0: "0",
+			m: map[int]int{
+				0: 0,
 			},
 			comparable: compare(),
-			want:       true,
+			wantKey:    []int{0},
+			wantVal:    []int{0},
 			wantErr:    nil,
 		},
 		{
 			name: "multiple",
-			m: map[int]string{
-				0: "0",
-				1: "1",
-				2: "2",
+			m: map[int]int{
+				0: 0,
+				1: 1,
+				2: 2,
 			},
 			comparable: compare(),
-			want:       true,
+			wantKey:    []int{0, 1, 2},
+			wantVal:    []int{0, 1, 2},
 			wantErr:    nil,
 		},
 		{
 			name: "disorder",
-			m: map[int]string{
-				1: "1",
-				2: "2",
-				0: "0",
-				3: "3",
-				5: "5",
-				4: "4",
+			m: map[int]int{
+				1: 1,
+				2: 2,
+				0: 0,
+				3: 3,
+				5: 5,
+				4: 4,
 			},
 			comparable: compare(),
-			want:       true,
+			wantKey:    []int{0, 1, 2, 3, 5, 4},
+			wantVal:    []int{0, 1, 2, 3, 5, 4},
 			wantErr:    nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			treeMap, err := BuildTreeMap[int, string](tt.comparable, tt.m)
+			treeMap, err := BuildTreeMap[int, int](tt.comparable, tt.m)
 			if err != nil {
 				assert.Equal(t, tt.wantErr, err)
 				return
 			}
-			assert.Equal(t, tt.want, tree.IsRedBlackTree[int, string](treeMap.Root()))
-
-			treeNewTreeMap, err := NewTreeMap[int, string](tt.comparable)
-			if err != nil {
-				assert.Equal(t, tt.wantErr, err)
-				return
-			}
-			assert.Equal(t, tt.want, tree.IsRedBlackTree[int, string](treeNewTreeMap.Root()))
+			keys, val := treeMap.keyValue()
+			assert.ElementsMatch(t, tt.wantKey, keys)
+			assert.ElementsMatch(t, tt.wantVal, val)
 		})
 
 	}
@@ -139,9 +140,6 @@ func TestPutAll(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			treeMap, _ := NewTreeMap[int, int](compare())
 			PutAll(treeMap, tt.m)
-			if !tree.IsRedBlackTree(treeMap.Root()) {
-				panic(errors.New("不是红黑树"))
-			}
 			keys, val := treeMap.keyValue()
 			assert.ElementsMatch(t, tt.wantKey, keys)
 			assert.ElementsMatch(t, tt.wantVal, val)
@@ -347,7 +345,6 @@ func TestTreeMap_Remove(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			treeMap, _ := NewTreeMap[int, int](compare())
 			treeMap.Remove(tt.delKey)
-			assert.Equal(t, true, tree.IsRedBlackTree[int, int](treeMap.Root()))
 			val, err := treeMap.Get(tt.delKey)
 			assert.Equal(t, tt.wantBool, err)
 			assert.Equal(t, tt.wantVal, val)
@@ -364,9 +361,9 @@ type kv[Key any, Val any] struct {
 	vals []Val
 }
 
-func (treeMap *TreeMap[int, string]) keyValue() ([]int, []string) {
+func (treeMap *TreeMap[K, V]) keyValue() ([]K, []V) {
 	treeNode := treeMap.Root()
-	var m = &kv[int, string]{}
+	var m = &kv[K, V]{}
 	if treeMap.Size() > 0 {
 		midOrder(treeNode, m)
 		return m.ks, m.vals
@@ -381,8 +378,8 @@ func midOrder[Key any, Val any](node *tree.RBNode[Key, Val], m *kv[Key, Val]) {
 	}
 	// 再遍历自己
 	if node != nil {
-		m.ks = append(m.ks, node.Key)
-		m.vals = append(m.vals, node.Value)
+		m.ks = append(m.ks, node.Key())
+		m.vals = append(m.vals, node.Value())
 	}
 	// 最后遍历右子树
 	if node.Right() != nil {

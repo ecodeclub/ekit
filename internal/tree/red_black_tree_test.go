@@ -149,35 +149,35 @@ func TestRBTree_Add(t *testing.T) {
 			name: "root-grandson",
 			node: &RBNode[int, string]{
 				parent: nil,
-				Key:    7,
+				key:    7,
 				left: &RBNode[int, string]{
-					Key:   5,
+					key:   5,
 					color: Black,
 					left: &RBNode[int, string]{
-						Key:   4,
+						key:   4,
 						color: Red,
 					},
 					right: &RBNode[int, string]{
-						Key:   6,
+						key:   6,
 						color: Red,
 					},
 				},
 				right: &RBNode[int, string]{
-					Key:   10,
+					key:   10,
 					color: Red,
 					left: &RBNode[int, string]{
-						Key:   9,
+						key:   9,
 						color: Black,
 						left: &RBNode[int, string]{
-							Key:   8,
+							key:   8,
 							color: Red,
 						},
 					},
 					right: &RBNode[int, string]{
-						Key:   12,
+						key:   12,
 						color: Black,
 						left: &RBNode[int, string]{
-							Key:   11,
+							key:   11,
 							color: Red,
 						},
 					},
@@ -245,17 +245,15 @@ func TestRBTree_Add(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			redBlackTree := NewRBTree[int, string](compare())
+			redBlackTree := NewRBTree[int, int](compare())
 			for i := 0; i < len(tt.k); i++ {
-				err := redBlackTree.Add(&RBNode[int, string]{
-					Key: tt.k[i],
-				})
+				err := redBlackTree.Add(tt.k[i], i)
 				if err != nil {
 					assert.Equal(t, tt.wantErr, err)
 					return
 				}
 			}
-			res := IsRedBlackTree[int, string](redBlackTree.root)
+			res := IsRedBlackTree[int, int](redBlackTree.root)
 			assert.Equal(t, tt.want, res)
 			assert.Equal(t, tt.size, redBlackTree.Size())
 		})
@@ -266,48 +264,48 @@ func TestRBTree_Delete(t *testing.T) {
 	tcase := []struct {
 		name   string
 		delKey int
-		Key    []int
+		key    []int
 		want   bool
 		size   int
 	}{
 		{
 			name:   "nil",
 			delKey: 0,
-			Key:    nil,
+			key:    nil,
 			want:   true,
 			size:   0,
 		},
 		{
 			name:   "node-empty",
 			delKey: 0,
-			Key:    []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:    []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			want:   true,
 			size:   9,
 		},
 		{
 			name:   "左右非空子节点,删除节点为黑色",
 			delKey: 11,
-			Key:    []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:    []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			want:   true,
 			size:   8,
 		},
 		{
 			name:   "左右只有一个非空子节点,删除节点为黑色",
 			delKey: 11,
-			Key:    []int{4, 5, 6, 7, 8, 9, 11, 12},
+			key:    []int{4, 5, 6, 7, 8, 9, 11, 12},
 			want:   true,
 			size:   7,
 		},
 		{
 			name:   "左右均为空节点,删除节点为黑色",
 			delKey: 12,
-			Key:    []int{4, 5, 6, 7, 8, 9, 12},
+			key:    []int{4, 5, 6, 7, 8, 9, 12},
 			want:   true,
 			size:   6,
 		}, {
 			name:   "左右非空子节点,删除节点为红色",
 			delKey: 5,
-			Key:    []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:    []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			want:   true,
 			size:   8,
 		},
@@ -315,18 +313,15 @@ func TestRBTree_Delete(t *testing.T) {
 		// {
 		//	name:   "左右只有一个非空子节点,删除节点为红色",
 		//	delKey: 5,
-		//	Key:    []int{4, 5, 6, 7, 8, 9, 11, 12},
+		//	key:    []int{4, 5, 6, 7, 8, 9, 11, 12},
 		//	want:   true,
 		// },
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			rbTree := NewRBTree[int, string](compare())
-			for i := 0; i < len(tt.Key); i++ {
-				node := &RBNode[int, string]{
-					Key: tt.Key[i],
-				}
-				err := rbTree.Add(node)
+			rbTree := NewRBTree[int, int](compare())
+			for i := 0; i < len(tt.key); i++ {
+				err := rbTree.Add(tt.key[i], i)
 				if err != nil {
 					panic(err)
 				}
@@ -343,47 +338,44 @@ func TestRBTree_Find(t *testing.T) {
 	tcase := []struct {
 		name      string
 		findKey   int
-		Key       []int
+		key       []int
 		wantKey   int
 		wantError error
 	}{
 		{
 			name:      "nil",
 			findKey:   0,
-			Key:       nil,
+			key:       nil,
 			wantError: errors.New("未找到0节点"),
 		},
 		{
 			name:      "node-empty",
 			findKey:   0,
-			Key:       []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:       []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			wantError: errors.New("未找到0节点"),
 		},
 		{
 			name:    "find",
 			findKey: 11,
-			Key:     []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:     []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			wantKey: 11,
 		}, {
 			name:    "find",
 			findKey: 12,
-			Key:     []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:     []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			wantKey: 12,
 		}, {
 			name:    "find",
 			findKey: 7,
-			Key:     []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:     []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			wantKey: 7,
 		},
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			rbTree := NewRBTree[int, string](compare())
-			for i := 0; i < len(tt.Key); i++ {
-				node := &RBNode[int, string]{
-					Key: tt.Key[i],
-				}
-				err := rbTree.Add(node)
+			rbTree := NewRBTree[int, int](compare())
+			for i := 0; i < len(tt.key); i++ {
+				err := rbTree.Add(tt.key[i], i)
 				if err != nil {
 					panic(err)
 				}
@@ -393,7 +385,7 @@ func TestRBTree_Find(t *testing.T) {
 			if findNode == nil {
 				assert.Equal(t, tt.wantError, errors.New("未找到0节点"))
 			} else {
-				assert.Equal(t, tt.wantKey, findNode.Key)
+				assert.Equal(t, tt.wantKey, findNode.key)
 			}
 		})
 	}
@@ -434,7 +426,7 @@ func TestRBTree_addNode(t *testing.T) {
 			redBlackTree := NewRBTree[int, string](compare())
 			for i := 0; i < len(tt.k); i++ {
 				err := redBlackTree.addNode(&RBNode[int, string]{
-					Key: tt.k[i],
+					key: tt.k[i],
 				})
 				if err != nil {
 					assert.Equal(t, tt.wantErr, err)
@@ -451,104 +443,100 @@ func TestRBTree_deleteNode(t *testing.T) {
 	tcase := []struct {
 		name      string
 		delKey    int
-		Key       []int
+		key       []int
 		want      bool
 		wantError error
 	}{
 		{
 			name:      "nil",
 			delKey:    0,
-			Key:       nil,
+			key:       nil,
 			wantError: errors.New("未找到节点0"),
 		},
 		{
 			name:      "node-empty",
 			delKey:    0,
-			Key:       []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:       []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			wantError: errors.New("未找到节点0"),
 		},
 		{
 			name:   "本身为右节点,左右非空子节点,删除节点为黑色",
 			delKey: 11,
-			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
 			want:   true,
 		},
 		{
 			name:   "本身为右节点,右只有一个非空子节点,删除节点为黑色",
 			delKey: 11,
-			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 11, 12},
+			key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 11, 12},
 			want:   true,
 		},
 		{
 			name:   "本身为右节点,左右均为空节点,删除节点为黑色",
 			delKey: 6,
-			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 11, 12},
+			key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 11, 12},
 			want:   true,
 		},
 		{
 			name:   "本身为左节点,左右非空子节点,删除节点为黑色",
 			delKey: 3,
-			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
 			want:   true,
 		},
 		{
 			name:   "本身为左节点,左右只有一个非空子节点,删除节点为黑色",
 			delKey: 3,
-			Key:    []int{2, 3, 5, 6, 7, 8, 9, 11, 12},
+			key:    []int{2, 3, 5, 6, 7, 8, 9, 11, 12},
 			want:   true,
 		},
 		{
 			name:   "本身为左节点,左右均为空节点,删除节点为黑色",
 			delKey: 8,
-			Key:    []int{2, 3, 5, 6, 7, 8, 9, 11, 12},
+			key:    []int{2, 3, 5, 6, 7, 8, 9, 11, 12},
 			want:   true,
 		},
 		{
 			name:   "本身是左节点,只有左边子节点,删除节点为黑色",
 			delKey: 3,
-			Key:    []int{5, 3, 4, 6, 2},
+			key:    []int{5, 3, 4, 6, 2},
 			want:   true,
 		},
 		// name: "本身为左节点,左右只有一个非空子节点,删除节点为红色(无法正确构造)"
 		{
 			name:   "本身为左节点,左右均为空节点,删除节点为红色",
 			delKey: 2,
-			Key:    []int{2, 3, 5, 6, 7, 8, 9, 11, 12},
+			key:    []int{2, 3, 5, 6, 7, 8, 9, 11, 12},
 			want:   true,
 		},
 		{
 			name:   "删除root节点",
 			delKey: 7,
-			Key:    []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:    []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			want:   true,
 		},
 		{
 			name:   "删除root节点",
 			delKey: 7,
-			Key:    []int{7},
+			key:    []int{7},
 			want:   true,
 		},
 		{
 			name:   "root",
 			delKey: 2,
-			Key:    []int{2, 1},
+			key:    []int{2, 1},
 			want:   true,
 		},
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			rbTree := NewRBTree[int, string](compare())
-			for i := 0; i < len(tt.Key); i++ {
-				node := &RBNode[int, string]{
-					Key: tt.Key[i],
-				}
-				err := rbTree.Add(node)
+			rbTree := NewRBTree[int, int](compare())
+			for i := 0; i < len(tt.key); i++ {
+				err := rbTree.Add(tt.key[i], i)
 				if err != nil {
 					panic(err)
 				}
-
 			}
-			delNode := rbTree.getRBNode(tt.delKey)
+			delNode := rbTree.findRBNode(tt.delKey)
 			if delNode == nil {
 				assert.Equal(t, tt.wantError, errors.New("未找到节点0"))
 			} else {
@@ -563,57 +551,54 @@ func TestRBTree_getTreeNode(t *testing.T) {
 	tcase := []struct {
 		name      string
 		findKey   int
-		Key       []int
+		key       []int
 		wantKey   int
 		wantError error
 	}{
 		{
 			name:      "nil",
 			findKey:   0,
-			Key:       nil,
+			key:       nil,
 			wantError: errors.New("未找到0节点"),
 		},
 		{
 			name:      "node-empty",
 			findKey:   0,
-			Key:       []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:       []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			wantError: errors.New("未找到0节点"),
 		},
 		{
 			name:    "find",
 			findKey: 11,
-			Key:     []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:     []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			wantKey: 11,
 		}, {
 			name:    "find",
 			findKey: 12,
-			Key:     []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:     []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			wantKey: 12,
 		}, {
 			name:    "find",
 			findKey: 7,
-			Key:     []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:     []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			wantKey: 7,
 		},
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			rbTree := NewRBTree[int, string](compare())
-			for i := 0; i < len(tt.Key); i++ {
-				node := &RBNode[int, string]{
-					Key: tt.Key[i],
-				}
-				err := rbTree.Add(node)
+			rbTree := NewRBTree[int, int](compare())
+			for i := 0; i < len(tt.key); i++ {
+				err := rbTree.Add(tt.key[i], i)
 				if err != nil {
 					panic(err)
 				}
 			}
 			assert.Equal(t, true, IsRedBlackTree[int](rbTree.root))
-			findNode := rbTree.getRBNode(tt.findKey)
+			findNode := rbTree.findRBNode(tt.findKey)
 			if findNode == nil {
 				assert.Equal(t, tt.wantError, errors.New("未找到0节点"))
 			} else {
-				assert.Equal(t, tt.wantKey, findNode.Key)
+				assert.Equal(t, tt.wantKey, findNode.key)
 			}
 		})
 	}
@@ -666,25 +651,22 @@ func TestRBTree_rotateLeft(t *testing.T) {
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			rbTree := NewRBTree[int, string](compare())
+			rbTree := NewRBTree[int, int](compare())
 			for i := 0; i < len(tt.key); i++ {
-				node := &RBNode[int, string]{
-					Key: tt.key[i],
-				}
-				err := rbTree.Add(node)
+				err := rbTree.Add(tt.key[i], i)
 				if err != nil {
 					panic(err)
 				}
 			}
-			rotaNode := rbTree.getRBNode(tt.rotaNode)
+			rotaNode := rbTree.findRBNode(tt.rotaNode)
 			rbTree.rotateLeft(rotaNode)
 			if rotaNode.getParent() != nil {
-				assert.Equal(t, tt.wantParent, rotaNode.getParent().Key)
+				assert.Equal(t, tt.wantParent, rotaNode.getParent().key)
 				if rotaNode.getLeft() != nil {
-					assert.Equal(t, tt.wantLeftChild, rotaNode.getLeft().Key)
+					assert.Equal(t, tt.wantLeftChild, rotaNode.getLeft().key)
 				}
 				if rotaNode.getRight() != nil {
-					assert.Equal(t, tt.wantRightChild, rotaNode.getRight().Key)
+					assert.Equal(t, tt.wantRightChild, rotaNode.getRight().key)
 				}
 			}
 		})
@@ -737,25 +719,22 @@ func TestRBTree_rotateRight(t *testing.T) {
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			rbTree := NewRBTree[int, string](compare())
+			rbTree := NewRBTree[int, int](compare())
 			for i := 0; i < len(tt.key); i++ {
-				node := &RBNode[int, string]{
-					Key: tt.key[i],
-				}
-				err := rbTree.Add(node)
+				err := rbTree.Add(tt.key[i], i)
 				if err != nil {
 					panic(err)
 				}
 			}
-			rotaNode := rbTree.getRBNode(tt.rotaNode)
+			rotaNode := rbTree.findRBNode(tt.rotaNode)
 			rbTree.rotateRight(rotaNode)
 			if rotaNode.getParent() != nil {
-				assert.Equal(t, tt.wantParent, rotaNode.getParent().Key)
+				assert.Equal(t, tt.wantParent, rotaNode.getParent().key)
 				if rotaNode.getLeft() != nil {
-					assert.Equal(t, tt.wantLeftChild, rotaNode.getLeft().Key)
+					assert.Equal(t, tt.wantLeftChild, rotaNode.getLeft().key)
 				}
 				if rotaNode.getRight() != nil {
-					assert.Equal(t, tt.wantRightChild, rotaNode.getRight().Key)
+					assert.Equal(t, tt.wantRightChild, rotaNode.getRight().key)
 				}
 			}
 		})
@@ -775,7 +754,7 @@ func TestRBNode_getColor(t *testing.T) {
 		},
 		{
 			name:      "new node",
-			node:      NewRBNode[int, int](1, 1),
+			node:      newRBNode[int, int](1, 1),
 			wantColor: false,
 		},
 	}
@@ -799,19 +778,19 @@ func TestRBNode_getLeft(t *testing.T) {
 		},
 		{
 			name:     "new node",
-			node:     NewRBNode[int, int](1, 1),
+			node:     newRBNode[int, int](1, 1),
 			wantNode: nil,
 		},
 		{
 			name: "new node have left-child",
 			node: &RBNode[int, int]{
-				Key: 2,
+				key: 2,
 				left: &RBNode[int, int]{
-					Key: 1,
+					key: 1,
 				},
 			},
 			wantNode: &RBNode[int, int]{
-				Key: 1,
+				key: 1,
 			},
 		},
 	}
@@ -835,19 +814,19 @@ func TestRBNode_getRight(t *testing.T) {
 		},
 		{
 			name:     "new node",
-			node:     NewRBNode[int, int](1, 1),
+			node:     newRBNode[int, int](1, 1),
 			wantNode: nil,
 		},
 		{
 			name: "new node have right-child",
 			node: &RBNode[int, int]{
-				Key: 1,
+				key: 1,
 				right: &RBNode[int, int]{
-					Key: 2,
+					key: 2,
 				},
 			},
 			wantNode: &RBNode[int, int]{
-				Key: 2,
+				key: 2,
 			},
 		},
 	}
@@ -871,19 +850,19 @@ func TestRBNode_getParent(t *testing.T) {
 		},
 		{
 			name:     "new node",
-			node:     NewRBNode[int, int](1, 1),
+			node:     newRBNode[int, int](1, 1),
 			wantNode: nil,
 		},
 		{
 			name: "new node have parent",
 			node: &RBNode[int, int]{
-				Key: 2,
+				key: 2,
 				parent: &RBNode[int, int]{
-					Key: 3,
+					key: 3,
 				},
 			},
 			wantNode: &RBNode[int, int]{
-				Key: 3,
+				key: 3,
 			},
 		},
 	}
@@ -909,7 +888,7 @@ func TestRBNode_setColor(t *testing.T) {
 		},
 		{
 			name:      "new node",
-			node:      NewRBNode[int, int](1, 1),
+			node:      newRBNode[int, int](1, 1),
 			color:     true,
 			wantColor: Black,
 		},
@@ -934,8 +913,8 @@ func TestNewRBNode(t *testing.T) {
 			key:   1,
 			value: 1,
 			wantNode: &RBNode[int, int]{
-				Key:    1,
-				Value:  1,
+				key:    1,
+				value:  1,
 				left:   nil,
 				right:  nil,
 				parent: nil,
@@ -945,7 +924,7 @@ func TestNewRBNode(t *testing.T) {
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			node := NewRBNode[int, int](tt.key, tt.value)
+			node := newRBNode[int, int](tt.key, tt.value)
 			assert.Equal(t, tt.wantNode, node)
 		})
 	}
@@ -964,19 +943,19 @@ func TestRBNode_Left(t *testing.T) {
 		},
 		{
 			name:     "new node",
-			node:     NewRBNode[int, int](1, 1),
+			node:     newRBNode[int, int](1, 1),
 			wantNode: nil,
 		},
 		{
 			name: "new node have left-child",
 			node: &RBNode[int, int]{
-				Key: 2,
+				key: 2,
 				left: &RBNode[int, int]{
-					Key: 1,
+					key: 1,
 				},
 			},
 			wantNode: &RBNode[int, int]{
-				Key: 1,
+				key: 1,
 			},
 		},
 	}
@@ -1000,19 +979,19 @@ func TestRBNode_Right(t *testing.T) {
 		},
 		{
 			name:     "new node",
-			node:     NewRBNode[int, int](1, 1),
+			node:     newRBNode[int, int](1, 1),
 			wantNode: nil,
 		},
 		{
 			name: "new node have right-child",
 			node: &RBNode[int, int]{
-				Key: 1,
+				key: 1,
 				right: &RBNode[int, int]{
-					Key: 2,
+					key: 2,
 				},
 			},
 			wantNode: &RBNode[int, int]{
-				Key: 2,
+				key: 2,
 			},
 		},
 	}
@@ -1036,19 +1015,19 @@ func TestRBNode_Parent(t *testing.T) {
 		},
 		{
 			name:     "new node",
-			node:     NewRBNode[int, int](1, 1),
+			node:     newRBNode[int, int](1, 1),
 			wantNode: nil,
 		},
 		{
 			name: "new node have parent",
 			node: &RBNode[int, int]{
-				Key: 2,
+				key: 2,
 				parent: &RBNode[int, int]{
-					Key: 3,
+					key: 3,
 				},
 			},
 			wantNode: &RBNode[int, int]{
-				Key: 3,
+				key: 3,
 			},
 		},
 	}
@@ -1089,21 +1068,19 @@ func TestRBNode_getBrother(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			redBlackTree := NewRBTree[int, string](compare())
+			redBlackTree := NewRBTree[int, int](compare())
 			for i := 0; i < len(tt.k); i++ {
-				err := redBlackTree.Add(&RBNode[int, string]{
-					Key: tt.k[i],
-				})
+				err := redBlackTree.Add(tt.k[i], i)
 				if err != nil {
 					panic(err)
 				}
 			}
-			tagNode := redBlackTree.getRBNode(tt.nodeKye)
+			tagNode := redBlackTree.findRBNode(tt.nodeKye)
 			brNode := tagNode.getBrother()
 			if brNode == nil {
 				return
 			}
-			assert.Equal(t, tt.want, brNode.Key)
+			assert.Equal(t, tt.want, brNode.key)
 
 		})
 	}
@@ -1139,21 +1116,19 @@ func TestRBNode_getGrandParent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			redBlackTree := NewRBTree[int, string](compare())
+			redBlackTree := NewRBTree[int, int](compare())
 			for i := 0; i < len(tt.k); i++ {
-				err := redBlackTree.Add(&RBNode[int, string]{
-					Key: tt.k[i],
-				})
+				err := redBlackTree.Add(tt.k[i], i)
 				if err != nil {
 					panic(err)
 				}
 			}
-			tagNode := redBlackTree.getRBNode(tt.nodeKye)
+			tagNode := redBlackTree.findRBNode(tt.nodeKye)
 			brNode := tagNode.getGrandParent()
 			if brNode == nil {
 				return
 			}
-			assert.Equal(t, tt.want, brNode.Key)
+			assert.Equal(t, tt.want, brNode.key)
 
 		})
 	}
@@ -1189,21 +1164,19 @@ func TestRBNode_getUncle(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			redBlackTree := NewRBTree[int, string](compare())
+			redBlackTree := NewRBTree[int, int](compare())
 			for i := 0; i < len(tt.k); i++ {
-				err := redBlackTree.Add(&RBNode[int, string]{
-					Key: tt.k[i],
-				})
+				err := redBlackTree.Add(tt.k[i], i)
 				if err != nil {
 					panic(err)
 				}
 			}
-			tagNode := redBlackTree.getRBNode(tt.nodeKye)
+			tagNode := redBlackTree.findRBNode(tt.nodeKye)
 			brNode := tagNode.getUncle()
 			if brNode == nil {
 				return
 			}
-			assert.Equal(t, tt.want, brNode.Key)
+			assert.Equal(t, tt.want, brNode.key)
 
 		})
 	}
@@ -1245,9 +1218,7 @@ func TestRBTree_Root(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for i := 0; i < len(tt.k); i++ {
-				err := tt.rbTree.Add(&RBNode[int, int]{
-					Key: tt.k[i],
-				})
+				err := tt.rbTree.Add(tt.k[i], i)
 				if err != nil {
 					panic(err)
 				}
@@ -1257,7 +1228,7 @@ func TestRBTree_Root(t *testing.T) {
 			if root == nil {
 				return
 			}
-			assert.Equal(t, tt.rootKey, tt.rbTree.Root().Key)
+			assert.Equal(t, tt.rootKey, tt.rbTree.root.key)
 
 		})
 	}
@@ -1369,35 +1340,35 @@ func Test_nodeCheck(t *testing.T) {
 			name: "root-grandson",
 			node: &RBNode[int, string]{
 				parent: nil,
-				Key:    7,
+				key:    7,
 				left: &RBNode[int, string]{
-					Key:   5,
+					key:   5,
 					color: Black,
 					left: &RBNode[int, string]{
-						Key:   4,
+						key:   4,
 						color: Red,
 					},
 					right: &RBNode[int, string]{
-						Key:   6,
+						key:   6,
 						color: Red,
 					},
 				},
 				right: &RBNode[int, string]{
-					Key:   10,
+					key:   10,
 					color: Red,
 					left: &RBNode[int, string]{
-						Key:   9,
+						key:   9,
 						color: Black,
 						left: &RBNode[int, string]{
-							Key:   8,
+							key:   8,
 							color: Red,
 						},
 					},
 					right: &RBNode[int, string]{
-						Key:   12,
+						key:   12,
 						color: Black,
 						left: &RBNode[int, string]{
-							Key:   11,
+							key:   11,
 							color: Red,
 						},
 					},
@@ -1434,8 +1405,8 @@ func TestRBNode_SetValue(t *testing.T) {
 		{
 			name: "new node",
 			node: &RBNode[int, int]{
-				Key:    1,
-				Value:  0,
+				key:    1,
+				value:  0,
 				left:   nil,
 				right:  nil,
 				parent: nil,
@@ -1443,8 +1414,8 @@ func TestRBNode_SetValue(t *testing.T) {
 			},
 			value: 1,
 			wantNode: &RBNode[int, int]{
-				Key:    1,
-				Value:  1,
+				key:    1,
+				value:  1,
 				left:   nil,
 				right:  nil,
 				parent: nil,
@@ -1454,7 +1425,7 @@ func TestRBNode_SetValue(t *testing.T) {
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.node.SetValue(tt.value)
+			tt.node.setValue(tt.value)
 			assert.Equal(t, tt.wantNode, tt.node)
 		})
 	}
@@ -1498,21 +1469,19 @@ func TestRBTree_getSuccessor(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			redBlackTree := NewRBTree[int, string](compare())
+			redBlackTree := NewRBTree[int, int](compare())
 			for i := 0; i < len(tt.k); i++ {
-				err := redBlackTree.Add(&RBNode[int, string]{
-					Key: tt.k[i],
-				})
+				err := redBlackTree.Add(tt.k[i], i)
 				if err != nil {
 					return
 				}
 			}
-			tagNode := redBlackTree.getRBNode(tt.successor)
-			successorNode := redBlackTree.getSuccessor(tagNode)
+			tagNode := redBlackTree.findRBNode(tt.successor)
+			successorNode := redBlackTree.findSuccessor(tagNode)
 			if successorNode == nil {
 				return
 			}
-			assert.Equal(t, tt.wantKey, successorNode.Key)
+			assert.Equal(t, tt.wantKey, successorNode.key)
 		})
 	}
 }
@@ -1539,18 +1508,16 @@ func TestRBTree_fixAddLeftBlack(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			redBlackTree := NewRBTree[int, string](compare())
+			redBlackTree := NewRBTree[int, int](compare())
 			for i := 0; i < len(tt.k); i++ {
-				err := redBlackTree.Add(&RBNode[int, string]{
-					Key: tt.k[i],
-				})
+				err := redBlackTree.Add(tt.k[i], i)
 				if err != nil {
 					return
 				}
 			}
-			node := redBlackTree.getRBNode(tt.addNode)
+			node := redBlackTree.findRBNode(tt.addNode)
 			x := redBlackTree.fixAddLeftBlack(node)
-			assert.Equal(t, tt.want, x.Key)
+			assert.Equal(t, tt.want, x.key)
 		})
 
 	}
@@ -1578,18 +1545,16 @@ func TestRBTree_fixAddRightBlack(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			redBlackTree := NewRBTree[int, string](compare())
+			redBlackTree := NewRBTree[int, int](compare())
 			for i := 0; i < len(tt.k); i++ {
-				err := redBlackTree.Add(&RBNode[int, string]{
-					Key: tt.k[i],
-				})
+				err := redBlackTree.Add(tt.k[i], i)
 				if err != nil {
 					return
 				}
 			}
-			node := redBlackTree.getRBNode(tt.addNode)
+			node := redBlackTree.findRBNode(tt.addNode)
 			x := redBlackTree.fixAddRightBlack(node)
-			assert.Equal(t, tt.want, x.Key)
+			assert.Equal(t, tt.want, x.key)
 		})
 
 	}
@@ -1599,60 +1564,57 @@ func TestRBTree_fixAfterDeleteLeft(t *testing.T) {
 	tcase := []struct {
 		name      string
 		delKey    int
-		Key       []int
+		key       []int
 		want      int
 		wantError error
 	}{
 		{
 			name:   "兄弟节点是红色并且兄弟左节点左侧是黑色",
 			delKey: 10,
-			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
 			want:   11,
 		},
 		{
 			name:   "兄弟节点是黑色,兄弟节点左测是黑色",
 			delKey: 2,
-			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
 			want:   3,
 		},
 		{
 			name:   "兄弟节点是黑色,兄弟节点左测不是黑色",
 			delKey: 8,
-			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
 			want:   5,
 		},
 		{
 			name:   "兄弟节点是红色,兄弟节点左测是黑色",
 			delKey: 1,
-			Key:    []int{2, 1, 3},
+			key:    []int{2, 1, 3},
 			want:   2,
 		},
 		{
 			name:   "节点左旋之后兄弟节点是红色",
 			delKey: 21,
-			Key:    []int{15, 20, 10, 16, 21, 8, 14, 7},
+			key:    []int{15, 20, 10, 16, 21, 8, 14, 7},
 			want:   15,
 		},
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			rbTree := NewRBTree[int, string](compare())
-			for i := 0; i < len(tt.Key); i++ {
-				node := &RBNode[int, string]{
-					Key: tt.Key[i],
-				}
-				err := rbTree.Add(node)
+			rbTree := NewRBTree[int, int](compare())
+			for i := 0; i < len(tt.key); i++ {
+				err := rbTree.Add(tt.key[i], i)
 				if err != nil {
 					panic(err)
 				}
 
 			}
-			delNode := rbTree.getRBNode(tt.delKey)
+			delNode := rbTree.findRBNode(tt.delKey)
 			if delNode == nil {
 				assert.Equal(t, tt.wantError, errors.New("未找到节点0"))
 			} else {
 				x := rbTree.fixAfterDeleteLeft(delNode)
-				assert.Equal(t, tt.want, x.Key)
+				assert.Equal(t, tt.want, x.key)
 			}
 		})
 	}
@@ -1662,55 +1624,92 @@ func TestRBTree_fixAfterDeleteRight(t *testing.T) {
 	tcase := []struct {
 		name      string
 		delKey    int
-		Key       []int
+		key       []int
 		want      int
 		wantError error
 	}{
 		{
 			name:   "兄弟节点是红色并且兄弟左节点左侧是黑色",
 			delKey: 12,
-			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
 			want:   11,
 		},
 		{
 			name:   "兄弟节点是黑色,兄弟节点左测是黑色",
 			delKey: 11,
-			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 0},
+			key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 0},
 			want:   9,
 		},
 		{
 			name:   "兄弟节点是黑色,兄弟节点左测不是黑色",
 			delKey: 4,
-			Key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 0},
+			key:    []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 0},
 			want:   5,
 		},
 		{
 			name:   "兄弟节点是红色,兄弟节点左测是黑色",
 			delKey: 3,
-			Key:    []int{2, 1, 3},
+			key:    []int{2, 1, 3},
 			want:   2,
 		},
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			rbTree := NewRBTree[int, string](compare())
-			for i := 0; i < len(tt.Key); i++ {
-				node := &RBNode[int, string]{
-					Key: tt.Key[i],
-				}
-				err := rbTree.Add(node)
+			rbTree := NewRBTree[int, int](compare())
+			for i := 0; i < len(tt.key); i++ {
+				err := rbTree.Add(tt.key[i], i)
 				if err != nil {
 					panic(err)
 				}
 
 			}
-			delNode := rbTree.getRBNode(tt.delKey)
+			delNode := rbTree.findRBNode(tt.delKey)
 			if delNode == nil {
 				assert.Equal(t, tt.wantError, errors.New("未找到节点0"))
 			} else {
 				x := rbTree.fixAfterDeleteRight(delNode)
-				assert.Equal(t, tt.want, x.Key)
+				assert.Equal(t, tt.want, x.key)
 			}
 		})
 	}
+}
+
+// IsRedBlackTree 检测是否满足红黑树
+func IsRedBlackTree[K any, V any](root *RBNode[K, V]) bool {
+	// 检测节点是否黑色
+	if !root.getColor() {
+		return false
+	}
+	// count 取最左树的黑色节点作为对照
+	count := 0
+	num := 0
+	node := root
+	for node != nil {
+		if node.color {
+			count++
+		}
+		node = node.getLeft()
+	}
+	return nodeCheck[K](root, count, num)
+}
+
+// nodeCheck 节点检测
+// 1、是否有连续的红色节点
+// 2、每条路径的黑色节点是否一致
+func nodeCheck[K any, V any](node *RBNode[K, V], count int, num int) bool {
+	if node == nil {
+		return true
+	}
+	if !node.getColor() && !node.parent.getColor() {
+		return false
+	}
+	if node.getColor() {
+		num++
+	}
+	if node.getLeft() == nil && node.getRight() == nil {
+		if num != count {
+			return false
+		}
+	}
+	return nodeCheck(node.left, count, num) && nodeCheck(node.right, count, num)
 }

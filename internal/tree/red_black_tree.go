@@ -27,35 +27,75 @@ const (
 
 var (
 	ErrRBTreeSameRBNode = errors.New("ekit: RBTree不能添加重复节点Key")
-	// errRBTreeNotRBNode  = errors.New("ekit: RBTree不存在节点Key")
+	ErrRBTreeNotRBNode  = errors.New("ekit: RBTree不存在节点Key")
 	// errRBTreeCantRepaceNil = errors.New("ekit: RBTree不能将节点替换为nil")
 )
 
-type RBTree[T any, V any] struct {
-	root    *RBNode[T, V]
-	compare ekit.Comparator[T]
+type RBTree[K any, V any] struct {
+	root    *RBNode[K, V]
+	compare ekit.Comparator[K]
 	size    int
 }
 
-type RBNode[T any, V any] struct {
+func (rb *RBTree[K, V]) Size() int {
+	if rb == nil {
+		return 0
+	}
+	return rb.size
+}
+
+func (rb *RBTree[K, V]) Root() *RBNode[K, V] {
+	if rb == nil {
+		return nil
+	}
+	return rb.root
+}
+
+type RBNode[K any, V any] struct {
 	color               bool
-	Key                 T
-	Value               V
-	left, right, parent *RBNode[T, V]
+	key                 K
+	value               V
+	left, right, parent *RBNode[K, V]
+}
+
+func (node *RBNode[K, V]) setValue(v V) {
+	if node == nil {
+		return
+	}
+	node.value = v
+}
+func (node *RBNode[K, V]) Left() *RBNode[K, V] {
+	return node.getLeft()
+}
+
+func (node *RBNode[K, V]) Right() *RBNode[K, V] {
+	return node.getRight()
+}
+
+func (node *RBNode[K, V]) Parent() *RBNode[K, V] {
+	return node.getParent()
+}
+
+func (node *RBNode[K, V]) Key() K {
+	return node.key
+}
+
+func (node *RBNode[K, V]) Value() V {
+	return node.value
 }
 
 // NewRBTree 构建红黑树
-func NewRBTree[T any, V any](compare ekit.Comparator[T]) *RBTree[T, V] {
-	return &RBTree[T, V]{
+func NewRBTree[K any, V any](compare ekit.Comparator[K]) *RBTree[K, V] {
+	return &RBTree[K, V]{
 		compare: compare,
 		root:    nil,
 	}
 }
 
-func NewRBNode[T any, V any](key T, value V) *RBNode[T, V] {
-	return &RBNode[T, V]{
-		Key:    key,
-		Value:  value,
+func newRBNode[K any, V any](key K, value V) *RBNode[K, V] {
+	return &RBNode[K, V]{
+		key:    key,
+		value:  value,
 		color:  Red,
 		left:   nil,
 		right:  nil,
@@ -63,71 +103,66 @@ func NewRBNode[T any, V any](key T, value V) *RBNode[T, V] {
 	}
 }
 
-func (redBlackTree *RBTree[T, V]) Root() *RBNode[T, V] {
-	if redBlackTree == nil {
-		return nil
-	}
-	return redBlackTree.root
-}
-
-func (redBlackTree *RBTree[T, V]) Size() int {
-	if redBlackTree == nil {
-		return 0
-	}
-	return redBlackTree.size
-}
-
 // Add 增加节点
-func (redBlackTree *RBTree[T, V]) Add(node *RBNode[T, V]) error {
-	return redBlackTree.addNode(node)
+func (rb *RBTree[K, V]) Add(key K, value V) error {
+	return rb.addNode(newRBNode(key, value))
 }
 
 // Delete 删除节点
-func (redBlackTree *RBTree[T, V]) Delete(key T) {
-	node := redBlackTree.getRBNode(key)
-	if node == nil {
-		return
+func (rb *RBTree[K, V]) Delete(key K) {
+	if node := rb.findRBNode(key); node != nil {
+		rb.deleteNode(node)
 	}
-	redBlackTree.deleteNode(node)
 }
 
 // Find 查找节点
-func (redBlackTree *RBTree[T, V]) Find(key T) *RBNode[T, V] {
-	return redBlackTree.getRBNode(key)
+func (rb *RBTree[K, V]) Find(key K) *RBNode[K, V] {
+	return rb.findRBNode(key)
+}
+func (rb *RBTree[K, V]) SetValue(key K, value V) error {
+	node := rb.Find(key)
+	if node == nil {
+		return ErrRBTreeNotRBNode
+	}
+	node.setValue(value)
+	return nil
 }
 
 // addNode 插入新节点
-func (redBlackTree *RBTree[T, V]) addNode(node *RBNode[T, V]) error {
-	t := redBlackTree.root
-	if redBlackTree.root == nil {
-		redBlackTree.root = NewRBNode[T, V](node.Key, node.Value)
-	}
-	cmp := 0
-	parent := &RBNode[T, V]{}
-	for t != nil {
-		parent = t
-		cmp = redBlackTree.compare(node.Key, t.Key)
+func (rb *RBTree[K, V]) addNode(node *RBNode[K, V]) error {
+	var fixNode *RBNode[K, V]
+	if rb.root == nil {
+		rb.root = newRBNode[K, V](node.key, node.value)
+		fixNode = rb.root
+	} else {
+		t := rb.root
+		cmp := 0
+		parent := &RBNode[K, V]{}
+		for t != nil {
+			parent = t
+			cmp = rb.compare(node.key, t.key)
+			if cmp < 0 {
+				t = t.left
+			} else if cmp > 0 {
+				t = t.right
+			} else if cmp == 0 {
+				return ErrRBTreeSameRBNode
+			}
+		}
+		fixNode = &RBNode[K, V]{
+			key:    node.key,
+			parent: parent,
+			value:  node.value,
+			color:  Red,
+		}
 		if cmp < 0 {
-			t = t.left
-		} else if cmp > 0 {
-			t = t.right
-		} else if cmp == 0 {
-			return ErrRBTreeSameRBNode
+			parent.left = fixNode
+		} else {
+			parent.right = fixNode
 		}
 	}
-	tempNode := &RBNode[T, V]{
-		Key:    node.Key,
-		parent: parent,
-		Value:  node.Value,
-		color:  Red,
-	}
-	if cmp < 0 {
-		parent.left = tempNode
-	} else {
-		parent.right = tempNode
-	}
-	redBlackTree.size++
-	redBlackTree.fixAfterAdd(tempNode)
+	rb.size++
+	rb.fixAfterAdd(fixNode)
 	return nil
 }
 
@@ -140,15 +175,15 @@ func (redBlackTree *RBTree[T, V]) addNode(node *RBNode[T, V]) error {
 // 着色旋转
 // case1:当删除节点非空且为黑色时,会违反红黑树任何路径黑节点个数相同的约束,所以需要重新平衡
 // case2:当删除红色节点时,不会破坏任何约束,所以不需要平衡
-func (redBlackTree *RBTree[T, V]) deleteNode(node *RBNode[T, V]) {
+func (rb *RBTree[K, V]) deleteNode(node *RBNode[K, V]) {
 	// node左右非空,取后继节点
 	if node.left != nil && node.right != nil {
-		s := redBlackTree.getSuccessor(node)
-		node.Key = s.Key
-		node.Value = s.Value
+		s := rb.findSuccessor(node)
+		node.key = s.key
+		node.value = s.value
 		node = s
 	}
-	var replacement *RBNode[T, V]
+	var replacement *RBNode[K, V]
 	// node节点只有一个非空子节点
 	if node.left != nil {
 		replacement = node.left
@@ -158,7 +193,7 @@ func (redBlackTree *RBTree[T, V]) deleteNode(node *RBNode[T, V]) {
 	if replacement != nil {
 		replacement.parent = node.parent
 		if node.parent == nil {
-			redBlackTree.root = replacement
+			rb.root = replacement
 		} else if node == node.parent.left {
 			node.parent.left = replacement
 		} else {
@@ -168,15 +203,15 @@ func (redBlackTree *RBTree[T, V]) deleteNode(node *RBNode[T, V]) {
 		node.right = nil
 		node.parent = nil
 		if node.color {
-			redBlackTree.fixAfterDelete(replacement)
+			rb.fixAfterDelete(replacement)
 		}
 	} else if node.parent == nil {
 		// 如果node节点无父节点,说明node为root节点
-		redBlackTree.root = nil
+		rb.root = nil
 	} else {
 		// node子节点均为空
 		if node.color {
-			redBlackTree.fixAfterDelete(node)
+			rb.fixAfterDelete(node)
 		}
 		if node.parent != nil {
 			if node == node.parent.left {
@@ -187,13 +222,13 @@ func (redBlackTree *RBTree[T, V]) deleteNode(node *RBNode[T, V]) {
 			node.parent = nil
 		}
 	}
-	redBlackTree.size--
+	rb.size--
 }
 
-// getSuccessor 寻找后继节点
+// findSuccessor 寻找后继节点
 // case1: node节点存在右子节点,则右子树的最小节点是node的后继节点
 // case2: node节点不存在右子节点,则其第一个为左节点的祖先的父节点为node的后继节点
-func (redBlackTree *RBTree[T, V]) getSuccessor(node *RBNode[T, V]) *RBNode[T, V] {
+func (rb *RBTree[K, V]) findSuccessor(node *RBNode[K, V]) *RBNode[K, V] {
 	if node == nil {
 		return nil
 	} else if node.right != nil {
@@ -214,10 +249,10 @@ func (redBlackTree *RBTree[T, V]) getSuccessor(node *RBNode[T, V]) *RBNode[T, V]
 
 }
 
-func (redBlackTree *RBTree[T, V]) getRBNode(key T) *RBNode[T, V] {
-	node := redBlackTree.root
+func (rb *RBTree[K, V]) findRBNode(key K) *RBNode[K, V] {
+	node := rb.root
 	for node != nil {
-		cmp := redBlackTree.compare(key, node.Key)
+		cmp := rb.compare(key, node.key)
 		if cmp < 0 {
 			node = node.left
 		} else if cmp > 0 {
@@ -235,21 +270,21 @@ func (redBlackTree *RBTree[T, V]) getRBNode(key T) *RBNode[T, V] {
 // fixUncleRed 叔叔节点是红色右节点
 // fixAddLeftBlack 叔叔节点是黑色右节点
 // fixAddRightBlack 叔叔节点是黑色左节点
-func (redBlackTree *RBTree[T, V]) fixAfterAdd(x *RBNode[T, V]) {
+func (rb *RBTree[K, V]) fixAfterAdd(x *RBNode[K, V]) {
 	x.color = Red
-	for x != nil && x != redBlackTree.root && !x.getParent().getColor() {
+	for x != nil && x != rb.root && !x.getParent().getColor() {
 		y := x.getUncle()
 		if !y.getColor() {
-			x = redBlackTree.fixUncleRed(x, y)
+			x = rb.fixUncleRed(x, y)
 			continue
 		}
 		if x.getParent() == x.getGrandParent().getLeft() {
-			x = redBlackTree.fixAddLeftBlack(x)
+			x = rb.fixAddLeftBlack(x)
 			continue
 		}
-		x = redBlackTree.fixAddRightBlack(x)
+		x = rb.fixAddRightBlack(x)
 	}
-	redBlackTree.root.setColor(Black)
+	rb.root.setColor(Black)
 }
 
 // fixAddLeftRed 叔叔节点是红色右节点，由于不能存在连续红色节点,此时祖父节点x.getParent().getParent()必为黑。另x为红所以叔父节点需要变黑，祖父变红，此时红黑树完成
@@ -261,7 +296,7 @@ func (redBlackTree *RBTree[T, V]) fixAfterAdd(x *RBNode[T, V]) {
 //		            x(r)    nil   nil  nil    x (r) nil   nil  nil
 //	             	/  \                      /  \
 //	            	nil nil                   nil nil
-func (redBlackTree *RBTree[T, V]) fixUncleRed(x *RBNode[T, V], y *RBNode[T, V]) *RBNode[T, V] {
+func (rb *RBTree[K, V]) fixUncleRed(x *RBNode[K, V], y *RBNode[K, V]) *RBNode[K, V] {
 	x.getParent().setColor(Black)
 	y.setColor(Black)
 	x.getGrandParent().setColor(Red)
@@ -279,14 +314,14 @@ func (redBlackTree *RBTree[T, V]) fixUncleRed(x *RBNode[T, V], y *RBNode[T, V]) 
 //		               nil   x (r) nil  nil      x(r) nil  nil  nil   x(r) nil nil nil
 //	           		 		 /  \               /  \                  / \
 //	           		 		nil nil             nil nil              nil nil
-func (redBlackTree *RBTree[T, V]) fixAddLeftBlack(x *RBNode[T, V]) *RBNode[T, V] {
+func (rb *RBTree[K, V]) fixAddLeftBlack(x *RBNode[K, V]) *RBNode[K, V] {
 	if x == x.getParent().getRight() {
 		x = x.getParent()
-		redBlackTree.rotateLeft(x)
+		rb.rotateLeft(x)
 	}
 	x.getParent().setColor(Black)
 	x.getGrandParent().setColor(Red)
-	redBlackTree.rotateRight(x.getGrandParent())
+	rb.rotateRight(x.getGrandParent())
 	return x
 }
 
@@ -300,37 +335,37 @@ func (redBlackTree *RBTree[T, V]) fixAddLeftBlack(x *RBNode[T, V]) *RBNode[T, V]
 //		               nil   nil x(r)  nil      nil nil  nil  x(r)   nil nil  nil  x(r)
 //	           		 		      /  \                         /  \               /  \
 //	           		 		      nil nil                    nil nil              nil nil
-func (redBlackTree *RBTree[T, V]) fixAddRightBlack(x *RBNode[T, V]) *RBNode[T, V] {
+func (rb *RBTree[K, V]) fixAddRightBlack(x *RBNode[K, V]) *RBNode[K, V] {
 	if x == x.getParent().getLeft() {
 		x = x.getParent()
-		redBlackTree.rotateRight(x)
+		rb.rotateRight(x)
 	}
 	x.getParent().setColor(Black)
 	x.getGrandParent().setColor(Red)
-	redBlackTree.rotateLeft(x.getGrandParent())
+	rb.rotateLeft(x.getGrandParent())
 	return x
 }
 
 // fixAfterDelete 删除时着色旋转
 // 根据x是节点位置分为fixAfterDeleteLeft,fixAfterDeleteRight两种情况
-func (redBlackTree *RBTree[T, V]) fixAfterDelete(x *RBNode[T, V]) {
-	for x != redBlackTree.root && x.getColor() {
+func (rb *RBTree[K, V]) fixAfterDelete(x *RBNode[K, V]) {
+	for x != rb.root && x.getColor() {
 		if x == x.parent.getLeft() {
-			x = redBlackTree.fixAfterDeleteLeft(x)
+			x = rb.fixAfterDeleteLeft(x)
 		} else {
-			x = redBlackTree.fixAfterDeleteRight(x)
+			x = rb.fixAfterDeleteRight(x)
 		}
 	}
 	x.setColor(Black)
 }
 
 // fixAfterDeleteLeft 处理x为左子节点时的平衡处理
-func (redBlackTree *RBTree[T, V]) fixAfterDeleteLeft(x *RBNode[T, V]) *RBNode[T, V] {
+func (rb *RBTree[K, V]) fixAfterDeleteLeft(x *RBNode[K, V]) *RBNode[K, V] {
 	sib := x.getParent().Right()
 	if !sib.getColor() {
 		sib.setColor(Black)
 		sib.getParent().setColor(Red)
-		redBlackTree.rotateLeft(x.getParent())
+		rb.rotateLeft(x.getParent())
 		sib = x.getParent().getRight()
 	}
 	if sib.getLeft().getColor() && sib.getRight().getColor() {
@@ -340,25 +375,25 @@ func (redBlackTree *RBTree[T, V]) fixAfterDeleteLeft(x *RBNode[T, V]) *RBNode[T,
 		if sib.getRight().getColor() {
 			sib.getLeft().setColor(Black)
 			sib.setColor(Red)
-			redBlackTree.rotateRight(sib)
+			rb.rotateRight(sib)
 			sib = x.getParent().getRight()
 		}
 		sib.setColor(x.getParent().getColor())
 		x.getParent().setColor(Black)
 		sib.getRight().setColor(Black)
-		redBlackTree.rotateLeft(x.getParent())
-		x = redBlackTree.root
+		rb.rotateLeft(x.getParent())
+		x = rb.root
 	}
 	return x
 }
 
 // fixAfterDeleteRight 处理x为右子节点时的平衡处理
-func (redBlackTree *RBTree[T, V]) fixAfterDeleteRight(x *RBNode[T, V]) *RBNode[T, V] {
+func (rb *RBTree[K, V]) fixAfterDeleteRight(x *RBNode[K, V]) *RBNode[K, V] {
 	sib := x.getParent().Left()
 	if !sib.getColor() {
 		sib.setColor(Black)
 		x.getParent().setColor(Red)
-		redBlackTree.rotateRight(x.getParent())
+		rb.rotateRight(x.getParent())
 		sib = x.getBrother()
 	}
 	if sib.getRight().getColor() && sib.getLeft().getColor() {
@@ -368,14 +403,14 @@ func (redBlackTree *RBTree[T, V]) fixAfterDeleteRight(x *RBNode[T, V]) *RBNode[T
 		if sib.getLeft().getColor() {
 			sib.getRight().setColor(Black)
 			sib.setColor(Red)
-			redBlackTree.rotateLeft(sib)
+			rb.rotateLeft(sib)
 			sib = x.getParent().getLeft()
 		}
 		sib.setColor(x.getParent().getColor())
 		x.getParent().setColor(Black)
 		sib.getLeft().setColor(Black)
-		redBlackTree.rotateRight(x.getParent())
-		x = redBlackTree.root
+		rb.rotateRight(x.getParent())
+		x = rb.root
 	}
 	return x
 }
@@ -388,27 +423,26 @@ func (redBlackTree *RBTree[T, V]) fixAfterDeleteRight(x *RBNode[T, V]) *RBNode[T
 //								 / \            /  \
 //		                     	x    y     		c	x
 
-func (redBlackTree *RBTree[T, V]) rotateLeft(node *RBNode[T, V]) {
-	if node != nil {
-		r := node.right
-		if r == nil {
-			return
-		}
-		node.right = r.left
-		if r.left != nil {
-			r.left.parent = node
-		}
-		r.parent = node.parent
-		if node.parent == nil {
-			redBlackTree.root = r
-		} else if node.parent.left == node {
-			node.parent.left = r
-		} else {
-			node.parent.right = r
-		}
-		r.left = node
-		node.parent = r
+func (rb *RBTree[K, V]) rotateLeft(node *RBNode[K, V]) {
+	if node == nil || node.getRight() == nil {
+		return
 	}
+	r := node.right
+	node.right = r.left
+	if r.left != nil {
+		r.left.parent = node
+	}
+	r.parent = node.parent
+	if node.parent == nil {
+		rb.root = r
+	} else if node.parent.left == node {
+		node.parent.left = r
+	} else {
+		node.parent.right = r
+	}
+	r.left = node
+	node.parent = r
+
 }
 
 // rotateRight 右旋转
@@ -418,77 +452,76 @@ func (redBlackTree *RBTree[T, V]) rotateLeft(node *RBNode[T, V]) {
 //					  c       a  ->    		 x     b
 //					 /	\	                       / \
 //	                 x  y  	     	 	  	       y  a
-func (redBlackTree *RBTree[T, V]) rotateRight(node *RBNode[T, V]) {
-	if node != nil {
-		l := node.left
-		if l == nil {
-			return
-		}
-		node.left = l.right
-		if l.right != nil {
-			l.right.parent = node
-		}
-		l.parent = node.parent
-		if node.parent == nil {
-			redBlackTree.root = l
-		} else if node.parent.right == node {
-			node.parent.right = l
-		} else {
-			node.parent.left = l
-		}
-		l.right = node
-		node.parent = l
+func (rb *RBTree[K, V]) rotateRight(node *RBNode[K, V]) {
+	if node == nil || node.getLeft() == nil {
+		return
 	}
+	l := node.left
+	node.left = l.right
+	if l.right != nil {
+		l.right.parent = node
+	}
+	l.parent = node.parent
+	if node.parent == nil {
+		rb.root = l
+	} else if node.parent.right == node {
+		node.parent.right = l
+	} else {
+		node.parent.left = l
+	}
+	l.right = node
+	node.parent = l
+
 }
 
-func (node *RBNode[T, V]) getColor() bool {
+func (node *RBNode[K, V]) getColor() bool {
 	if node == nil {
 		return Black
 	}
 	return node.color
 }
 
-func (node *RBNode[T, V]) setColor(color bool) {
+func (node *RBNode[K, V]) setColor(color bool) {
 	if node == nil {
 		return
 	}
 	node.color = color
 }
 
-func (node *RBNode[T, V]) getParent() *RBNode[T, V] {
+func (node *RBNode[K, V]) getParent() *RBNode[K, V] {
 	if node == nil {
 		return nil
 	}
 	return node.parent
 }
 
-func (node *RBNode[T, V]) getLeft() *RBNode[T, V] {
+func (node *RBNode[K, V]) getLeft() *RBNode[K, V] {
 	if node == nil {
 		return nil
 	}
 	return node.left
 }
 
-func (node *RBNode[T, V]) getRight() *RBNode[T, V] {
+func (node *RBNode[K, V]) getRight() *RBNode[K, V] {
 	if node == nil {
 		return nil
 	}
 	return node.right
 }
 
-func (node *RBNode[T, V]) getUncle() *RBNode[T, V] {
+func (node *RBNode[K, V]) getUncle() *RBNode[K, V] {
 	if node == nil {
 		return nil
 	}
 	return node.getParent().getBrother()
 }
-func (node *RBNode[T, V]) getGrandParent() *RBNode[T, V] {
+func (node *RBNode[K, V]) getGrandParent() *RBNode[K, V] {
 	if node == nil {
 		return nil
 	}
 	return node.getParent().getParent()
 }
-func (node *RBNode[T, V]) getBrother() *RBNode[T, V] {
+func (node *RBNode[K, V]) getBrother() *RBNode[K, V] {
 	if node == nil {
 		return nil
 	}
@@ -496,61 +529,4 @@ func (node *RBNode[T, V]) getBrother() *RBNode[T, V] {
 		return node.getParent().getRight()
 	}
 	return node.getParent().getLeft()
-}
-func (node *RBNode[T, V]) SetValue(v V) {
-	if node == nil {
-		return
-	}
-	node.Value = v
-}
-func (node *RBNode[T, V]) Left() *RBNode[T, V] {
-	return node.getLeft()
-}
-
-func (node *RBNode[T, V]) Right() *RBNode[T, V] {
-	return node.getRight()
-}
-
-func (node *RBNode[T, V]) Parent() *RBNode[T, V] {
-	return node.getParent()
-}
-
-// IsRedBlackTree 检测是否满足红黑树
-func IsRedBlackTree[T any, V any](root *RBNode[T, V]) bool {
-	// 检测节点是否黑色
-	if !root.getColor() {
-		return false
-	}
-	// count 取最左树的黑色节点作为对照
-	count := 0
-	num := 0
-	node := root
-	for node != nil {
-		if node.color {
-			count++
-		}
-		node = node.getLeft()
-	}
-	return nodeCheck[T](root, count, num)
-}
-
-// nodeCheck 节点检测
-// 1、是否有连续的红色节点
-// 2、每条路径的黑色节点是否一致
-func nodeCheck[T any, V any](node *RBNode[T, V], count int, num int) bool {
-	if node == nil {
-		return true
-	}
-	if !node.getColor() && !node.parent.getColor() {
-		return false
-	}
-	if node.getColor() {
-		num++
-	}
-	if node.getLeft() == nil && node.getRight() == nil {
-		if num != count {
-			return false
-		}
-	}
-	return nodeCheck(node.left, count, num) && nodeCheck(node.right, count, num)
 }

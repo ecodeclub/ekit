@@ -26,14 +26,14 @@ var (
 )
 
 // TreeMap 是基于红黑树实现的Map
-type TreeMap[T any, V any] struct {
-	*tree.RBTree[T, V]
+type TreeMap[K any, V any] struct {
+	*tree.RBTree[K, V]
 }
 
 // BuildTreeMap TreeMap构造方法
 // 支持通过传入的map构造生成TreeMap
-func BuildTreeMap[T comparable, V any](compare ekit.Comparator[T], m map[T]V) (*TreeMap[T, V], error) {
-	treeMap, err := NewTreeMap[T, V](compare)
+func BuildTreeMap[K comparable, V any](compare ekit.Comparator[K], m map[K]V) (*TreeMap[K, V], error) {
+	treeMap, err := NewTreeMap[K, V](compare)
 	if err != nil {
 		return treeMap, err
 	}
@@ -43,20 +43,20 @@ func BuildTreeMap[T comparable, V any](compare ekit.Comparator[T], m map[T]V) (*
 
 // NewTreeMap TreeMap构造方法,创建一个的TreeMap
 // 需注意比较器compare不能为nil
-func NewTreeMap[T any, V any](compare ekit.Comparator[T]) (*TreeMap[T, V], error) {
+func NewTreeMap[K any, V any](compare ekit.Comparator[K]) (*TreeMap[K, V], error) {
 	if compare == nil {
 		return nil, errTreeMapComparatorIsNull
 	}
-	return &TreeMap[T, V]{
-		RBTree: tree.NewRBTree[T, V](compare),
+	return &TreeMap[K, V]{
+		RBTree: tree.NewRBTree[K, V](compare),
 	}, nil
 }
 
 // PutAll 将map传入TreeMap
 // 需注意如果map中的key已存在,value将被替换
-func PutAll[T comparable, V any](treeMap *TreeMap[T, V], m map[T]V) {
+func PutAll[K comparable, V any](treeMap *TreeMap[K, V], m map[K]V) {
 	if len(m) != 0 {
-		keys, values := KeysValues[T, V](m)
+		keys, values := KeysValues[K, V](m)
 		for i := 0; i < len(keys); i++ {
 			_ = treeMap.Put(keys[i], values[i])
 		}
@@ -65,23 +65,21 @@ func PutAll[T comparable, V any](treeMap *TreeMap[T, V], m map[T]V) {
 
 // Put 在TreeMap插入指定值
 // 需注意如果TreeMap已存在该Key那么原值会被替换
-func (treeMap *TreeMap[T, V]) Put(k T, v V) error {
-	node := tree.NewRBNode[T, V](k, v)
-	err := treeMap.Add(node)
+func (treeMap *TreeMap[K, V]) Put(key K, value V) error {
+	err := treeMap.Add(key, value)
 	if err == tree.ErrRBTreeSameRBNode {
-		oldNode := treeMap.Find(k)
-		oldNode.SetValue(v)
+		return treeMap.SetValue(key, value)
 	}
 	return nil
 }
 
 // Get 在TreeMap找到指定Key的节点,返回Val
 // TreeMap未找到指定节点将会返回false
-func (treeMap *TreeMap[T, V]) Get(k T) (V, bool) {
+func (treeMap *TreeMap[K, V]) Get(key K) (V, bool) {
 	var defaultV V
-	node := treeMap.Find(k)
+	node := treeMap.Find(key)
 	for node != nil {
-		return node.Value, true
+		return node.Value(), true
 	}
 	return defaultV, false
 }
