@@ -21,11 +21,6 @@ import (
 	"github.com/gotomicro/ekit/internal/tree"
 )
 
-const (
-	Red   = false
-	Black = true
-)
-
 var (
 	errTreeMapComparatorIsNull = errors.New("ekit: Comparator不能为nil")
 )
