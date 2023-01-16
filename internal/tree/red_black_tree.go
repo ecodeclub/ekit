@@ -58,7 +58,7 @@ type RBNode[K any, V any] struct {
 	left, right, parent *RBNode[K, V]
 }
 
-func (node *RBNode[K, V]) setValue(v V) {
+func (node *RBNode[K, V]) setNodeValue(v V) {
 	if node == nil {
 		return
 	}
@@ -124,7 +124,7 @@ func (rb *RBTree[K, V]) SetValue(key K, value V) error {
 	if node == nil {
 		return ErrRBTreeNotRBNode
 	}
-	node.setValue(value)
+	node.setNodeValue(value)
 	return nil
 }
 
