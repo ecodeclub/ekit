@@ -31,16 +31,12 @@ var (
 )
 
 // TreeMap 是基于红黑树实现的Map
-// 需要注意TreeMap是有序的所以必须传入比较器
-// compare	比较器
-// root	根节点
 type TreeMap[T any, V any] struct {
 	*tree.RBTree[T, V]
 }
 
 // BuildTreeMap TreeMap构造方法
-// 支持传入compare比较器，并根据传入的m构建TreeMap
-// 需注意比较器compare不能为nil
+// 支持通过传入的map构造生成TreeMap
 func BuildTreeMap[T comparable, V any](compare ekit.Comparator[T], m map[T]V) (*TreeMap[T, V], error) {
 	treeMap, err := NewTreeMap[T, V](compare)
 	if err != nil {
@@ -51,6 +47,7 @@ func BuildTreeMap[T comparable, V any](compare ekit.Comparator[T], m map[T]V) (*
 }
 
 // NewTreeMap TreeMap构造方法,创建一个的TreeMap
+// 需注意比较器compare不能为nil
 func NewTreeMap[T any, V any](compare ekit.Comparator[T]) (*TreeMap[T, V], error) {
 	if compare == nil {
 		return nil, errTreeMapComparatorIsNull
@@ -61,7 +58,7 @@ func NewTreeMap[T any, V any](compare ekit.Comparator[T]) (*TreeMap[T, V], error
 }
 
 // PutAll 将map传入TreeMap
-// 需注意如果map中的Key已存在TreeMap将被替换
+// 需注意如果map中的key已存在,value将被替换
 func PutAll[T comparable, V any](treeMap *TreeMap[T, V], m map[T]V) {
 	if len(m) != 0 {
 		keys, values := KeysValues[T, V](m)
@@ -71,10 +68,8 @@ func PutAll[T comparable, V any](treeMap *TreeMap[T, V], m map[T]V) {
 	}
 }
 
-// Put 在TreeMap插入指定Key的节点
+// Put 在TreeMap插入指定值
 // 需注意如果TreeMap已存在该Key那么原值会被替换
-// 错误：
-// TreeMap中比较器为nil将会返回error
 func (treeMap *TreeMap[T, V]) Put(k T, v V) error {
 	node := tree.NewRBNode[T, V](k, v)
 	err := treeMap.Add(node)
@@ -86,9 +81,7 @@ func (treeMap *TreeMap[T, V]) Put(k T, v V) error {
 }
 
 // Get 在TreeMap找到指定Key的节点,返回Val
-// 错误：
-// TreeMap未找到指定Key将会返回error
-// TreeMap中比较器为nil将会返回error
+// TreeMap未找到指定节点将会返回false
 func (treeMap *TreeMap[T, V]) Get(k T) (V, bool) {
 	var defaultV V
 	node := treeMap.Find(k)
@@ -98,7 +91,7 @@ func (treeMap *TreeMap[T, V]) Get(k T) (V, bool) {
 	return defaultV, false
 }
 
-// Remove TreeMap中删除对应K的节点
+// Remove TreeMap中删除指定key的节点
 func (treeMap *TreeMap[T, V]) Remove(k T) {
 	treeMap.Delete(k)
 }
