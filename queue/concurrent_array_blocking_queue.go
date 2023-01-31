@@ -17,6 +17,8 @@ package queue
 import (
 	"context"
 	"sync"
+
+	"golang.org/x/sync/semaphore"
 )
 
 // ConcurrentArrayBlockingQueue 有界并发阻塞队列
@@ -31,8 +33,8 @@ type ConcurrentArrayBlockingQueue[T any] struct {
 	// 包含多少个元素
 	count int
 
-	notEmpty *cond
-	notFull  *cond
+	enqueueCap *semaphore.Weighted
+	dequeueCap *semaphore.Weighted
 
 	// zero 不能作为返回值返回，防止用户篡改
 	zero T
@@ -43,73 +45,102 @@ type ConcurrentArrayBlockingQueue[T any] struct {
 // capacity 必须为正数
 func NewConcurrentArrayBlockingQueue[T any](capacity int) *ConcurrentArrayBlockingQueue[T] {
 	mutex := &sync.RWMutex{}
+
+	semaForEnqueue := semaphore.NewWeighted(int64(capacity))
+	semaForDequeue := semaphore.NewWeighted(int64(capacity))
+
+	// error暂时不处理，因为目前没办法处理，只能考虑panic掉
+	// 相当于将信号量置空
+	_ = semaForDequeue.Acquire(context.TODO(), int64(capacity))
+
 	res := &ConcurrentArrayBlockingQueue[T]{
-		data:     make([]T, capacity),
-		mutex:    mutex,
-		notEmpty: newCond(mutex),
-		notFull:  newCond(mutex),
+		data:       make([]T, capacity),
+		mutex:      mutex,
+		enqueueCap: semaForEnqueue,
+		dequeueCap: semaForDequeue,
 	}
 	return res
 }
 
 // Enqueue 入队
-// 注意：目前我们已经通过broadcast实现了超时控制
+// 通过sema来控制容量、超时、阻塞问题
 func (c *ConcurrentArrayBlockingQueue[T]) Enqueue(ctx context.Context, t T) error {
+
+	// 能拿到，说明队列还有空位，可以入队，拿不到则阻塞
+	err := c.enqueueCap.Acquire(ctx, 1)
+
+	if err != nil {
+		return err
+	}
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	// 拿到锁，先判断是否超时，防止在抢锁时已经超时
 	if ctx.Err() != nil {
+
+		// 超时应该主动归还信号量，避免容量泄露
+		c.enqueueCap.Release(1)
+
 		return ctx.Err()
 	}
-	c.mutex.Lock()
-	for c.count == len(c.data) {
-		signal := c.notFull.signalCh()
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-signal:
-			// 收到信号要重新加锁
-			c.mutex.Lock()
-		}
-	}
+
 	c.data[c.tail] = t
 	c.tail++
 	c.count++
+
 	// c.tail 已经是最后一个了，重置下标
 	if c.tail == cap(c.data) {
 		c.tail = 0
 	}
-	// 这里会释放锁
-	c.notEmpty.broadcast()
+
+	// 往出队的sema放入一个元素，出队的goroutine可以拿到并出队
+	c.dequeueCap.Release(1)
+
 	return nil
+
 }
 
 // Dequeue 出队
-// 注意：目前我们已经通过broadcast实现了超时控制
+// 通过sema来控制容量、超时、阻塞问题
 func (c *ConcurrentArrayBlockingQueue[T]) Dequeue(ctx context.Context) (T, error) {
-	if ctx.Err() != nil {
-		var t T
-		return t, ctx.Err()
+
+	// 能拿到，说明队列有元素可以取，可以出队，拿不到则阻塞
+	err := c.dequeueCap.Acquire(ctx, 1)
+
+	var res T
+
+	if err != nil {
+		return res, err
 	}
+
 	c.mutex.Lock()
-	for c.count == 0 {
-		signal := c.notEmpty.signalCh()
-		select {
-		case <-ctx.Done():
-			var t T
-			return t, ctx.Err()
-		case <-signal:
-			c.mutex.Lock()
-		}
+	defer c.mutex.Unlock()
+
+	// 拿到锁，先判断是否超时，防止在抢锁时已经超时
+	if ctx.Err() != nil {
+
+		// 超时应该主动归还信号量，有元素消费不到
+		c.dequeueCap.Release(1)
+
+		return res, ctx.Err()
 	}
-	val := c.data[c.head]
+
+	res = c.data[c.head]
 	// 为了释放内存，GC
 	c.data[c.head] = c.zero
-	c.count--
+
 	c.head++
-	// 重置下标
+	c.count--
 	if c.head == cap(c.data) {
 		c.head = 0
 	}
-	c.notFull.broadcast()
-	return val, nil
+
+	// 往入队的sema放入一个元素，入队的goroutine可以拿到并入队
+	c.enqueueCap.Release(1)
+
+	return res, nil
+
 }
 
 func (c *ConcurrentArrayBlockingQueue[T]) Len() int {
