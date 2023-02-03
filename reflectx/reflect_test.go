@@ -28,24 +28,29 @@ func TestIsNilValue(t *testing.T) {
 	n := 1
 	myInterface := MyInterface(n)
 
-	// 空 channel
+	// nil channel
 	var nilCh chan int
-	// 非空 channel
+	// 非 nil channel
 	ch := make(chan int)
 
-	// 空 pointer
+	// nil pointer
 	var nilPtr *int
-	// 非空指针
+	// 非 nil pointer
 	ptr := &n
 
-	// 空 map
+	// nil map
 	var nilMp map[string]struct{}
-	// 非空 map
+	// 非 nil map
 	mp := make(map[string]struct{}, 1)
 
-	// 空 slice
+	// nil slice
 	var nilSlice []int
+	// 非 nil slice
 	slc := make([]int, 1)
+
+	// nil 函数
+	type MyFunc func()
+	var myFunc MyFunc
 
 	testCases := []struct {
 		name string
@@ -151,12 +156,8 @@ func TestIsNilValue(t *testing.T) {
 		},
 		{
 			name: "func 类型 - 空",
-			val: reflect.ValueOf(func() func() {
-				type MyFunc func()
-				var myFunc MyFunc
-				return myFunc
-			}),
-			res: true,
+			val:  reflect.ValueOf(myFunc),
+			res:  true,
 		},
 	}
 	for _, tc := range testCases {
