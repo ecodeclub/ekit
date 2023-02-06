@@ -17,6 +17,7 @@ package reflectx
 import (
 	"reflect"
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -38,6 +39,11 @@ func TestIsNilValue(t *testing.T) {
 	var nilPtr *int
 	// 非 nil pointer
 	ptr := &n
+
+	// nil unsafePointer
+	nilUsPtr := unsafe.Pointer(nilPtr)
+	// 非 nil unsafePointer
+	usPtr := unsafe.Pointer(ptr)
 
 	// nil map
 	var nilMp map[string]struct{}
@@ -116,6 +122,16 @@ func TestIsNilValue(t *testing.T) {
 		{
 			name: "pointer 类型 - 空",
 			val:  reflect.ValueOf(nilPtr),
+			res:  true,
+		},
+		{
+			name: "unsafePointer 类型 - 非空",
+			val:  reflect.ValueOf(usPtr),
+			res:  false,
+		},
+		{
+			name: "unsafePointer 类型 - 空",
+			val:  reflect.ValueOf(nilUsPtr),
 			res:  true,
 		},
 		{

@@ -14,7 +14,9 @@
 
 package reflectx
 
-import "reflect"
+import (
+	"reflect"
+)
 
 // IsNilValue 对 IsNil 方法进一步封装
 // 如果 val 的类型 为 map、chan、slice、interface 和 ptr 以及 func，可以执行 IsNil 方法
@@ -27,7 +29,7 @@ func IsNilValue(val reflect.Value) bool {
 	}
 	// 根据类型判断是否可以执行 IsNil 方法
 	switch val.Type().Kind() {
-	case reflect.Map, reflect.Chan, reflect.Slice, reflect.Interface, reflect.Ptr, reflect.Func:
+	case reflect.Map, reflect.Chan, reflect.Slice, reflect.Interface, reflect.Ptr, reflect.Func, reflect.UnsafePointer:
 		return val.IsNil()
 	}
 	return false
