@@ -44,11 +44,14 @@ func NewArrayDequeOf[T any](elements ...T) *ArrayDeque[T] {
 }
 
 // ArrayDeque 基于切片实现的可扩容循环队列。
-//  相较于SDK中的list.List, ArrayDeque无需维护复杂的链表关系，并且基于切片的随机访问，可以快速获取数据
-// 	1.此循环队列不是无限制添加的，容量限定范围为[1 << 4, 1 << 30]
-// 	2.此循环队列不是线程安全的，它不支持多线程的并发访问
-// 	3.实现了Queue和Stack接口，你可以将他作为栈或者队列使用
-//  4.
+//  1.相较于SDK中的list.List, ArrayDeque无需维护复杂的链表关系
+//  2.相较于SDK中的list.List, 基于切片的随机访问，可以快速获取数据
+//  3.相较于SDK中的list.List, 基于切片的连续性，可以降低内存的碎片化
+// 	4.此循环队列不是无限制添加的，容量限定范围为[1 << 4, 1 << 30]
+// 	5.此循环队列不是线程安全的，它不支持多线程的并发访问
+// 	6.实现了Queue和Stack接口，你可以将他作为栈或者队列使用
+//  7.ArrayDeque没有对空值作限制，但是不推荐向其中写入nil
+//  8.ArrayDeque具有扩容机制，并且容量始终为2的幂，这造成了内存空间的浪费，在使用前可以预估容量，减少扩容导致的内存浪费
 type ArrayDeque[T any] struct {
 	elements   []T
 	head, tail int
