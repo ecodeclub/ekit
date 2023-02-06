@@ -2,12 +2,11 @@ package stack
 
 import (
 	"errors"
-	"math"
 )
 
 const (
-	minCapacity uint32 = 16
-	maxCapacity uint32 = math.MaxInt32 - 8
+	minCapacity int = 1 << 4
+	maxCapacity int = 1 << 30
 )
 
 var (
@@ -25,20 +24,39 @@ func NewArrayDeque[T any]() *ArrayDeque[T] {
 	return NewArrayDequeWithCap[T](minCapacity)
 }
 
-// NewArrayDequeWithCap 构造一个指定容量的Deque
-func NewArrayDequeWithCap[T any](minCap uint32) *ArrayDeque[T] {
-	capp := calculateCap(minCap)
+// NewArrayDequeWithCap 构造一个期望容量的Deque
+func NewArrayDequeWithCap[T any](expectedCapacity int) *ArrayDeque[T] {
+	capacity := calculateCapacity(expectedCapacity)
 	return &ArrayDeque[T]{
-		elements: make([]T, capp, capp),
+		elements: make([]T, capacity, capacity),
 		head:     0,
 		tail:     0,
 	}
 }
 
+func NewArrayDequeOf[T any](elements ...T) *ArrayDeque[T] {
+	length := len(elements)
+	deque := NewArrayDequeWithCap[T](length)
+	for _, val := range elements {
+		_ = deque.AddLast(val)
+	}
+	return deque
+}
+
+// ArrayDeque 基于切片实现的可扩容循环队列。
+//  相较于SDK中的list.List, ArrayDeque无需维护复杂的链表关系，并且基于切片的随机访问，可以快速获取数据
+// 	1.此循环队列不是无限制添加的，容量限定范围为[1 << 4, 1 << 30]
+// 	2.此循环队列不是线程安全的，它不支持多线程的并发访问
+// 	3.实现了Queue和Stack接口，你可以将他作为栈或者队列使用
+//  4.
 type ArrayDeque[T any] struct {
 	elements   []T
-	head, tail uint32
+	head, tail int
 	empty      T
+}
+
+func (a *ArrayDeque[T]) Front() (T, error) {
+	return a.GetFirst()
 }
 
 func (a *ArrayDeque[T]) Enqueue(t T) error {
@@ -49,10 +67,6 @@ func (a *ArrayDeque[T]) Dequeue() (T, error) {
 	return a.RemoveFirst()
 }
 
-func (a *ArrayDeque[T]) PeekFirst() (T, error) {
-	return a.GetFirst()
-}
-
 func (a *ArrayDeque[T]) Push(t T) error {
 	return a.AddLast(t)
 }
@@ -61,43 +75,29 @@ func (a *ArrayDeque[T]) Pop() (T, error) {
 	return a.RemoveLast()
 }
 
-func (a *ArrayDeque[T]) Peek() (T, error) {
+func (a *ArrayDeque[T]) Top() (T, error) {
 	return a.GetLast()
 }
 
+// AddFirst 从队首添加元素，如果失败，那么返回错误
+func (a *ArrayDeque[T]) AddFirst(t T) error {
+	a.head = (a.head - 1) & (a.Cap() - 1)
+	a.elements[a.head] = t
+	if a.head == a.tail {
+		err := a.doubleCapacity()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// AddLast 从尾部添加元素，如果失败，那么返回错误
 func (a *ArrayDeque[T]) AddLast(t T) error {
 	a.elements[a.tail] = t
-	a.tail = (a.tail + 1) & (a.capacity() - 1)
-	if a.tail == a.head {
-		err := a.growDouble()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// RemoveLast 因为泛型不支持设置为nil, 所以使用trim方法在合适的时机缩容，但是还是存在内存释放不够及时的问题，可能存在内存泄露的隐患
-func (a *ArrayDeque[T]) RemoveLast() (T, error) {
-	defer func() {
-		a.trim()
-	}()
-	var result T
-	if a.IsEmpty() {
-		return result, ErrEmpty
-	}
-	t := (a.tail - 1) & (a.capacity() - 1)
-	result = a.elements[t]
-	a.elements[t] = a.empty
-	a.tail = t
-	return result, nil
-}
-
-func (a *ArrayDeque[T]) AddFirst(t T) error {
-	a.elements[a.head] = t
-	a.head = (a.head + 1) & (a.capacity() - 1)
+	a.tail = (a.tail + 1) & (a.Cap() - 1)
 	if a.head == a.tail {
-		err := a.growDouble()
+		err := a.doubleCapacity()
 		if err != nil {
 			return err
 		}
@@ -105,22 +105,31 @@ func (a *ArrayDeque[T]) AddFirst(t T) error {
 	return nil
 }
 
-// RemoveFirst 因为不支持设置nil, 所以trim方法在合适的时机缩容，但是还是存在内存释放不够及时的问题，可能存在内存泄漏的隐患
+// RemoveFirst 删除第一个元素，如果为空，那么返回错误
 func (a *ArrayDeque[T]) RemoveFirst() (T, error) {
-	defer func() {
-		a.trim()
-	}()
 	var result T
 	if a.IsEmpty() {
 		return result, ErrEmpty
 	}
-	h := a.head
-	result = a.elements[h]
-	a.elements[h] = a.empty
-	a.head = (h + 1) & (a.capacity() - 1)
+	result = a.elements[a.head]
+	a.elements[a.head] = a.empty
+	a.head = (a.head + 1) & (a.Cap() - 1)
 	return result, nil
 }
 
+// RemoveLast 删除最后一个元素，如果为空，那么返回错误
+func (a *ArrayDeque[T]) RemoveLast() (T, error) {
+	var result T
+	if a.IsEmpty() {
+		return result, ErrEmpty
+	}
+	a.tail = (a.tail - 1) & (a.Cap() - 1)
+	result = a.elements[a.tail]
+	a.elements[a.tail] = a.empty
+	return result, nil
+}
+
+// GetFirst 获取arrayDeque的队首元素，如果没有，那么返回错误
 func (a *ArrayDeque[T]) GetFirst() (T, error) {
 	var result T
 	if a.IsEmpty() {
@@ -130,75 +139,54 @@ func (a *ArrayDeque[T]) GetFirst() (T, error) {
 	return result, nil
 }
 
+// GetLast 获取arrayDeque末尾的元素，如果没有，那么返回ErrEmpty
 func (a *ArrayDeque[T]) GetLast() (T, error) {
 	var result T
 	if a.IsEmpty() {
 		return result, ErrEmpty
 	}
-	t := (a.tail - 1) & (a.capacity() - 1)
+	t := (a.tail - 1) & (a.Cap() - 1)
 	result = a.elements[t]
 	return result, nil
 }
 
-func (a *ArrayDeque[T]) Len() uint32 {
-	return (a.tail - a.head) & (a.capacity() - 1)
+// Cap 返回arrayDeque此时的容量
+func (a *ArrayDeque[T]) Cap() int {
+	return cap(a.elements)
 }
 
+// Len 返回arrayDeque中的元素个数
+func (a *ArrayDeque[T]) Len() int {
+	return (a.tail - a.head) & (a.Cap() - 1)
+}
+
+// IsEmpty 返回arrayDeque是否为空
 func (a *ArrayDeque[T]) IsEmpty() bool {
 	return a.Len() == 0
 }
 
-// capacity , return capacity of the deque
-func (a *ArrayDeque[T]) capacity() uint32 {
-	return uint32(cap(a.elements))
-}
-
-// growDouble , grow deque capacity
-func (a *ArrayDeque[T]) growDouble() error {
-	p := a.head
-	n := a.capacity()
-	r := n - p
-	newCap := n << 1
-	if newCap > maxCapacity {
+// doubleCapacity 给arrayDeque扩容，如果容量超过了最大容量，那么返回错误
+func (a *ArrayDeque[T]) doubleCapacity() error {
+	n := a.Cap()
+	newCapacity := n << 1
+	if newCapacity < 0 || newCapacity > maxCapacity {
 		return ErrOutOfCapacity
 	}
-	newElements := make([]T, newCap, newCap)
-	copyArr(a.elements, p, newElements, 0, r)
-	copyArr(a.elements, 0, newElements, r, p)
+	newElements := make([]T, newCapacity, newCapacity)
+	r := n - a.head
+	copy(newElements[0:r], a.elements[a.head:r+a.head])
+	copy(newElements[r:], a.elements[:a.tail+1])
 	a.elements = newElements
 	a.head = 0
 	a.tail = n
 	return nil
 }
 
-func (a *ArrayDeque[T]) trim() {
-	if a.IsEmpty() {
-		return
-	}
-	curLen := a.Len()
-	if curLen <= minCapacity {
-		return
-	}
-	expectedCapp := calculateCap(curLen)
-	if expectedCapp == a.capacity() {
-		return
-	}
-	p := a.head
-	n := curLen
-	r := n - p
-	newElement := make([]T, expectedCapp, expectedCapp)
-	copyArr(a.elements, p, newElement, 0, r)
-	copyArr(a.elements, 0, newElement, r, p)
-	a.elements = newElement
-	a.head = 0
-	a.tail = n
-}
-
-// calculateCap , calculate init capacity
-func calculateCap(capacity uint32) uint32 {
+// calculateCapacity 从给定的预期容量中计算一个合适的预期容量
+func calculateCapacity(expected int) int {
 	initialCapacity := minCapacity
-	if capacity >= initialCapacity {
-		initialCapacity = capacity
+	if expected > initialCapacity {
+		initialCapacity = expected
 		initialCapacity |= initialCapacity >> 1
 		initialCapacity |= initialCapacity >> 2
 		initialCapacity |= initialCapacity >> 4
@@ -210,12 +198,4 @@ func calculateCap(capacity uint32) uint32 {
 		}
 	}
 	return initialCapacity
-}
-
-// copyArr , copy slice
-func copyArr[T any](src []T, srcPos uint32, dest []T, destPos uint32, length uint32) {
-	for i := srcPos; i < length+srcPos; i++ {
-		dest[destPos] = src[i]
-		destPos++
-	}
 }
