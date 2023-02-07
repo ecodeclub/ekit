@@ -299,13 +299,13 @@ func TestArrayDeque_Cap(t *testing.T) {
 		{
 			name:        "test init cap",
 			deque:       NewArrayDeque[int](),
-			newVals:     make([]int, 0, 0),
+			newVals:     make([]int, 0),
 			expectedCap: 16,
 		},
 		{
 			name:        "test init with expected cap",
 			deque:       NewArrayDequeWithCap[int](20),
-			newVals:     make([]int, 0, 0),
+			newVals:     make([]int, 0),
 			expectedCap: 32,
 		},
 		{

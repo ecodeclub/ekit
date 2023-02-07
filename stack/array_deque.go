@@ -28,7 +28,7 @@ func NewArrayDeque[T any]() *ArrayDeque[T] {
 func NewArrayDequeWithCap[T any](expectedCapacity int) *ArrayDeque[T] {
 	capacity := calculateCapacity(expectedCapacity)
 	return &ArrayDeque[T]{
-		elements: make([]T, capacity, capacity),
+		elements: make([]T, capacity),
 		head:     0,
 		tail:     0,
 	}
@@ -175,7 +175,7 @@ func (a *ArrayDeque[T]) doubleCapacity() error {
 	if newCapacity < 0 || newCapacity > maxCapacity {
 		return ErrOutOfCapacity
 	}
-	newElements := make([]T, newCapacity, newCapacity)
+	newElements := make([]T, newCapacity)
 	r := n - a.head
 	copy(newElements[0:r], a.elements[a.head:r+a.head])
 	copy(newElements[r:], a.elements[:a.tail+1])
