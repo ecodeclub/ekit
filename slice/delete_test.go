@@ -78,6 +78,15 @@ func TestFilterDelete(t *testing.T) {
 		wantRes []int
 	}{
 		{
+			name: "空切片",
+			src:  []int{},
+			deleteCondition: func(idx int, src int) bool {
+				return false
+			},
+
+			wantRes: []int{},
+		},
+		{
 			name: "不删除元素",
 			src:  []int{0, 1, 2, 3, 4, 5, 6, 7},
 			deleteCondition: func(idx int, src int) bool {
@@ -88,12 +97,12 @@ func TestFilterDelete(t *testing.T) {
 		},
 		{
 			name: "删除首位元素",
-			src:  []int{0, 1, 2, 3, 4, 5, 6, 7},
+			src:  []int{0, 1, 2, 3, 4, 5, 6},
 			deleteCondition: func(idx int, src int) bool {
 				return idx == 0
 			},
 
-			wantRes: []int{1, 2, 3, 4, 5, 6, 7},
+			wantRes: []int{1, 2, 3, 4, 5, 6},
 		},
 		{
 			name: "删除前面两个元素",
