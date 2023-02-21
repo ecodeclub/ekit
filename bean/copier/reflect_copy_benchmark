@@ -1,13 +1,7 @@
-goos: darwin
-goarch: amd64
-pkg: github.com/gotomicro/ekit/bean/copier
-cpu: Intel(R) Core(TM) i5-1030NG7 CPU @ 1.10GHz
-// 字典树简单测试
-BenchmarkReflectCopier_Copy-8                                    1973594               685.5 ns/op           192 B/op         11 allocs/op
-// 纯递归反射简单测试
-BenchmarkReflectCopier_Copy_PureRunTime-8                        1000000              1130 ns/op             240 B/op         17 allocs/op
-
-// 字典树 复杂测试
-BenchmarkReflectCopier_CopyComplexStruct-8                        410677              3039 ns/op             784 B/op         46 allocs/op
-// 纯递归反射复杂测试
-BenchmarkReflectCopier_CopyComplexStruct_WithPureRuntime-8        194046              5564 ns/op            1056 B/op         80 allocs/op
+cpu: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+BenchmarkReflectCopier_Copy_PureRunTime-12                       1332534               910.4 ns/op           240 B/op         17 allocs/op
+BenchmarkReflectCopier_CopyComplexStruct_WithPureRuntime-12       239366              4562 ns/op            1056 B/op         80 allocs/op
+BenchmarkReflectCopier_Copy/reused-12                            2169706               534.5 ns/op           192 B/op         11 allocs/op
+BenchmarkReflectCopier_Copy/create-12                             733861              1684 ns/op            1064 B/op         29 allocs/op
+BenchmarkReflectCopier_CopyComplexStruct/reused-12                470026              2359 ns/op             784 B/op         46 allocs/op
+BenchmarkReflectCopier_CopyComplexStruct/create-12                149652              8172 ns/op            4968 B/op        134 allocs/op
