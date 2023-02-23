@@ -1385,7 +1385,10 @@ func TestRBTree_KeyValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rbTree := NewRBTree[int, int](compare())
 			for i := 0; i < len(tt.k); i++ {
-				rbTree.Add(tt.k[i], tt.v[i])
+				err := rbTree.Add(tt.k[i], tt.v[i])
+				if err != nil {
+					panic(err)
+				}
 			}
 			keys, values := rbTree.KeyValues()
 			assert.Equal(t, tt.wantKey, keys)
