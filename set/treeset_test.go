@@ -15,9 +15,10 @@
 package set
 
 import (
+	"testing"
+
 	"github.com/gotomicro/ekit"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNewTreeSet(t *testing.T) {
