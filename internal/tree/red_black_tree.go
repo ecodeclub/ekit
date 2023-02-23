@@ -16,7 +16,6 @@ package tree
 
 import (
 	"errors"
-
 	"github.com/gotomicro/ekit"
 )
 
@@ -105,6 +104,33 @@ func (rb *RBTree[K, V]) Set(key K, value V) error {
 		return nil
 	}
 	return ErrRBTreeNotRBNode
+}
+
+// KeyValues 获取红黑树所有节点K,V
+func (rb *RBTree[K, V]) KeyValues() ([]K, []V) {
+	keys := make([]K, 0, rb.Size())
+	values := make([]V, 0, rb.Size())
+	if rb.root == nil {
+		return keys, values
+	}
+	midOrder[K, V](rb.root, func(k K, v V) {
+		keys = append(keys, k)
+		values = append(values, v)
+	})
+	return keys, values
+}
+
+// midOrder 中序遍历
+func midOrder[K any, V any](node *rbNode[K, V], f func(K, V)) {
+	if node.left != nil {
+		midOrder(node.left, f)
+	}
+	if node != nil {
+		f(node.key, node.value)
+	}
+	if node.right != nil {
+		midOrder(node.right, f)
+	}
 }
 
 // addNode 插入新节点
