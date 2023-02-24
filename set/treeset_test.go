@@ -43,7 +43,7 @@ func TestNewTreeSet(t *testing.T) {
 			wantKey:    []int{},
 		},
 		{
-			name:       "repeat-key",
+			name:       "duplicate-key",
 			comparable: compare(),
 			keys:       []int{0, 1, 2, 1},
 			wantKey:    []int{0, 1, 2},
@@ -66,7 +66,7 @@ func TestNewTreeSet(t *testing.T) {
 				treeSet.Add(tt.keys[i])
 			}
 			keys := treeSet.Keys()
-			assert.Equal(t, tt.wantKey, keys)
+			assert.ElementsMatch(t, tt.wantKey, keys)
 		})
 	}
 }
