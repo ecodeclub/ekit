@@ -114,23 +114,26 @@ func (rb *RBTree[K, V]) KeyValues() ([]K, []V) {
 	if rb.root == nil {
 		return keys, values
 	}
-	midOrder[K, V](rb.root, func(k K, v V) {
-		keys = append(keys, k)
-		values = append(values, v)
+	rb.root.inOrderTraversal(func(node *rbNode[K, V]) {
+		keys = append(keys, node.key)
+		values = append(values, node.value)
 	})
 	return keys, values
 }
 
-// midOrder 中序遍历
-func midOrder[K any, V any](node *rbNode[K, V], f func(K, V)) {
-	if node.left != nil {
-		midOrder(node.left, f)
-	}
-	if node != nil {
-		f(node.key, node.value)
-	}
-	if node.right != nil {
-		midOrder(node.right, f)
+// inOrderTraversal 中序遍历
+func (node *rbNode[K, V]) inOrderTraversal(visit func(node *rbNode[K, V])) {
+	stack := []*rbNode[K, V]{}
+	curr := node
+	for curr != nil || len(stack) > 0 {
+		for curr != nil {
+			stack = append(stack, curr)
+			curr = curr.left
+		}
+		curr = stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		visit(curr)
+		curr = curr.right
 	}
 }
 
