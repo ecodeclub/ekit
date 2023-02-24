@@ -45,7 +45,7 @@ func (s *TreeSet[T]) Exist(key T) bool {
 	return isExist
 }
 
-// Keys 方法返回的元素顺序从小到大
+// Keys 方法返回的元素顺序不固定
 func (s *TreeSet[T]) Keys() []T {
 	keys, _ := s.treeMap.KeyValues()
 	return keys
