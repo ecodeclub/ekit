@@ -1374,7 +1374,7 @@ func TestRBTree_KeyValues(t *testing.T) {
 			wantValue: []int{},
 		},
 		{
-			name:      "node-empty",
+			name:      "normal",
 			k:         []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			v:         []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
 			wantKey:   []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
