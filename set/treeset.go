@@ -19,11 +19,11 @@ import (
 	"github.com/gotomicro/ekit/mapx"
 )
 
-type TreeSet[T comparable] struct {
+type TreeSet[T any] struct {
 	treeMap *mapx.TreeMap[T, any]
 }
 
-func NewTreeSet[T comparable](compare ekit.Comparator[T]) (*TreeSet[T], error) {
+func NewTreeSet[T any](compare ekit.Comparator[T]) (*TreeSet[T], error) {
 	treeMap, err := mapx.NewTreeMap[T, any](compare)
 	if err != nil {
 		return nil, err
