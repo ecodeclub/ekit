@@ -15,6 +15,7 @@
 package set
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/gotomicro/ekit"
@@ -99,8 +100,8 @@ func TestTreeSet_Delete(t *testing.T) {
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			treeSet, _ := NewTreeSet[int](compare())
-
+			treeSet, err := NewTreeSet[int](compare())
+			require.NoError(t, err)
 			for i := 0; i < len(tt.keys); i++ {
 				treeSet.Add(tt.keys[i])
 			}
@@ -139,8 +140,8 @@ func TestTreeSet_Exist(t *testing.T) {
 	}
 	for _, tt := range tcase {
 		t.Run(tt.name, func(t *testing.T) {
-			treeSet, _ := NewTreeSet[int](compare())
-
+			treeSet, err := NewTreeSet[int](compare())
+			require.NoError(t, err)
 			for i := 0; i < len(tt.keys); i++ {
 				treeSet.Add(tt.keys[i])
 			}
@@ -169,7 +170,8 @@ func compare() ekit.Comparator[int] {
 // BenchmarkTreeSet/set_del-4                100000                58.19 ns/op
 // BenchmarkTreeSet/map_del-4                100000                52.26 ns/op
 func BenchmarkTreeSet(b *testing.B) {
-	treeSet, _ := NewTreeSet[uint64](ekit.ComparatorRealNumber[uint64])
+	treeSet, err := NewTreeSet[uint64](ekit.ComparatorRealNumber[uint64])
+	require.NoError(b, err)
 	s := NewMapSet[uint64](100)
 	m := make(map[uint64]int, 100)
 	b.Run("treeSet_add", func(b *testing.B) {
