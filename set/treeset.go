@@ -32,6 +32,7 @@ func NewTreeSet[T any](compare ekit.Comparator[T]) (*TreeSet[T], error) {
 		treeMap: treeMap,
 	}, nil
 }
+
 func (s *TreeSet[T]) Add(key T) {
 	_ = s.treeMap.Put(key, nil)
 }
