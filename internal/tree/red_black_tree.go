@@ -123,7 +123,7 @@ func (rb *RBTree[K, V]) KeyValues() ([]K, []V) {
 
 // inOrderTraversal 中序遍历
 func (rb *RBTree[K, V]) inOrderTraversal(visit func(node *rbNode[K, V])) {
-	stack := make([]*rbNode[K, V], 0, rb.Size())
+	stack := make([]*rbNode[K, V], 0, rb.size)
 	curr := rb.root
 	for curr != nil || len(stack) > 0 {
 		for curr != nil {
