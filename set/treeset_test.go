@@ -15,8 +15,9 @@
 package set
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/gotomicro/ekit"
 	"github.com/stretchr/testify/assert"
