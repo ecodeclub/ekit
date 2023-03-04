@@ -1358,6 +1358,44 @@ func TestRBTree_fixAfterDeleteRight(t *testing.T) {
 		})
 	}
 }
+func TestRBTree_KeyValues(t *testing.T) {
+	tcase := []struct {
+		name      string
+		k         []int
+		v         []int
+		wantKey   []int
+		wantValue []int
+	}{
+		{
+			name:      "nil",
+			k:         nil,
+			v:         nil,
+			wantKey:   []int{},
+			wantValue: []int{},
+		},
+		{
+			name:      "normal",
+			k:         []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			v:         []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			wantKey:   []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			wantValue: []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+		},
+	}
+	for _, tt := range tcase {
+		t.Run(tt.name, func(t *testing.T) {
+			rbTree := NewRBTree[int, int](compare())
+			for i := 0; i < len(tt.k); i++ {
+				err := rbTree.Add(tt.k[i], tt.v[i])
+				if err != nil {
+					panic(err)
+				}
+			}
+			keys, values := rbTree.KeyValues()
+			assert.Equal(t, tt.wantKey, keys)
+			assert.Equal(t, tt.wantValue, values)
+		})
+	}
+}
 
 // IsRedBlackTree 检测是否满足红黑树
 func IsRedBlackTree[K any, V any](root *rbNode[K, V]) bool {
