@@ -16,7 +16,7 @@ package ekit_test
 
 import (
 	"fmt"
-	. "github.com/gotomicro/ekit/tuple/pair"
+	. "github.com/ecodeclub/ekit/tuple/pair"
 )
 
 func ExamplePair_Copy() {

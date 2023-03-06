@@ -1,4 +1,4 @@
-// Copyright 2021 gotomicro
+// Copyright 2021 ecodeclub
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gotomicro/ekit/internal/queue"
+	"github.com/ecodeclub/ekit/internal/queue"
 )
 
 // DelayQueue 延时队列

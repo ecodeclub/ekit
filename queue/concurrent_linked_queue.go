@@ -1,4 +1,4 @@
-// Copyright 2021 gotomicro
+// Copyright 2021 ecodeclub
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"github.com/gotomicro/ekit/internal/queue"
+	"github.com/ecodeclub/ekit/internal/queue"
 )
 
 // ConcurrentLinkedQueue 无界并发安全队列

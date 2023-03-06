@@ -16,7 +16,7 @@ package ekit_test
 
 import (
 	"fmt"
-	. "github.com/gotomicro/ekit/tuple/triple"
+	. "github.com/ecodeclub/ekit/tuple/triple"
 )
 
 func ExampleTriple_Copy() {

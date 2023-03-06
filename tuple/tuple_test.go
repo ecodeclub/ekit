@@ -15,8 +15,8 @@
 package tuple
 
 import (
-	. "github.com/gotomicro/ekit/tuple/pair"
-	. "github.com/gotomicro/ekit/tuple/triple"
+	. "github.com/ecodeclub/ekit/tuple/pair"
+	. "github.com/ecodeclub/ekit/tuple/triple"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
