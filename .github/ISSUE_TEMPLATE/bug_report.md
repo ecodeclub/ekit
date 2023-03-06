@@ -9,7 +9,7 @@ assignees: ''
 
 **仅限中文**
 
-在提之前请先查找[已有 issues](https://github.com/gotomicro/eorm/issues)，避免重复上报。
+在提之前请先查找[已有 issues](https://github.com/ecodeclub/eorm/issues)，避免重复上报。
 
 并且确保自己已经：
 - [ ] 阅读过文档
