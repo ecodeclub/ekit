@@ -1,4 +1,4 @@
-// Copyright 2021 gotomicro
+// Copyright 2021 ecodeclub
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
 package list
 
 import (
-	"github.com/gotomicro/ekit/internal/errs"
-	"github.com/gotomicro/ekit/internal/slice"
+	"github.com/ecodeclub/ekit/internal/errs"
+	"github.com/ecodeclub/ekit/internal/slice"
 )
 
 var (

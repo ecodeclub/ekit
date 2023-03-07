@@ -1,4 +1,4 @@
-module github.com/gotomicro/ekit
+module github.com/ecodeclub/ekit
 
 go 1.18
 
