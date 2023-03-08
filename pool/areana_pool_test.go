@@ -1,56 +1,56 @@
+// Copyright 2021 gotomicro
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//go:build goexperiment.arenas
+
 package pool
 
 import (
-	"arena"
-	"fmt"
 	"github.com/stretchr/testify/assert"
-	"sync"
 	"testing"
 )
+
+var count int
 
 type Test struct {
 	A int
 }
 
-func TestSyncPool(t *testing.T) {
-	pool := sync.Pool{New: func() any {
-		return &Test{
-			A: 1,
-		}
-	},
+func NewTest() *Test {
+	count++
+	return &Test{
+		A: 1,
 	}
-	testObject := pool.Get().(*Test)
-	assert.Equal(t, testObject.A, 1)
-	pool.Put(testObject)
-
-}
-
-func TestArena(t *testing.T) {
-	mem := arena.NewArena()
-
-	obj := arena.New[Test](mem)
-	mem.Free()
-	obj.A = 2
-
-	fmt.Println(obj)
-
-	//slice := arena.MakeSlice[Test](mem, 100, 200)
-	//fmt.Println(slice)
 }
 
 func TestArenaPool(t *testing.T) {
-	pool := NewArenaPool(func() any {
-		return &Test{
-			A: 1,
-		}
+	pool := NewArenaPool[Test](NewTest)
+	t.Run("no box in pool", func(t *testing.T) {
+		count = 0
+		testObject, err := pool.Get()
+		assert.NoError(t, err)
+		assert.Equal(t, 1, testObject.Object().A)
+		assert.Equal(t, 1, count)
 	})
-	testObject, err := pool.Get()
-	assert.NoError(t, err)
-	assert.Equal(t, 1, testObject.Object.(*Test).A)
-	pool.Put(testObject)
-	testObject1, err := pool.Get()
-	assert.Equal(t, testObject, testObject1)
 
-	testObject1.Free()
+	t.Run("box already in pool", func(t *testing.T) {
+		count = 0
+		testObject, err := pool.Get()
+		assert.NoError(t, err)
+		pool.Put(testObject)
+		testObject1, err := pool.Get()
+		assert.Equal(t, testObject, testObject1)
+		assert.Equal(t, 1, count)
+	})
 
 }
