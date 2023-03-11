@@ -14,6 +14,11 @@
 
 package ekit
 
+import (
+	"context"
+	"github.com/gotomicro/ekit/pool"
+)
+
 // Comparator 用于比较两个对象的大小 src < dst, 返回-1，src = dst, 返回0，src > dst, 返回1
 // 不要返回任何其它值！
 type Comparator[T any] func(src T, dst T) int
@@ -26,4 +31,12 @@ func ComparatorRealNumber[T RealNumber](src T, dst T) int {
 	} else {
 		return 1
 	}
+}
+
+type TaskObserver interface {
+	Observe(ctx context.Context, task pool.Task, status uint64)
+}
+
+type PoolObserver interface {
+	Observe(ctx context.Context, pool pool.TaskPool, status uint64)
 }
