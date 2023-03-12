@@ -476,7 +476,6 @@ func TestReflectCopier_CopyTo(t *testing.T) {
 }
 
 func BenchmarkReflectCopier_Copy_PureRunTime(b *testing.B) {
-
 	for i := 1; i <= b.N; i++ {
 		_ = CopyTo(&SimpleSrc{
 			Name:    "大明",
@@ -487,7 +486,6 @@ func BenchmarkReflectCopier_Copy_PureRunTime(b *testing.B) {
 }
 
 func BenchmarkReflectCopier_CopyComplexStruct_WithPureRuntime(b *testing.B) {
-
 	for i := 1; i <= b.N; i++ {
 		_ = CopyTo(&ComplexSrc{
 			Simple: SimpleSrc{

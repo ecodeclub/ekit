@@ -107,6 +107,36 @@ func (rb *RBTree[K, V]) Set(key K, value V) error {
 	return ErrRBTreeNotRBNode
 }
 
+// KeyValues 获取红黑树所有节点K,V
+func (rb *RBTree[K, V]) KeyValues() ([]K, []V) {
+	keys := make([]K, 0, rb.Size())
+	values := make([]V, 0, rb.Size())
+	if rb.root == nil {
+		return keys, values
+	}
+	rb.inOrderTraversal(func(node *rbNode[K, V]) {
+		keys = append(keys, node.key)
+		values = append(values, node.value)
+	})
+	return keys, values
+}
+
+// inOrderTraversal 中序遍历
+func (rb *RBTree[K, V]) inOrderTraversal(visit func(node *rbNode[K, V])) {
+	stack := make([]*rbNode[K, V], 0, rb.size)
+	curr := rb.root
+	for curr != nil || len(stack) > 0 {
+		for curr != nil {
+			stack = append(stack, curr)
+			curr = curr.left
+		}
+		curr = stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		visit(curr)
+		curr = curr.right
+	}
+}
+
 // addNode 插入新节点
 func (rb *RBTree[K, V]) addNode(node *rbNode[K, V]) error {
 	var fixNode *rbNode[K, V]
