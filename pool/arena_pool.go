@@ -11,18 +11,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 //go:build goexperiment.arenas
 
 package pool
 
 import (
 	"arena"
+	"sync"
 )
 
 type ArenaPool[T any] struct {
 	newFunc func() *T
 	chain   []*Box[T]
 	cursor  int
+	mutex   sync.Mutex
 }
 
 func NewArenaPool[T any](newFunc func() *T) *ArenaPool[T] {
@@ -48,14 +51,18 @@ func (a *ArenaPool[T]) Get() (*Box[T], error) {
 		}
 		return X, nil
 	}
+	a.mutex.Lock()
 	ret := a.chain[a.cursor]
 	a.cursor--
+	a.mutex.Unlock()
 	return ret, nil
 }
 
 func (a *ArenaPool[T]) Put(X *Box[T]) error {
+	a.mutex.Lock()
 	a.chain = append(a.chain, X)
 	a.cursor++
+	a.mutex.Unlock()
 	return nil
 }
 
