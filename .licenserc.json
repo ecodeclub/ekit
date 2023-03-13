@@ -1,5 +1,5 @@
 {
-  "**/*.go": "// Copyright 2021 gotomicro",
-  "**/*.{yml,toml}": "# Copyright 2021 gotomicro",
-  "**/*.sh": "# Copyright 2021 gotomicro"
+  "**/*.go": "// Copyright 2021 ecodeclub",
+  "**/*.{yml,toml}": "# Copyright 2021 ecodeclub",
+  "**/*.sh": "# Copyright 2021 ecodeclub"
 }
