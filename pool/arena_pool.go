@@ -22,24 +22,22 @@ import (
 )
 
 type ArenaPool[T any] struct {
-	newFunc func() *T
-	chain   []*Box[T]
-	cursor  int
-	mutex   sync.Mutex
+	chain  []*Box[T]
+	cursor int
+	mutex  sync.Mutex
 }
 
-func NewArenaPool[T any](newFunc func() *T) *ArenaPool[T] {
+func NewArenaPool[T any]() *ArenaPool[T] {
 	return &ArenaPool[T]{
-		newFunc: newFunc,
-		cursor:  -1,
+		cursor: -1,
 	}
 }
 
 func (a *ArenaPool[T]) newX() (*Box[T], error) {
 	mem := arena.NewArena()
-	box := arena.New[Box[T]](mem)
+	box := &Box[T]{}
 	box.Mem = mem
-	box.object = a.newFunc()
+	box.object = arena.New[T](mem)
 	return box, nil
 }
 

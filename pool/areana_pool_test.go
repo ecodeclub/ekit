@@ -21,37 +21,26 @@ import (
 	"testing"
 )
 
-var count int
-
-type Test struct {
-	A int
-}
-
-func NewTest() *Test {
-	count++
-	return &Test{
-		A: 1,
-	}
-}
-
 func TestArenaPool(t *testing.T) {
-	pool := NewArenaPool[Test](NewTest)
+
+	type Test struct {
+		A int
+	}
+	pool := NewArenaPool[Test]()
 	t.Run("no box in pool", func(t *testing.T) {
-		count = 0
 		testObject, err := pool.Get()
 		assert.NoError(t, err)
-		assert.Equal(t, 1, testObject.Object().A)
-		assert.Equal(t, 1, count)
+		assert.Equal(t, 0, testObject.Object().A)
+
 	})
 
 	t.Run("box already in pool", func(t *testing.T) {
-		count = 0
 		testObject, err := pool.Get()
 		assert.NoError(t, err)
-		pool.Put(testObject)
+		err = pool.Put(testObject)
+		assert.NoError(t, err)
 		testObject1, err := pool.Get()
 		assert.Equal(t, testObject, testObject1)
-		assert.Equal(t, 1, count)
 	})
 
 }
