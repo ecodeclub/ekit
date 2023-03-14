@@ -22,58 +22,51 @@ import (
 )
 
 type ArenaPool[T any] struct {
-	chain  []*Box[T]
-	cursor int
-	mutex  sync.Mutex
+	chain []*Arena[T]
+	mutex sync.RWMutex
 }
 
 func NewArenaPool[T any]() *ArenaPool[T] {
-	return &ArenaPool[T]{
-		cursor: -1,
-	}
+	return &ArenaPool[T]{}
 }
 
-func (a *ArenaPool[T]) newX() (*Box[T], error) {
-	mem := arena.NewArena()
-	box := &Box[T]{}
-	box.Mem = mem
-	box.object = arena.New[T](mem)
-	return box, nil
-}
-
-func (a *ArenaPool[T]) Get() (*Box[T], error) {
-	if a.cursor == -1 {
-		X, err := a.newX()
-		if err != nil {
-			return nil, err
-		}
-		return X, nil
+func (a *ArenaPool[T]) Get() (*Arena[T], error) {
+	a.mutex.RLock()
+	l := len(a.chain)
+	a.mutex.RUnlock()
+	if l == 0 {
+		mem := arena.NewArena()
+		obj := arena.New[T](mem)
+		return &Arena[T]{arena: mem, obj: obj}, nil
 	}
 	a.mutex.Lock()
-	ret := a.chain[a.cursor]
-	a.cursor--
-	a.mutex.Unlock()
+	defer a.mutex.Unlock()
+	l = len(a.chain)
+	if l == 0 {
+		mem := arena.NewArena()
+		obj := arena.New[T](mem)
+		return &Arena[T]{arena: mem, obj: obj}, nil
+	}
+	ret := a.chain[l-1]
+	a.chain = a.chain[:l-1]
 	return ret, nil
 }
 
-func (a *ArenaPool[T]) Put(X *Box[T]) error {
+func (a *ArenaPool[T]) Put(X *Arena[T]) error {
 	a.mutex.Lock()
+	defer a.mutex.Unlock()
 	a.chain = append(a.chain, X)
-	a.cursor++
-	a.mutex.Unlock()
 	return nil
 }
 
-type Box[T any] struct {
-	Mem    *arena.Arena
-	object *T
+// Arena 二次封装
+// 将来支持缩容，或者淘汰空闲很久的 Arena
+type Arena[T any] struct {
+	arena *arena.Arena
+	obj   *T
 }
 
-func (b *Box[T]) Object() *T {
-	return b.object
-}
-
-func (b *Box[T]) free() error {
-	b.Mem.Free()
-	return nil
+// Obj 返回已有的对象
+func (b *Arena[T]) Obj() *T {
+	return b.obj
 }
