@@ -1,4 +1,4 @@
-// Copyright 2021 gotomicro
+// Copyright 2021 ecodeclub
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package ekit
 import (
 	"reflect"
 
-	"github.com/gotomicro/ekit/internal/errs"
+	"github.com/ecodeclub/ekit/internal/errs"
 )
 
 // AnyValue 类型转换结构定义

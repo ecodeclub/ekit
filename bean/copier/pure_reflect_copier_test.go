@@ -1,4 +1,4 @@
-// Copyright 2021 gotomicro
+// Copyright 2021 ecodeclub
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gotomicro/ekit"
+	"github.com/ecodeclub/ekit"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -476,7 +476,6 @@ func TestReflectCopier_CopyTo(t *testing.T) {
 }
 
 func BenchmarkReflectCopier_Copy_PureRunTime(b *testing.B) {
-
 	for i := 1; i <= b.N; i++ {
 		_ = CopyTo(&SimpleSrc{
 			Name:    "大明",
@@ -487,7 +486,6 @@ func BenchmarkReflectCopier_Copy_PureRunTime(b *testing.B) {
 }
 
 func BenchmarkReflectCopier_CopyComplexStruct_WithPureRuntime(b *testing.B) {
-
 	for i := 1; i <= b.N; i++ {
 		_ = CopyTo(&ComplexSrc{
 			Simple: SimpleSrc{

@@ -1,4 +1,4 @@
-// Copyright 2021 gotomicro
+// Copyright 2021 ecodeclub
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gotomicro/ekit"
+	"github.com/ecodeclub/ekit"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -1355,6 +1355,44 @@ func TestRBTree_fixAfterDeleteRight(t *testing.T) {
 				x := rbTree.fixAfterDeleteRight(delNode)
 				assert.Equal(t, tt.want, x.key)
 			}
+		})
+	}
+}
+func TestRBTree_KeyValues(t *testing.T) {
+	tcase := []struct {
+		name      string
+		k         []int
+		v         []int
+		wantKey   []int
+		wantValue []int
+	}{
+		{
+			name:      "nil",
+			k:         nil,
+			v:         nil,
+			wantKey:   []int{},
+			wantValue: []int{},
+		},
+		{
+			name:      "normal",
+			k:         []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			v:         []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			wantKey:   []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+			wantValue: []int{4, 5, 6, 7, 8, 9, 10, 11, 12},
+		},
+	}
+	for _, tt := range tcase {
+		t.Run(tt.name, func(t *testing.T) {
+			rbTree := NewRBTree[int, int](compare())
+			for i := 0; i < len(tt.k); i++ {
+				err := rbTree.Add(tt.k[i], tt.v[i])
+				if err != nil {
+					panic(err)
+				}
+			}
+			keys, values := rbTree.KeyValues()
+			assert.Equal(t, tt.wantKey, keys)
+			assert.Equal(t, tt.wantValue, values)
 		})
 	}
 }

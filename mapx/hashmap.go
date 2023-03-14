@@ -1,4 +1,4 @@
-// Copyright 2021 gotomicro
+// Copyright 2021 ecodeclub
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 package mapx
 
-import "github.com/gotomicro/ekit/syncx"
+import "github.com/ecodeclub/ekit/syncx"
 
 type node[T Hashable, ValType any] struct {
 	key   Hashable
