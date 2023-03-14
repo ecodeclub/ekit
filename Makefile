@@ -4,7 +4,7 @@ bench:
 
 .PHONY:	ut
 ut:
-	@go test -race ./...
+	@go test -tags=goexperiment.arenas -race ./...
 
 .PHONY:	setup
 setup:
