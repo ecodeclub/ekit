@@ -48,9 +48,8 @@ func (e *ExponentialIntervalRetry) Next() (time.Duration, bool) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.cnt++
-	if e.interval < e.MaxInterval {
-		e.interval = time.Duration(math.Exp2(float64(e.cnt))) * e.BeginInterval
-	} else {
+	e.interval = time.Duration(math.Exp2(float64(e.cnt))) * e.BeginInterval
+	if e.interval > e.MaxInterval {
 		e.interval = e.MaxInterval
 	}
 	if e.Max <= 0 {
