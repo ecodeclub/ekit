@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEqualRetryStrategy_Next(t *testing.T) {
+func TestFixedIntervalRetryStrategy_Next(t *testing.T) {
 
 	testCases := []struct {
 		name     string
