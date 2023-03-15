@@ -2,6 +2,7 @@ package retry
 
 import (
 	"math"
+	"sync"
 	"time"
 )
 
@@ -17,9 +18,12 @@ type FixIntervalRetry struct {
 	// 最大次数
 	Max int
 	cnt int
+	mu  sync.Mutex
 }
 
 func (f *FixIntervalRetry) Next() (time.Duration, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	if f.Max <= 0 {
 		return f.Interval, true
 	}
@@ -37,9 +41,12 @@ type ExponentialIntervalRetry struct {
 	// 最大次数
 	Max int
 	cnt int
+	mu  sync.Mutex
 }
 
 func (e *ExponentialIntervalRetry) Next() (time.Duration, bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	e.cnt++
 	if e.interval < e.MaxInterval {
 		e.interval = time.Duration(math.Exp2(float64(e.cnt))) * e.BeginInterval
