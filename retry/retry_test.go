@@ -91,7 +91,7 @@ func TestFixedIntervalRetryStrategy_Next(t *testing.T) {
 	}
 }
 
-func TestNewFixedIntervalRetryStrategy(t *testing.T) {
+func TestFixedIntervalRetryStrategy_New(t *testing.T) {
 	testCases := []struct {
 		name       string
 		maxRetries int32
