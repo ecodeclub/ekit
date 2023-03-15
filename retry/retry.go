@@ -15,31 +15,32 @@
 package retry
 
 import (
-	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/ecodeclub/ekit/internal/errs"
 )
 
-type EqualRetryStrategy struct {
-	MaxRetries int           // 最大重试次数，如果是 0 或负数，表示无限重试
-	Interval   time.Duration // 重试间隔时间
-	retries    int           // 当前重试次数
-	mu         sync.Mutex    // 用于保证并发安全
+type FixedIntervalRetryStrategy struct {
+	maxRetries int32         // 最大重试次数，如果是 0 或负数，表示无限重试
+	interval   time.Duration // 重试间隔时间
+	retries    int32         // 当前重试次数
 }
 
-func NewEqualRetryStrategy(maxRetries int, interval time.Duration) *EqualRetryStrategy {
-	return &EqualRetryStrategy{
-		MaxRetries: maxRetries,
-		Interval:   interval,
+func NewFixedIntervalRetryStrategy(maxRetries int32, interval time.Duration) (*FixedIntervalRetryStrategy, error) {
+	if interval <= 0 {
+		return nil, errs.NewErrInvalidIntervalValue(interval)
 	}
+	return &FixedIntervalRetryStrategy{
+		maxRetries: maxRetries,
+		interval:   interval,
+	}, nil
 }
 
-func (s *EqualRetryStrategy) Next() (time.Duration, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.MaxRetries <= 0 || s.retries <= s.MaxRetries {
-		s.retries++
-		return s.Interval, true
+func (s *FixedIntervalRetryStrategy) Next() (time.Duration, bool) {
+	retries := atomic.AddInt32(&s.retries, 1)
+	if s.maxRetries <= 0 || retries <= s.maxRetries {
+		return s.interval, true
 	}
-	return s.Interval, false
+	return 0, false
 }
