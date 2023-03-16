@@ -15,6 +15,8 @@
 package retry
 
 import (
+	"math"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -43,4 +45,47 @@ func (s *FixedIntervalRetryStrategy) Next() (time.Duration, bool) {
 		return s.interval, true
 	}
 	return 0, false
+}
+
+// ExponentialIntervalRetryStrategy 指数间隔重试
+type ExponentialIntervalRetryStrategy struct {
+	// 初始重试间隔
+	beginInterval time.Duration
+	interval      time.Duration
+	// 最大重试间隔
+	maxInterval time.Duration
+	// 最大重试次数
+	maxRetries int32
+	retries    int32
+	mu         sync.Mutex
+}
+
+func (e *ExponentialIntervalRetryStrategy) Next() (time.Duration, bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.interval = time.Duration(math.Exp2(float64(e.retries))) * e.beginInterval
+	atomic.AddInt32(&e.retries, 1)
+
+	if e.interval > e.maxInterval {
+		e.interval = e.maxInterval
+	}
+	if e.maxRetries <= 0 || e.retries <= e.maxRetries {
+		return e.interval, true
+	}
+	return e.maxInterval, false
+}
+func NewExponentialIntervalRetryStrategy(maxRetries int32, beginInterval time.Duration, maxInterval time.Duration) (*ExponentialIntervalRetryStrategy, error) {
+	if beginInterval <= 0 {
+		return nil, errs.NewErrInvalidIntervalValue(beginInterval)
+	}
+
+	if maxInterval <= 0 {
+		return nil, errs.NewErrInvalidIntervalValue(maxInterval)
+	}
+	return &ExponentialIntervalRetryStrategy{
+		beginInterval: beginInterval,
+		maxInterval:   maxInterval,
+		maxRetries:    maxRetries,
+	}, nil
 }
