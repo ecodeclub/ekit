@@ -1,59 +1,46 @@
+// Copyright 2021 ecodeclub
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package retry
 
 import (
-	"math"
-	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/ecodeclub/ekit/internal/errs"
 )
 
-type Strategy interface {
-	// Next 返回下一次重试的间隔，如果不需要继续重试，那么第二参数返回 false
-	Next() (time.Duration, bool)
+type FixedIntervalRetryStrategy struct {
+	maxRetries int32         // 最大重试次数，如果是 0 或负数，表示无限重试
+	interval   time.Duration // 重试间隔时间
+	retries    int32         // 当前重试次数
 }
 
-// FixIntervalRetry 固定间隔重试
-type FixIntervalRetry struct {
-	// 重试间隔
-	Interval time.Duration
-	// 最大次数
-	Max int
-	cnt int
-	mu  sync.Mutex
-}
-
-func (f *FixIntervalRetry) Next() (time.Duration, bool) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.Max <= 0 {
-		return f.Interval, true
+func NewFixedIntervalRetryStrategy(maxRetries int32, interval time.Duration) (*FixedIntervalRetryStrategy, error) {
+	if interval <= 0 {
+		return nil, errs.NewErrInvalidIntervalValue(interval)
 	}
-	f.cnt++
-	return f.Interval, f.cnt <= f.Max
+	return &FixedIntervalRetryStrategy{
+		maxRetries: maxRetries,
+		interval:   interval,
+	}, nil
 }
 
-// ExponentialIntervalRetry 指数间隔重试
-type ExponentialIntervalRetry struct {
-	// 初始重试间隔
-	BeginInterval time.Duration
-	interval      time.Duration
-	// 最大重试间隔
-	MaxInterval time.Duration
-	// 最大次数
-	Max int
-	cnt int
-	mu  sync.Mutex
-}
-
-func (e *ExponentialIntervalRetry) Next() (time.Duration, bool) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.cnt++
-	e.interval = time.Duration(math.Exp2(float64(e.cnt))) * e.BeginInterval
-	if e.interval > e.MaxInterval {
-		e.interval = e.MaxInterval
+func (s *FixedIntervalRetryStrategy) Next() (time.Duration, bool) {
+	retries := atomic.AddInt32(&s.retries, 1)
+	if s.maxRetries <= 0 || retries <= s.maxRetries {
+		return s.interval, true
 	}
-	if e.Max <= 0 {
-		return e.interval, true
-	}
-	return e.interval, e.cnt <= e.Max
+	return 0, false
 }

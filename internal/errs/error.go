@@ -16,6 +16,7 @@ package errs
 
 import (
 	"fmt"
+	"time"
 )
 
 // NewErrIndexOutOfRange 创建一个代表下标超出范围的错误
@@ -26,4 +27,8 @@ func NewErrIndexOutOfRange(length int, index int) error {
 // NewErrInvalidType 创建一个代表类型转换失败的错误
 func NewErrInvalidType(want, got string) error {
 	return fmt.Errorf("ekit: 类型转换失败，want:%s, got:%s", want, got)
+}
+
+func NewErrInvalidIntervalValue(interval time.Duration) error {
+	return fmt.Errorf("ekit: 无效的间隔时间 %d, 预期值应大于 0", interval)
 }

@@ -1,99 +1,138 @@
+// Copyright 2021 ecodeclub
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package retry
 
 import (
-	"github.com/stretchr/testify/assert"
-	"math"
 	"testing"
 	"time"
+
+	"github.com/ecodeclub/ekit/internal/errs"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestExponentialIntervalRetry_Next(t *testing.T) {
+func TestFixedIntervalRetryStrategy_Next(t *testing.T) {
+
 	testCases := []struct {
-		name         string
-		strategy     *ExponentialIntervalRetry
-		wantRetryCnt int
-		wantInterval []time.Duration
+		name     string
+		s        *FixedIntervalRetryStrategy
+		interval time.Duration
+
+		isContinue bool
 	}{
 		{
-			name: "test max cnt",
-			strategy: &ExponentialIntervalRetry{
-				BeginInterval: time.Second,
-				MaxInterval:   5 * time.Minute,
-				Max:           5,
+			name: "init case, retries 0",
+			s: &FixedIntervalRetryStrategy{
+				maxRetries: 3,
+				interval:   time.Second,
 			},
-			wantRetryCnt: 5,
-			wantInterval: func() []time.Duration {
-				var res []time.Duration
-				beginInterval := time.Second
-				for i := 1; i <= 5; i++ {
-					res = append(res, time.Duration(math.Exp2(float64(i)))*beginInterval)
-				}
-				return res
-			}(),
+
+			interval:   time.Second,
+			isContinue: true,
 		},
 		{
-			name: "test max interval",
-			strategy: &ExponentialIntervalRetry{
-				BeginInterval: time.Second,
-				MaxInterval:   5 * time.Second,
-				Max:           5,
+			name: "retries equals to MaxRetries 3 after the increase",
+			s: &FixedIntervalRetryStrategy{
+				maxRetries: 3,
+				interval:   time.Second,
+				retries:    2,
 			},
-			wantRetryCnt: 5,
-			wantInterval: func() []time.Duration {
-				var res []time.Duration
-				beginInterval := time.Second
-				maxInterval := 5 * time.Second
-				for i := 1; i <= 2; i++ {
-					res = append(res, time.Duration(math.Exp2(float64(i)))*beginInterval)
-				}
-				res = append(res, maxInterval)
-				res = append(res, maxInterval)
-				res = append(res, maxInterval)
-				return res
-			}(),
+			interval:   time.Second,
+			isContinue: true,
+		},
+		{
+			name: "retries over MaxRetries after the increase",
+			s: &FixedIntervalRetryStrategy{
+				maxRetries: 3,
+				interval:   time.Second,
+				retries:    3,
+			},
+			interval:   0,
+			isContinue: false,
+		},
+		{
+			name: "MaxRetries equals to 0",
+			s: &FixedIntervalRetryStrategy{
+				maxRetries: 0,
+				interval:   time.Second,
+			},
+			interval:   time.Second,
+			isContinue: true,
+		},
+		{
+			name: "negative MaxRetries",
+			s: &FixedIntervalRetryStrategy{
+				maxRetries: -1,
+				interval:   time.Second,
+				retries:    0,
+			},
+			interval:   time.Second,
+			isContinue: true,
 		},
 	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			for i := 0; i < tc.wantRetryCnt; i++ {
-				interval, ok := tc.strategy.Next()
-				assert.Equal(t, true, ok)
-				assert.Equal(t, tc.wantInterval[i], interval)
-			}
-			_, ok := tc.strategy.Next()
-			assert.Equal(t, false, ok)
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			interval, isContinue := tt.s.Next()
+			assert.Equal(t, tt.interval, interval)
+			assert.Equal(t, tt.isContinue, isContinue)
 		})
 	}
 }
 
-func TestFixIntervalRetry_Next(t *testing.T) {
+func TestFixedIntervalRetryStrategy_New(t *testing.T) {
 	testCases := []struct {
-		name         string
-		strategy     *FixIntervalRetry
-		wantRetryCnt int
-		wantInterval time.Duration
+		name       string
+		maxRetries int32
+		interval   time.Duration
+
+		want    *FixedIntervalRetryStrategy
+		wantErr error
 	}{
 		{
-			name: "test",
-			strategy: &FixIntervalRetry{
-				Interval: time.Second,
-				Max:      5,
+			name:       "no error",
+			maxRetries: 5,
+			interval:   time.Second,
+
+			want: &FixedIntervalRetryStrategy{
+				maxRetries: 5,
+				interval:   time.Second,
 			},
-			wantRetryCnt: 5,
-			wantInterval: time.Second,
+			wantErr: nil,
+		},
+		{
+			name:       "returns error, interval equals to 0",
+			maxRetries: 5,
+			interval:   0,
+
+			want:    nil,
+			wantErr: errs.NewErrInvalidIntervalValue(0),
+		},
+		{
+			name:       "returns error, interval equals to -1",
+			maxRetries: 5,
+			interval:   -1,
+
+			want:    nil,
+			wantErr: errs.NewErrInvalidIntervalValue(-1),
 		},
 	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			for i := 0; i < tc.wantRetryCnt; i++ {
-				interval, ok := tc.strategy.Next()
-				assert.Equal(t, true, ok)
-				assert.Equal(t, tc.wantInterval, interval)
-			}
-			_, ok := tc.strategy.Next()
-			assert.Equal(t, false, ok)
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewFixedIntervalRetryStrategy(tt.maxRetries, tt.interval)
+			assert.Equal(t, tt.wantErr, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
