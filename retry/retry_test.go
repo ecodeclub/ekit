@@ -15,6 +15,7 @@
 package retry
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -139,164 +140,134 @@ func TestFixedIntervalRetryStrategy_New(t *testing.T) {
 
 func TestExponentialIntervalRetry_Next(t *testing.T) {
 	testCases := []struct {
-		name         string
-		strategy     *ExponentialIntervalRetryStrategy
-		wantStrategy *ExponentialIntervalRetryStrategy
-		wantInterval time.Duration
-		isContinue   bool
+		name          string
+		strategy      *ExponentialBackoffRetryStrategy
+		wantIntervals []time.Duration
+		wantRetries   int
 	}{
 		{
-			name: "test begin",
-			strategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				maxInterval:   5 * time.Second,
-				maxRetries:    3,
+			name: "normal",
+			strategy: &ExponentialBackoffRetryStrategy{
+				initInterval: time.Second,
+				maxInterval:  5 * time.Second,
+				maxRetries:   3,
 			},
-			wantStrategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				interval:      time.Second,
-				maxInterval:   5 * time.Second,
-				maxRetries:    3,
-				retries:       1,
+			wantIntervals: []time.Duration{
+				time.Second,
+				2 * time.Second,
+				4 * time.Second,
+				0,
 			},
-			wantInterval: time.Second,
-			isContinue:   true,
+			wantRetries: 3,
 		},
 		{
-			name: "test normal",
-			strategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				interval:      time.Second,
-				maxInterval:   5 * time.Second,
-				maxRetries:    3,
-				retries:       1,
+			name: "max interval",
+			strategy: &ExponentialBackoffRetryStrategy{
+				initInterval: time.Second,
+				maxInterval:  5 * time.Second,
+				maxRetries:   5,
 			},
-			wantStrategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				interval:      2 * time.Second,
-				maxInterval:   5 * time.Second,
-				maxRetries:    3,
-				retries:       2,
+			wantIntervals: []time.Duration{
+				time.Second,
+				2 * time.Second,
+				4 * time.Second,
+				5 * time.Second,
+				5 * time.Second,
+				0,
 			},
-			wantInterval: 2 * time.Second,
-			isContinue:   true,
+			wantRetries: 5,
 		},
 		{
-			name: "test max interval",
-			strategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				interval:      4 * time.Second,
-				maxInterval:   5 * time.Second,
-				maxRetries:    5,
-				retries:       3,
+			name: "max retires",
+			strategy: &ExponentialBackoffRetryStrategy{
+				initInterval: time.Second,
+				maxInterval:  5 * time.Second,
+				maxRetries:   3,
 			},
-			wantStrategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				interval:      5 * time.Second,
-				maxInterval:   5 * time.Second,
-				maxRetries:    5,
-				retries:       4,
+			wantIntervals: []time.Duration{
+				time.Second,
+				2 * time.Second,
+				4 * time.Second,
+				0,
 			},
-			wantInterval: 5 * time.Second,
-			isContinue:   true,
-		},
-		{
-			name: "test max retires",
-			strategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				interval:      5 * time.Second,
-				maxInterval:   5 * time.Second,
-				maxRetries:    5,
-				retries:       5,
-			},
-			wantStrategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				interval:      5 * time.Second,
-				maxInterval:   5 * time.Second,
-				maxRetries:    5,
-				retries:       6,
-			},
-			wantInterval: 5 * time.Second,
-			isContinue:   false,
-		},
-		{
-			name: "test zero retires",
-			strategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				interval:      5 * time.Second,
-				maxInterval:   5 * time.Second,
-				maxRetries:    0,
-			},
-			wantStrategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				interval:      time.Second,
-				maxInterval:   5 * time.Second,
-				maxRetries:    0,
-				retries:       1,
-			},
-			wantInterval: time.Second,
-			isContinue:   true,
-		},
-		{
-			name: "test zero retires",
-			strategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				interval:      4 * time.Second,
-				maxInterval:   5 * time.Second,
-				maxRetries:    0,
-				retries:       3,
-			},
-			wantStrategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				interval:      5 * time.Second,
-				maxInterval:   5 * time.Second,
-				maxRetries:    0,
-				retries:       4,
-			},
-			wantInterval: 5 * time.Second,
-			isContinue:   true,
+			wantRetries: 3,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			interval, isContinue := tc.strategy.Next()
-			assert.Equal(t, tc.wantInterval, interval)
-			assert.Equal(t, tc.wantStrategy, tc.strategy)
-			assert.Equal(t, tc.isContinue, isContinue)
+			var intervals []time.Duration
+			var interval time.Duration
+			var ok = true
+			var retries int
+			for ; ok; retries += 1 {
+				interval, ok = tc.strategy.Next()
+				intervals = append(intervals, interval)
+			}
+			assert.Equal(t, tc.wantIntervals, intervals)
+			assert.Equal(t, tc.wantRetries, retries-1)
 		})
+	}
+}
+
+func TestExponentialBackoffRetryStrategy_Next_zero_max_retires(t *testing.T) {
+	initInterval := time.Second
+	maxInterval := 5 * time.Second
+	strategy := &ExponentialBackoffRetryStrategy{
+		initInterval: initInterval,
+		maxInterval:  maxInterval,
+		maxRetries:   0,
+	}
+
+	randRetires := 100
+	for i := 0; i <= randRetires; i += 1 {
+		intervals, ok := strategy.Next()
+		assert.Equal(t, true, ok)
+		if i < 3 {
+			assert.Equal(t, time.Duration(math.Exp2(float64(i)))*initInterval, intervals)
+		} else {
+			assert.Equal(t, maxInterval, intervals)
+		}
+
 	}
 }
 
 func TestExponentialIntervalRetryStrategy_New(t *testing.T) {
 	testCases := []struct {
 		name          string
-		wantStrategy  *ExponentialIntervalRetryStrategy
+		wantStrategy  *ExponentialBackoffRetryStrategy
 		beginInterval time.Duration
 		maxInterval   time.Duration
 		maxRetries    int32
 		wantErr       error
 	}{
 		{
-			name: "test normal",
-			wantStrategy: &ExponentialIntervalRetryStrategy{
-				beginInterval: time.Second,
-				maxInterval:   time.Minute,
-				maxRetries:    5,
+			name: "normal",
+			wantStrategy: &ExponentialBackoffRetryStrategy{
+				initInterval: time.Second,
+				maxInterval:  time.Minute,
+				maxRetries:   5,
 			},
 			beginInterval: time.Second,
 			maxInterval:   time.Minute,
 			maxRetries:    5,
 		},
 		{
-			name:          "test invalide beginInterval",
+			name:          "invalid initInterval",
 			beginInterval: time.Duration(-1),
 			maxInterval:   time.Minute,
 			maxRetries:    5,
 			wantErr:       errs.NewErrInvalidIntervalValue(time.Duration(-1)),
 		},
 		{
-			name:          "test invalide maxInterval",
+			name:          "invalid initInterval",
+			beginInterval: time.Hour,
+			maxInterval:   time.Minute,
+			maxRetries:    5,
+			wantErr:       errs.NewErrInvalidIntervalValue(time.Hour),
+		},
+		{
+			name:          "invalid maxInterval",
 			beginInterval: time.Second,
 			maxInterval:   time.Duration(-1),
 			maxRetries:    5,

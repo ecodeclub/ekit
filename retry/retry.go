@@ -16,7 +16,6 @@ package retry
 
 import (
 	"math"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -47,25 +46,26 @@ func (s *FixedIntervalRetryStrategy) Next() (time.Duration, bool) {
 	return 0, false
 }
 
-// ExponentialIntervalRetryStrategy 指数间隔重试
-type ExponentialIntervalRetryStrategy struct {
+// ExponentialBackoffRetryStrategy 指数间隔重试
+type ExponentialBackoffRetryStrategy struct {
 	// 初始重试间隔
-	beginInterval time.Duration
-	interval      time.Duration
+	initInterval time.Duration
+	interval     time.Duration
 	// 最大重试间隔
 	maxInterval time.Duration
 	// 最大重试次数
 	maxRetries int32
 	retries    int32
-	mu         sync.Mutex
 }
 
-func (e *ExponentialIntervalRetryStrategy) Next() (time.Duration, bool) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	e.interval = time.Duration(math.Exp2(float64(e.retries))) * e.beginInterval
-	atomic.AddInt32(&e.retries, 1)
+func (e *ExponentialBackoffRetryStrategy) Next() (time.Duration, bool) {
+	retries := atomic.AddInt32(&e.retries, 1)
+	expRetries := math.Pow(2, float64(retries-1))
+	if expRetries > math.MaxInt32 {
+		e.interval = e.maxInterval
+	} else {
+		e.interval = time.Duration(expRetries) * e.initInterval
+	}
 
 	if e.interval > e.maxInterval {
 		e.interval = e.maxInterval
@@ -73,19 +73,22 @@ func (e *ExponentialIntervalRetryStrategy) Next() (time.Duration, bool) {
 	if e.maxRetries <= 0 || e.retries <= e.maxRetries {
 		return e.interval, true
 	}
-	return e.maxInterval, false
+	return 0, false
 }
-func NewExponentialIntervalRetryStrategy(maxRetries int32, beginInterval time.Duration, maxInterval time.Duration) (*ExponentialIntervalRetryStrategy, error) {
-	if beginInterval <= 0 {
-		return nil, errs.NewErrInvalidIntervalValue(beginInterval)
+func NewExponentialIntervalRetryStrategy(maxRetries int32, initInterval time.Duration, maxInterval time.Duration) (*ExponentialBackoffRetryStrategy, error) {
+	if initInterval <= 0 {
+		return nil, errs.NewErrInvalidIntervalValue(initInterval)
 	}
 
 	if maxInterval <= 0 {
 		return nil, errs.NewErrInvalidIntervalValue(maxInterval)
 	}
-	return &ExponentialIntervalRetryStrategy{
-		beginInterval: beginInterval,
-		maxInterval:   maxInterval,
-		maxRetries:    maxRetries,
+	if initInterval > maxInterval {
+		return nil, errs.NewErrInvalidIntervalValue(initInterval)
+	}
+	return &ExponentialBackoffRetryStrategy{
+		initInterval: initInterval,
+		maxInterval:  maxInterval,
+		maxRetries:   maxRetries,
 	}, nil
 }
