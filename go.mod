@@ -1,6 +1,6 @@
 module github.com/ecodeclub/ekit
 
-go 1.18
+go 1.20
 
 require (
 	github.com/gotomicro/ekit v0.0.6
