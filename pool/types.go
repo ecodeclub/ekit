@@ -2,6 +2,7 @@ package pool
 
 import (
 	"context"
+	"time"
 )
 
 type TaskObserver interface {
@@ -36,7 +37,7 @@ type TaskPool interface {
 	ShutdownNow() ([]Task, error)
 
 	// Stats 暴露 TaskPool 生命周期内的运行状态
-	Stats() (chan State, error)
+	Stats(ctx context.Context, internal time.Duration) (<-chan State, error)
 }
 
 // Task 代表一个任务

@@ -112,7 +112,8 @@ func (g *group) size() int32 {
 // OnDemandBlockTaskPool 按需创建goroutine的并发阻塞的任务池
 type OnDemandBlockTaskPool struct {
 	// TaskPool内部状态
-	state int32
+	state     int32
+	StatsChan chan State
 
 	queue             chan Task
 	numGoRunningTasks int32
@@ -133,6 +134,7 @@ type OnDemandBlockTaskPool struct {
 	// 队列积压率
 	queueBacklogRate float64
 	shutdownOnce     sync.Once
+	statsOnce        sync.Once
 
 	// 协程id方便调试程序
 	id int32
@@ -162,6 +164,7 @@ func NewOnDemandBlockTaskPool(initGo int, queueSize int, opts ...option.Option[O
 		coreGo:       int32(initGo),
 		maxGo:        int32(initGo),
 		maxIdleTime:  defaultMaxIdleTime,
+		StatsChan:    make(chan State, 8),
 	}
 
 	b.shutdownNowCtx, b.shutdownNowCancel = context.WithCancel(context.Background())
@@ -529,13 +532,68 @@ func (b *OnDemandBlockTaskPool) numOfGo() int32 {
 	return n
 }
 
-func (b *OnDemandBlockTaskPool) Stats() (chan State, error) {
-	ch := make(chan State, 1)
-	ch <- State{
-		PoolState:      b.state,
-		GoCnt:          b.totalGo,
-		QueueSize:      cap(b.queue),
-		WaitingTaskCnt: len(b.queue),
+func (b *OnDemandBlockTaskPool) Stats(ctx context.Context, internal time.Duration) (<-chan State, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
-	return ch, nil
+	if atomic.LoadInt32(&b.state) == stateStopped {
+		return nil, fmt.Errorf("%w", errTaskPoolIsStopped)
+	}
+
+	if atomic.LoadInt32(&b.state) == stateClosing {
+		return nil, fmt.Errorf("%w", errTaskPoolIsClosing)
+	}
+	var err error
+	b.statsOnce.Do(func() {
+		select {
+		case b.StatsChan <- State{
+			PoolState:      b.state,
+			GoCnt:          b.totalGo,
+			QueueSize:      cap(b.queue),
+			WaitingTaskCnt: len(b.queue),
+		}:
+		case <-ctx.Done():
+			err = ctx.Err()
+			return
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		ticker := time.NewTicker(internal)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				select {
+				case b.StatsChan <- State{
+					PoolState:      b.state,
+					GoCnt:          b.totalGo,
+					QueueSize:      cap(b.queue),
+					WaitingTaskCnt: len(b.queue),
+				}:
+				case <-ctx.Done():
+					err = ctx.Err()
+					close(b.StatsChan)
+					return
+				case <-b.shutdownNowCtx.Done():
+					close(b.StatsChan)
+					return
+				}
+			case <-ctx.Done():
+				err = ctx.Err()
+				close(b.StatsChan)
+				return
+			case <-b.shutdownNowCtx.Done():
+				close(b.StatsChan)
+				return
+			default:
+			}
+		}
+	}()
+	if err != nil {
+		return nil, err
+	}
+	return b.StatsChan, nil
 }
