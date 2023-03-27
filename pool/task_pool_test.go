@@ -1180,7 +1180,7 @@ func ExampleOnDemandBlockTaskPool_States() {
 	// get ch
 	// 2
 	// 0
-	// 0
+	// 1
 	// 10
 	// 100
 }
