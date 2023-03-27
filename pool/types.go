@@ -5,14 +5,6 @@ import (
 	"time"
 )
 
-type TaskObserver interface {
-	Observe(ctx context.Context, task Task, target int64)
-}
-
-type TaskPoolObserver interface {
-	Observe(ctx context.Context, pool TaskPool, target int64)
-}
-
 // TaskPool 任务池
 type TaskPool interface {
 	// Submit 执行一个任务
@@ -36,8 +28,10 @@ type TaskPool interface {
 	// 该方法会返回所有剩下的任务，剩下的任务是否包含正在执行的任务，也取决于具体的实现
 	ShutdownNow() ([]Task, error)
 
-	// Stats 暴露 TaskPool 生命周期内的运行状态
-	Stats(ctx context.Context, internal time.Duration) (<-chan State, error)
+	// States 暴露 TaskPool 生命周期内的运行状态
+	// 如果在 ctx 过期都没有提交成功，那么应该返回错误
+	// internal 为向 chan 中发送 State 的 Duration
+	States(ctx context.Context, internal time.Duration) (<-chan State, error)
 }
 
 // Task 代表一个任务
@@ -48,8 +42,9 @@ type Task interface {
 }
 
 type State struct {
-	PoolState      int32
-	GoCnt          int32
-	WaitingTaskCnt int
-	QueueSize      int
+	PoolState       int32
+	GoCnt           int32
+	WaitingTaskCnt  int
+	QueueSize       int
+	RunningTasksCnt int32
 }

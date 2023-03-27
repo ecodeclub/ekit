@@ -27,6 +27,150 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+func TestOnDemandBlockTaskPool_States(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name         string
+		getCtx       func() (context.Context, context.CancelFunc)
+		internal     time.Duration
+		stopDuration time.Duration
+		pool         *OnDemandBlockTaskPool
+		wantVal1     State
+		wantVal2     State
+		wantErr      error
+	}{
+		{
+			name: "ctx deadline exceeded",
+			getCtx: func() (context.Context, context.CancelFunc) {
+				c, f := context.WithTimeout(context.Background(), time.Second)
+				return c, f
+			},
+			pool: func() *OnDemandBlockTaskPool {
+				p, err := NewOnDemandBlockTaskPool(10, 100)
+				assert.Nil(t, err)
+				err = p.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+					return nil
+				}))
+				assert.Nil(t, err)
+				err = p.Start()
+				assert.Nil(t, err)
+				return p
+			}(),
+			internal:     time.Second * 5,
+			stopDuration: time.Second * 2,
+			wantErr:      context.DeadlineExceeded,
+		},
+		{
+			name: "pool stopped",
+			getCtx: func() (context.Context, context.CancelFunc) {
+				c, f := context.WithTimeout(context.Background(), time.Second*2)
+				return c, f
+			},
+			pool: func() *OnDemandBlockTaskPool {
+				p, err := NewOnDemandBlockTaskPool(10, 100)
+				assert.Nil(t, err)
+				err = p.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+					return nil
+				}))
+				assert.Nil(t, err)
+				err = p.Start()
+				assert.Nil(t, err)
+				_, err = p.ShutdownNow()
+				assert.Nil(t, err)
+				return p
+			}(),
+			internal:     time.Second,
+			stopDuration: time.Second,
+			wantErr:      fmt.Errorf("%w", errTaskPoolIsStopped),
+		},
+		{
+			name: "pool not running",
+			getCtx: func() (context.Context, context.CancelFunc) {
+				c, f := context.WithTimeout(context.Background(), time.Second*2)
+				return c, f
+			},
+			pool: func() *OnDemandBlockTaskPool {
+				p, err := NewOnDemandBlockTaskPool(10, 100)
+				assert.Nil(t, err)
+				err = p.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+					return nil
+				}))
+				assert.Nil(t, err)
+				return p
+			}(),
+			internal:     time.Second,
+			stopDuration: time.Second,
+			wantErr:      fmt.Errorf("%w", errTaskPoolIsNotRunning),
+		},
+		{
+			name: "pool closing",
+			getCtx: func() (context.Context, context.CancelFunc) {
+				c, f := context.WithTimeout(context.Background(), time.Second*2)
+				return c, f
+			},
+			pool: func() *OnDemandBlockTaskPool {
+				p, err := NewOnDemandBlockTaskPool(10, 100)
+				assert.Nil(t, err)
+				err = p.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+					time.Sleep(10 * time.Second)
+					return nil
+				}))
+				assert.Nil(t, err)
+				err = p.Start()
+				assert.Nil(t, err)
+				_, err = p.Shutdown()
+				assert.Nil(t, err)
+				return p
+			}(),
+			internal:     time.Second,
+			stopDuration: time.Second,
+			wantErr:      fmt.Errorf("%w", errTaskPoolIsClosing),
+		},
+		{
+			name: "res state",
+			getCtx: func() (context.Context, context.CancelFunc) {
+				c, f := context.WithTimeout(context.Background(), time.Second*3)
+				return c, f
+			},
+			pool: func() *OnDemandBlockTaskPool {
+				p, err := NewOnDemandBlockTaskPool(10, 100)
+				assert.Nil(t, err)
+				err = p.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+					return nil
+				}))
+				assert.Nil(t, err)
+				err = p.Start()
+				assert.Nil(t, err)
+				return p
+			}(),
+			internal:     time.Second,
+			stopDuration: time.Second,
+			wantVal1:     State{PoolState: 2, GoCnt: 10, WaitingTaskCnt: 0, QueueSize: 100, RunningTasksCnt: 0},
+			wantVal2:     State{PoolState: 2, GoCnt: 10, WaitingTaskCnt: 0, QueueSize: 100, RunningTasksCnt: 0},
+		},
+	}
+	for _, tt := range testCases {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			pool := tc.pool
+			ctx, cancel := tc.getCtx()
+			time.Sleep(tc.stopDuration)
+			ch, err := pool.States(ctx, tc.internal)
+			defer cancel()
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			state := <-ch
+			assert.Equal(t, tc.wantVal1, state)
+			time.Sleep(tc.internal)
+			state = <-ch
+			assert.Equal(t, tc.wantVal2, state)
+
+		})
+	}
+}
+
 /*
 TaskPool有限状态机
                                                        Start/Submit/ShutdownNow() Error
@@ -1009,4 +1153,36 @@ func ExampleNewOnDemandBlockTaskPool() {
 	wg.Wait()
 	// Output:
 	// hello, world
+}
+
+func ExampleOnDemandBlockTaskPool_States() {
+	p, _ := NewOnDemandBlockTaskPool(10, 100)
+	_ = p.Start()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	_ = p.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+		fmt.Println("hello, world")
+		wg.Done()
+		return nil
+	}))
+	ch, err := p.States(context.Background(), time.Second*3)
+	if err == nil {
+		fmt.Println("get State")
+	}
+	wg.Wait()
+	state := <-ch
+	fmt.Println(state.PoolState)
+	fmt.Println(state.RunningTasksCnt)
+	fmt.Println(state.WaitingTaskCnt)
+	fmt.Println(state.GoCnt)
+	fmt.Println(state.QueueSize)
+
+	// Output:
+	// get State
+	// hello, world
+	// 2
+	// 0
+	// 1
+	// 10
+	// 100
 }
