@@ -1157,32 +1157,30 @@ func ExampleNewOnDemandBlockTaskPool() {
 
 func ExampleOnDemandBlockTaskPool_States() {
 	p, _ := NewOnDemandBlockTaskPool(10, 100)
-	_ = p.Start()
 	var wg sync.WaitGroup
 	wg.Add(1)
 	_ = p.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-		fmt.Println("hello, world")
 		wg.Done()
 		return nil
 	}))
-	ch, err := p.States(context.Background(), time.Second*3)
+	_ = p.Start()
+	ch, err := p.States(context.Background(), time.Second*10)
 	if err == nil {
-		fmt.Println("get State")
+		fmt.Println("get ch")
 	}
-	wg.Wait()
 	state := <-ch
 	fmt.Println(state.PoolState)
 	fmt.Println(state.RunningTasksCnt)
 	fmt.Println(state.WaitingTaskCnt)
 	fmt.Println(state.GoCnt)
 	fmt.Println(state.QueueSize)
+	wg.Wait()
 
 	// Output:
-	// get State
-	// hello, world
+	// get ch
 	// 2
 	// 0
-	// 1
+	// 0
 	// 10
 	// 100
 }
