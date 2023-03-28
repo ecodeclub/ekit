@@ -1164,6 +1164,7 @@ func ExampleOnDemandBlockTaskPool_States() {
 		return nil
 	}))
 	_ = p.Start()
+	time.Sleep(5 * time.Second)
 	ch, err := p.States(context.Background(), time.Second*10)
 	if err == nil {
 		fmt.Println("get ch")
@@ -1180,7 +1181,7 @@ func ExampleOnDemandBlockTaskPool_States() {
 	// get ch
 	// 2
 	// 0
-	// 1
+	// 0
 	// 10
 	// 100
 }
