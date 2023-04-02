@@ -535,9 +535,8 @@ func (b *OnDemandBlockTaskPool) States(ctx context.Context, internal time.Durati
 		return nil, b.shutdownNowCtx.Err()
 	}
 
-	statsChan := make(chan State, 1)
+	statsChan := make(chan State)
 	go func() {
-		b.sendState(statsChan, time.Now().UnixNano())
 		ticker := time.NewTicker(internal)
 		defer ticker.Stop()
 		for {
