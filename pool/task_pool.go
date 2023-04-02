@@ -537,32 +537,21 @@ func (b *OnDemandBlockTaskPool) States(ctx context.Context, internal time.Durati
 
 	statsChan := make(chan State, 1)
 	go func() {
-		statsChan <- b.getState(time.Now().UnixNano())
+		b.sendState(statsChan, time.Now().UnixNano())
 		ticker := time.NewTicker(internal)
 		defer ticker.Stop()
 		for {
 			select {
 			case stamp := <-ticker.C:
-				// 这里发送 State 不成功则直接丢弃，不考虑重试逻辑，用户对自己的行为负责
-				select {
-				case statsChan <- b.getState(stamp.UnixNano()):
-				default:
-				}
+				b.sendState(statsChan, stamp.UnixNano())
 			case <-ctx.Done():
-				select {
-				case statsChan <- b.getState(time.Now().UnixNano()):
-				default:
-				}
+				b.sendState(statsChan, time.Now().UnixNano())
 				close(statsChan)
 				return
 			case <-b.shutdownNowCtx.Done():
-				select {
-				case statsChan <- b.getState(time.Now().UnixNano()):
-				default:
-				}
+				b.sendState(statsChan, time.Now().UnixNano())
 				close(statsChan)
 				return
-			default:
 			}
 		}
 	}()
@@ -586,4 +575,12 @@ func (b *OnDemandBlockTaskPool) getState(stamp int64) State {
 	}
 	return s
 
+}
+
+func (b *OnDemandBlockTaskPool) sendState(ch chan<- State, stamp int64) {
+	// 这里发送 State 不成功则直接丢弃，不考虑重试逻辑，用户对自己的行为负责
+	select {
+	case ch <- b.getState(stamp):
+	default:
+	}
 }
