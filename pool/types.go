@@ -62,5 +62,5 @@ type State struct {
 	WaitingTaskCnt  int
 	QueueSize       int
 	RunningTasksCnt int32
-	Stamp           int64
+	Timestamp       int64
 }

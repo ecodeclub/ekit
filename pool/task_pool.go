@@ -541,8 +541,8 @@ func (b *OnDemandBlockTaskPool) States(ctx context.Context, internal time.Durati
 		defer ticker.Stop()
 		for {
 			select {
-			case stamp := <-ticker.C:
-				b.sendState(statsChan, stamp.UnixNano())
+			case timeStamp := <-ticker.C:
+				b.sendState(statsChan, timeStamp.UnixNano())
 			case <-ctx.Done():
 				b.sendState(statsChan, time.Now().UnixNano())
 				close(statsChan)
@@ -557,7 +557,7 @@ func (b *OnDemandBlockTaskPool) States(ctx context.Context, internal time.Durati
 	return statsChan, nil
 }
 
-func (b *OnDemandBlockTaskPool) getState(stamp int64) State {
+func (b *OnDemandBlockTaskPool) getState(timeStamp int64) State {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
 	runningTasks := atomic.LoadInt32(&b.numGoRunningTasks)
@@ -570,16 +570,16 @@ func (b *OnDemandBlockTaskPool) getState(stamp int64) State {
 		QueueSize:       cap(b.queue),
 		WaitingTaskCnt:  len(b.queue),
 		RunningTasksCnt: runningTasks,
-		Stamp:           stamp,
+		Timestamp:       timeStamp,
 	}
 	return s
 
 }
 
-func (b *OnDemandBlockTaskPool) sendState(ch chan<- State, stamp int64) {
+func (b *OnDemandBlockTaskPool) sendState(ch chan<- State, timeStamp int64) {
 	// 这里发送 State 不成功则直接丢弃，不考虑重试逻辑，用户对自己的行为负责
 	select {
-	case ch <- b.getState(stamp):
+	case ch <- b.getState(timeStamp):
 	default:
 	}
 }
