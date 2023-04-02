@@ -371,7 +371,6 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 				}
 				// log.Println("id", id, "out timeoutGroup")
 			}
-
 			atomic.AddInt32(&b.numGoRunningTasks, 1)
 			if !ok {
 				// b.numGoRunningTasks > 1表示虽然当前协程监听到了b.queue关闭但还有其他协程运行task，当前协程自己退出就好
@@ -396,7 +395,6 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 				b.decreaseTotalGo(1)
 				return
 			}
-
 			// todo handle error
 			_ = task.Run(b.shutdownNowCtx)
 			atomic.AddInt32(&b.numGoRunningTasks, -1)
@@ -530,15 +528,6 @@ func (b *OnDemandBlockTaskPool) numOfGo() int32 {
 }
 
 func (b *OnDemandBlockTaskPool) States(ctx context.Context, internal time.Duration) (<-chan State, error) {
-	if atomic.LoadInt32(&b.state) == stateCreated {
-		return nil, fmt.Errorf("%w", errTaskPoolIsNotRunning)
-	}
-	if atomic.LoadInt32(&b.state) == stateStopped {
-		return nil, fmt.Errorf("%w", errTaskPoolIsStopped)
-	}
-	if atomic.LoadInt32(&b.state) == stateClosing {
-		return nil, fmt.Errorf("%w", errTaskPoolIsClosing)
-	}
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -547,62 +536,54 @@ func (b *OnDemandBlockTaskPool) States(ctx context.Context, internal time.Durati
 	}
 
 	statsChan := make(chan State, 1)
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-b.shutdownNowCtx.Done():
-		return nil, b.shutdownNowCtx.Err()
-	default:
-		statsChan <- b.getState()
-	}
-
-	var err error
 	go func() {
+		statsChan <- b.getState(time.Now().UnixNano())
 		ticker := time.NewTicker(internal)
 		defer ticker.Stop()
 		for {
 			select {
-			case <-ticker.C:
+			case stamp := <-ticker.C:
 				// 这里发送 State 不成功则直接丢弃，不考虑重试逻辑，用户对自己的行为负责
 				select {
-				case statsChan <- b.getState():
-				case <-ctx.Done():
-					err = ctx.Err()
-					close(statsChan)
-					return
-				case <-b.shutdownNowCtx.Done():
-					err = b.shutdownNowCtx.Err()
-					close(statsChan)
-					return
+				case statsChan <- b.getState(stamp.UnixNano()):
 				default:
 				}
 			case <-ctx.Done():
-				err = ctx.Err()
+				select {
+				case statsChan <- b.getState(time.Now().UnixNano()):
+				default:
+				}
 				close(statsChan)
 				return
 			case <-b.shutdownNowCtx.Done():
-				err = b.shutdownNowCtx.Err()
+				select {
+				case statsChan <- b.getState(time.Now().UnixNano()):
+				default:
+				}
 				close(statsChan)
 				return
 			default:
 			}
 		}
 	}()
-	if err != nil {
-		return nil, err
-	}
 	return statsChan, nil
 }
 
-func (b *OnDemandBlockTaskPool) getState() State {
+func (b *OnDemandBlockTaskPool) getState(stamp int64) State {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
+	runningTasks := atomic.LoadInt32(&b.numGoRunningTasks)
+	if runningTasks < 0 {
+		runningTasks = 0
+	}
 	s := State{
 		PoolState:       atomic.LoadInt32(&b.state),
 		GoCnt:           b.totalGo,
 		QueueSize:       cap(b.queue),
 		WaitingTaskCnt:  len(b.queue),
-		RunningTasksCnt: atomic.LoadInt32(&b.numGoRunningTasks),
+		RunningTasksCnt: runningTasks,
+		Stamp:           stamp,
 	}
 	return s
+
 }

@@ -75,13 +75,14 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 				assert.Nil(t, err)
 				err = p.Start()
 				assert.Nil(t, err)
-				_, err = p.ShutdownNow()
+				_, err = p.Shutdown()
 				assert.Nil(t, err)
 				return p
 			}(),
 			internal:     time.Second,
 			stopDuration: time.Second,
-			wantErr:      fmt.Errorf("%w", errTaskPoolIsStopped),
+			wantVal1:     State{PoolState: 4, GoCnt: 0, WaitingTaskCnt: 0, QueueSize: 100, RunningTasksCnt: 0},
+			wantVal2:     State{PoolState: 4, GoCnt: 0, WaitingTaskCnt: 0, QueueSize: 100, RunningTasksCnt: 0},
 		},
 		{
 			name: "pool not running",
@@ -100,7 +101,8 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 			}(),
 			internal:     time.Second,
 			stopDuration: time.Second,
-			wantErr:      fmt.Errorf("%w", errTaskPoolIsNotRunning),
+			wantVal1:     State{PoolState: 1, GoCnt: 0, WaitingTaskCnt: 1, QueueSize: 100, RunningTasksCnt: 0},
+			wantVal2:     State{PoolState: 1, GoCnt: 0, WaitingTaskCnt: 1, QueueSize: 100, RunningTasksCnt: 0},
 		},
 		{
 			name: "pool closing",
@@ -124,7 +126,8 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 			}(),
 			internal:     time.Second,
 			stopDuration: time.Second,
-			wantErr:      fmt.Errorf("%w", errTaskPoolIsClosing),
+			wantVal1:     State{PoolState: 3, GoCnt: 1, WaitingTaskCnt: 0, QueueSize: 100, RunningTasksCnt: 1},
+			wantVal2:     State{PoolState: 3, GoCnt: 1, WaitingTaskCnt: 0, QueueSize: 100, RunningTasksCnt: 1},
 		},
 		{
 			name: "res state",
@@ -162,10 +165,18 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 				return
 			}
 			state := <-ch
-			assert.Equal(t, tc.wantVal1, state)
+			assert.Equal(t, tc.wantVal1.PoolState, state.PoolState)
+			assert.Equal(t, tc.wantVal1.WaitingTaskCnt, state.WaitingTaskCnt)
+			assert.Equal(t, tc.wantVal1.RunningTasksCnt, state.RunningTasksCnt)
+			assert.Equal(t, tc.wantVal1.QueueSize, state.QueueSize)
+			assert.Equal(t, tc.wantVal1.GoCnt, state.GoCnt)
 			time.Sleep(tc.internal)
 			state = <-ch
-			assert.Equal(t, tc.wantVal2, state)
+			assert.Equal(t, tc.wantVal2.PoolState, state.PoolState)
+			assert.Equal(t, tc.wantVal2.WaitingTaskCnt, state.WaitingTaskCnt)
+			assert.Equal(t, tc.wantVal2.RunningTasksCnt, state.RunningTasksCnt)
+			assert.Equal(t, tc.wantVal2.QueueSize, state.QueueSize)
+			assert.Equal(t, tc.wantVal2.GoCnt, state.GoCnt)
 
 		})
 	}

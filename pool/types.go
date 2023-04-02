@@ -43,8 +43,9 @@ type TaskPool interface {
 	ShutdownNow() ([]Task, error)
 
 	// States 暴露 TaskPool 生命周期内的运行状态
-	// 如果在 ctx 过期都没有提交成功，那么应该返回错误
-	// internal 为向 chan 中发送 State 的 Duration
+	// ctx 是让用户来控制什么时候退出采样。那么最基本的两个退出机制：一个是 ctx 被 cancel 了或者超时了，一个是TaskPool 被关闭了
+	// error 仅仅表示创建 chan state 是否成功
+	// internal 表示获取TaskPool运行期间内部状态的周期/时间间隔
 	States(ctx context.Context, internal time.Duration) (<-chan State, error)
 }
 
@@ -61,4 +62,5 @@ type State struct {
 	WaitingTaskCnt  int
 	QueueSize       int
 	RunningTasksCnt int32
+	Stamp           int64
 }
