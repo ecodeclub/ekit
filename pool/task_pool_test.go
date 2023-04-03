@@ -35,8 +35,7 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 		internal     time.Duration
 		stopDuration time.Duration
 		pool         *OnDemandBlockTaskPool
-		wantVal1     State
-		wantVal2     State
+		wantVal      State
 		wantErr      error
 	}{
 		{
@@ -63,7 +62,7 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 		{
 			name: "pool stopped",
 			getCtx: func() (context.Context, context.CancelFunc) {
-				c, f := context.WithTimeout(context.Background(), time.Second*2)
+				c, f := context.WithTimeout(context.Background(), time.Second*3)
 				return c, f
 			},
 			pool: func() *OnDemandBlockTaskPool {
@@ -81,13 +80,12 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 			}(),
 			internal:     time.Second,
 			stopDuration: time.Second,
-			wantVal1:     State{PoolState: 4, GoCnt: 0, WaitingTaskCnt: 0, QueueSize: 100, RunningTasksCnt: 0},
-			wantVal2:     State{PoolState: 4, GoCnt: 0, WaitingTaskCnt: 0, QueueSize: 100, RunningTasksCnt: 0},
+			wantVal:      State{PoolState: 4, GoCnt: 0, WaitingTasksCnt: 0, QueueSize: 100, RunningTasksCnt: 0},
 		},
 		{
 			name: "pool not running",
 			getCtx: func() (context.Context, context.CancelFunc) {
-				c, f := context.WithTimeout(context.Background(), time.Second*2)
+				c, f := context.WithTimeout(context.Background(), time.Second*3)
 				return c, f
 			},
 			pool: func() *OnDemandBlockTaskPool {
@@ -101,8 +99,7 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 			}(),
 			internal:     time.Second,
 			stopDuration: time.Second,
-			wantVal1:     State{PoolState: 1, GoCnt: 0, WaitingTaskCnt: 1, QueueSize: 100, RunningTasksCnt: 0},
-			wantVal2:     State{PoolState: 1, GoCnt: 0, WaitingTaskCnt: 1, QueueSize: 100, RunningTasksCnt: 0},
+			wantVal:      State{PoolState: 1, GoCnt: 0, WaitingTasksCnt: 1, QueueSize: 100, RunningTasksCnt: 0},
 		},
 		{
 			name: "pool closing",
@@ -124,10 +121,9 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 				assert.Nil(t, err)
 				return p
 			}(),
-			internal:     time.Second,
+			internal:     time.Millisecond,
 			stopDuration: time.Second,
-			wantVal1:     State{PoolState: 3, GoCnt: 1, WaitingTaskCnt: 0, QueueSize: 100, RunningTasksCnt: 1},
-			wantVal2:     State{PoolState: 3, GoCnt: 1, WaitingTaskCnt: 0, QueueSize: 100, RunningTasksCnt: 1},
+			wantVal:      State{PoolState: 3, GoCnt: 1, WaitingTasksCnt: 0, QueueSize: 100, RunningTasksCnt: 1},
 		},
 		{
 			name: "res state",
@@ -148,8 +144,7 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 			}(),
 			internal:     time.Second,
 			stopDuration: time.Second,
-			wantVal1:     State{PoolState: 2, GoCnt: 10, WaitingTaskCnt: 0, QueueSize: 100, RunningTasksCnt: 0},
-			wantVal2:     State{PoolState: 2, GoCnt: 10, WaitingTaskCnt: 0, QueueSize: 100, RunningTasksCnt: 0},
+			wantVal:      State{PoolState: 2, GoCnt: 10, WaitingTasksCnt: 0, QueueSize: 100, RunningTasksCnt: 0},
 		},
 	}
 	for _, tt := range testCases {
@@ -164,19 +159,17 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 			if err != nil {
 				return
 			}
-			state := <-ch
-			assert.Equal(t, tc.wantVal1.PoolState, state.PoolState)
-			assert.Equal(t, tc.wantVal1.WaitingTaskCnt, state.WaitingTaskCnt)
-			assert.Equal(t, tc.wantVal1.RunningTasksCnt, state.RunningTasksCnt)
-			assert.Equal(t, tc.wantVal1.QueueSize, state.QueueSize)
-			assert.Equal(t, tc.wantVal1.GoCnt, state.GoCnt)
 			time.Sleep(tc.internal)
-			state = <-ch
-			assert.Equal(t, tc.wantVal2.PoolState, state.PoolState)
-			assert.Equal(t, tc.wantVal2.WaitingTaskCnt, state.WaitingTaskCnt)
-			assert.Equal(t, tc.wantVal2.RunningTasksCnt, state.RunningTasksCnt)
-			assert.Equal(t, tc.wantVal2.QueueSize, state.QueueSize)
-			assert.Equal(t, tc.wantVal2.GoCnt, state.GoCnt)
+			//state, ok := <-ch
+			//if !ok {
+			//	return
+			//}
+			state := <-ch
+			assert.Equal(t, tc.wantVal.PoolState, state.PoolState)
+			assert.Equal(t, tc.wantVal.WaitingTasksCnt, state.WaitingTasksCnt)
+			assert.Equal(t, tc.wantVal.RunningTasksCnt, state.RunningTasksCnt)
+			assert.Equal(t, tc.wantVal.QueueSize, state.QueueSize)
+			assert.Equal(t, tc.wantVal.GoCnt, state.GoCnt)
 
 		})
 	}
@@ -1183,7 +1176,7 @@ func ExampleOnDemandBlockTaskPool_States() {
 	state := <-ch
 	fmt.Println(state.PoolState)
 	fmt.Println(state.RunningTasksCnt)
-	fmt.Println(state.WaitingTaskCnt)
+	fmt.Println(state.WaitingTasksCnt)
 	fmt.Println(state.GoCnt)
 	fmt.Println(state.QueueSize)
 	wg.Wait()

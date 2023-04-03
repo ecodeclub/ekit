@@ -376,7 +376,7 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 				// b.numGoRunningTasks > 1表示虽然当前协程监听到了b.queue关闭但还有其他协程运行task，当前协程自己退出就好
 				// b.numGoRunningTasks == 1表示只有当前协程"运行task"中，其他协程在一定在"拿到b.queue到已关闭"，这一信号的路上
 				// 绝不会处于运行task中
-				if atomic.CompareAndSwapInt32(&b.numGoRunningTasks, 1, 0) && atomic.LoadInt32(&b.state) == stateClosing {
+				if atomic.LoadInt32(&b.state) == stateClosing && atomic.CompareAndSwapInt32(&b.numGoRunningTasks, 1, 0) {
 					// 在b.queue关闭后，第一个检测到全部task已经自然结束的协程
 					b.shutdownOnce.Do(func() {
 						// 状态迁移
@@ -527,7 +527,7 @@ func (b *OnDemandBlockTaskPool) numOfGo() int32 {
 	return n
 }
 
-func (b *OnDemandBlockTaskPool) States(ctx context.Context, internal time.Duration) (<-chan State, error) {
+func (b *OnDemandBlockTaskPool) States(ctx context.Context, interval time.Duration) (<-chan State, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -537,7 +537,7 @@ func (b *OnDemandBlockTaskPool) States(ctx context.Context, internal time.Durati
 
 	statsChan := make(chan State)
 	go func() {
-		ticker := time.NewTicker(internal)
+		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 		for {
 			select {
@@ -557,29 +557,22 @@ func (b *OnDemandBlockTaskPool) States(ctx context.Context, internal time.Durati
 	return statsChan, nil
 }
 
-func (b *OnDemandBlockTaskPool) getState(timeStamp int64) State {
-	b.mutex.RLock()
-	defer b.mutex.RUnlock()
-	runningTasks := atomic.LoadInt32(&b.numGoRunningTasks)
-	if runningTasks < 0 {
-		runningTasks = 0
-	}
-	s := State{
-		PoolState:       atomic.LoadInt32(&b.state),
-		GoCnt:           b.totalGo,
-		QueueSize:       cap(b.queue),
-		WaitingTaskCnt:  len(b.queue),
-		RunningTasksCnt: runningTasks,
-		Timestamp:       timeStamp,
-	}
-	return s
-
-}
-
 func (b *OnDemandBlockTaskPool) sendState(ch chan<- State, timeStamp int64) {
 	// 这里发送 State 不成功则直接丢弃，不考虑重试逻辑，用户对自己的行为负责
 	select {
 	case ch <- b.getState(timeStamp):
 	default:
 	}
+}
+
+func (b *OnDemandBlockTaskPool) getState(timeStamp int64) State {
+	s := State{
+		PoolState:       atomic.LoadInt32(&b.state),
+		GoCnt:           b.numOfGo(),
+		QueueSize:       cap(b.queue),
+		WaitingTasksCnt: len(b.queue),
+		RunningTasksCnt: atomic.LoadInt32(&b.numGoRunningTasks),
+		Timestamp:       timeStamp,
+	}
+	return s
 }
