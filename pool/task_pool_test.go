@@ -142,7 +142,7 @@ func testTaskPoolStatesPoolNotRunning(t *testing.T, pool *OnDemandBlockTaskPool,
 	}
 	_ = eg.Wait()
 
-	ch, err := pool.States(context.Background(), time.Second)
+	ch, err := pool.States(context.Background(), time.Millisecond)
 	assert.NoError(t, err)
 	state1 := <-ch
 	assert.Equal(t, wantState.PoolState, state1.PoolState)
@@ -212,7 +212,7 @@ func testTaskPoolStatesPoolShutdownNow(t *testing.T, pool *OnDemandBlockTaskPool
 	err = pool.Start()
 	assert.NoError(t, err)
 
-	ch, err := pool.States(context.Background(), time.Second)
+	ch, err := pool.States(context.Background(), time.Millisecond)
 	assert.NoError(t, err)
 	done <- struct{}{}
 	_, err = pool.ShutdownNow()
