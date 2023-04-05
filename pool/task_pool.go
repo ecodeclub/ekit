@@ -359,7 +359,6 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 			b.mutex.Unlock()
 			return
 		case task, ok := <-b.queue:
-
 			// log.Println("id", id, "running tasks")
 			if b.timeoutGroup.isIn(id) {
 				// timer只保证至少在等待X时间后才发送信号而不是在X时间内发送信号
