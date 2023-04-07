@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/ecodeclub/ekit/internal/errs"
 
 	"github.com/stretchr/testify/assert"
@@ -138,7 +140,7 @@ func TestFixedIntervalRetryStrategy_New(t *testing.T) {
 	}
 }
 
-func TestNewExponentialBackoffRetryStrategy(t *testing.T) {
+func TestNewExponentialBackoffRetryStrategy_New(t *testing.T) {
 	testCases := []struct {
 		name            string
 		initialInterval time.Duration
@@ -202,22 +204,22 @@ func TestExponentialBackoffRetryStrategy_Next(t *testing.T) {
 		wantIntervals []time.Duration
 	}{
 		{
-			name: "normal case",
-			strategy: &ExponentialBackoffRetryStrategy{
-				initialInterval: 1 * time.Second,
-				maxInterval:     10 * time.Second,
-				maxRetries:      3,
-			},
+			name: "stop if retries reaches maxRetries",
+			strategy: func() *ExponentialBackoffRetryStrategy {
+				s, err := NewExponentialBackoffRetryStrategy(1*time.Second, 10*time.Second, 3)
+				require.NoError(t, err)
+				return s
+			}(),
 
 			wantIntervals: []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second},
 		},
 		{
 			name: "initialInterval over maxInterval",
-			strategy: &ExponentialBackoffRetryStrategy{
-				initialInterval: 1 * time.Second,
-				maxInterval:     4 * time.Second,
-				maxRetries:      5,
-			},
+			strategy: func() *ExponentialBackoffRetryStrategy {
+				s, err := NewExponentialBackoffRetryStrategy(1*time.Second, 4*time.Second, 5)
+				require.NoError(t, err)
+				return s
+			}(),
 
 			wantIntervals: []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second, 4 * time.Second, 4 * time.Second},
 		},
@@ -239,35 +241,44 @@ func TestExponentialBackoffRetryStrategy_Next(t *testing.T) {
 
 // 指数退避重试策略子测试函数，无限重试
 func TestExponentialBackoffRetryStrategy_Next4InfiniteRetry(t *testing.T) {
-	// maxRetries 为 0
-	s := &ExponentialBackoffRetryStrategy{
-		initialInterval: 1 * time.Second,
-		maxInterval:     4 * time.Second,
-		maxRetries:      0,
-	}
-	wantIntervals := []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second}
-	for i := 0; i < 97; i++ {
-		wantIntervals = append(wantIntervals, 4*time.Second)
-	}
 
-	intervals := make([]time.Duration, 0, 100)
-	for i := 0; i < 100; i++ {
-		res, _ := s.Next()
-		intervals = append(intervals, res)
-	}
-	assert.Equal(t, wantIntervals, intervals)
+	t.Run("maxRetries equals 0", func(t *testing.T) {
+		n := 100
 
-	// maxRetries 为负数
-	s = &ExponentialBackoffRetryStrategy{
-		initialInterval: 1 * time.Second,
-		maxInterval:     4 * time.Second,
-		maxRetries:      -1,
-	}
+		s, err := NewExponentialBackoffRetryStrategy(1*time.Second, 4*time.Second, 0)
+		require.NoError(t, err)
 
-	intervals = make([]time.Duration, 0, 100)
-	for i := 0; i < 100; i++ {
-		res, _ := s.Next()
-		intervals = append(intervals, res)
-	}
-	assert.Equal(t, wantIntervals, intervals)
+		wantIntervals := []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second}
+		length := n - len(wantIntervals)
+		for i := 0; i < length; i++ {
+			wantIntervals = append(wantIntervals, 4*time.Second)
+		}
+
+		intervals := make([]time.Duration, 0, n)
+		for i := 0; i < n; i++ {
+			res, _ := s.Next()
+			intervals = append(intervals, res)
+		}
+		assert.Equal(t, wantIntervals, intervals)
+	})
+
+	t.Run("maxRetries equals -1", func(t *testing.T) {
+		n := 100
+
+		s, err := NewExponentialBackoffRetryStrategy(1*time.Second, 4*time.Second, -1)
+		require.NoError(t, err)
+
+		wantIntervals := []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second}
+		length := n - len(wantIntervals)
+		for i := 0; i < length; i++ {
+			wantIntervals = append(wantIntervals, 4*time.Second)
+		}
+
+		intervals := make([]time.Duration, 0, n)
+		for i := 0; i < n; i++ {
+			res, _ := s.Next()
+			intervals = append(intervals, res)
+		}
+		assert.Equal(t, wantIntervals, intervals)
+	})
 }
