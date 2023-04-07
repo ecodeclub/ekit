@@ -15,6 +15,7 @@
 package retry
 
 import (
+	"math"
 	"sync/atomic"
 	"time"
 
@@ -41,6 +42,43 @@ func (s *FixedIntervalRetryStrategy) Next() (time.Duration, bool) {
 	retries := atomic.AddInt32(&s.retries, 1)
 	if s.maxRetries <= 0 || retries <= s.maxRetries {
 		return s.interval, true
+	}
+	return 0, false
+}
+
+type ExponentialBackoffRetryStrategy struct {
+	// 初始重试间隔
+	initialInterval time.Duration
+	// 最大重试间隔
+	maxInterval time.Duration
+	// 最大重试次数
+	maxRetries int32
+	// 当前重试次数
+	retries int32
+}
+
+func NewExponentialBackoffRetryStrategy(initialInterval, maxInterval time.Duration, maxRetries int32) (*ExponentialBackoffRetryStrategy, error) {
+	if initialInterval <= 0 {
+		return nil, errs.NewErrInvalidIntervalValue(initialInterval)
+	} else if initialInterval > maxInterval {
+		return nil, errs.NewErrInvalidMaxIntervalValue(maxInterval, initialInterval)
+	}
+	return &ExponentialBackoffRetryStrategy{
+		initialInterval: initialInterval,
+		maxInterval:     maxInterval,
+		maxRetries:      maxRetries,
+	}, nil
+}
+
+func (s *ExponentialBackoffRetryStrategy) Next() (time.Duration, bool) {
+	retries := atomic.AddInt32(&s.retries, 1)
+	if s.maxRetries <= 0 || retries <= s.maxRetries {
+		interval := s.initialInterval * time.Duration(math.Pow(2, float64(retries-1)))
+		// 无限重试的情况下，如果 interval 小于等于 0，说明溢出了，返回 maxInterval
+		if interval <= 0 || interval > s.maxInterval {
+			return s.maxInterval, true
+		}
+		return interval, true
 	}
 	return 0, false
 }

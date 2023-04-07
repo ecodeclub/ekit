@@ -15,6 +15,7 @@
 package retry
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -135,4 +136,138 @@ func TestFixedIntervalRetryStrategy_New(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestNewExponentialBackoffRetryStrategy(t *testing.T) {
+	testCases := []struct {
+		name            string
+		initialInterval time.Duration
+		maxInterval     time.Duration
+		maxRetries      int32
+		want            *ExponentialBackoffRetryStrategy
+		wantErr         error
+	}{
+		{
+			name:            "no error",
+			initialInterval: 2 * time.Second,
+			maxInterval:     2 * time.Minute,
+			maxRetries:      5,
+			want: &ExponentialBackoffRetryStrategy{
+				initialInterval: 2 * time.Second,
+				maxInterval:     2 * time.Minute,
+				maxRetries:      5,
+			},
+			wantErr: nil,
+		},
+		{
+			name:            "return error, initialInterval equals 0",
+			initialInterval: 0 * time.Second,
+			maxInterval:     2 * time.Minute,
+			maxRetries:      5,
+			want:            nil,
+			wantErr:         fmt.Errorf("ekit: 无效的间隔时间 %d, 预期值应大于 0", 0*time.Second),
+		},
+		{
+			name:            "return error, initialInterval equals -60",
+			initialInterval: -1 * time.Second,
+			maxInterval:     2 * time.Minute,
+			maxRetries:      5,
+			want:            nil,
+			wantErr:         fmt.Errorf("ekit: 无效的间隔时间 %d, 预期值应大于 0", -1*time.Second),
+		},
+		{
+			name:            "return error, maxInternal > initialInterval",
+			initialInterval: 5 * time.Second,
+			maxInterval:     1 * time.Second,
+			maxRetries:      5,
+			want:            nil,
+			wantErr:         fmt.Errorf("ekit: 最大重试间隔的时间 [%d] 应大于等于初始重试的间隔时间 [%d] ", 1*time.Second, 5*time.Second),
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := NewExponentialBackoffRetryStrategy(tt.initialInterval, tt.maxInterval, tt.maxRetries)
+			assert.Equal(t, tt.wantErr, err)
+			assert.Equal(t, tt.want, s)
+		})
+	}
+}
+
+func TestExponentialBackoffRetryStrategy_Next(t *testing.T) {
+	testCases := []struct {
+		name     string
+		strategy *ExponentialBackoffRetryStrategy
+
+		wantIntervals []time.Duration
+	}{
+		{
+			name: "normal case",
+			strategy: &ExponentialBackoffRetryStrategy{
+				initialInterval: 1 * time.Second,
+				maxInterval:     10 * time.Second,
+				maxRetries:      3,
+			},
+
+			wantIntervals: []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second},
+		},
+		{
+			name: "initialInterval over maxInterval",
+			strategy: &ExponentialBackoffRetryStrategy{
+				initialInterval: 1 * time.Second,
+				maxInterval:     4 * time.Second,
+				maxRetries:      5,
+			},
+
+			wantIntervals: []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second, 4 * time.Second, 4 * time.Second},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			intervals := make([]time.Duration, 0)
+			for {
+				if interval, ok := tt.strategy.Next(); ok {
+					intervals = append(intervals, interval)
+				} else {
+					break
+				}
+			}
+			assert.Equal(t, tt.wantIntervals, intervals)
+		})
+	}
+}
+
+// 指数退避重试策略子测试函数，无限重试
+func TestExponentialBackoffRetryStrategy_Next4InfiniteRetry(t *testing.T) {
+	// maxRetries 为 0
+	s := &ExponentialBackoffRetryStrategy{
+		initialInterval: 1 * time.Second,
+		maxInterval:     4 * time.Second,
+		maxRetries:      0,
+	}
+	wantIntervals := []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second}
+	for i := 0; i < 97; i++ {
+		wantIntervals = append(wantIntervals, 4*time.Second)
+	}
+
+	intervals := make([]time.Duration, 0, 100)
+	for i := 0; i < 100; i++ {
+		res, _ := s.Next()
+		intervals = append(intervals, res)
+	}
+	assert.Equal(t, wantIntervals, intervals)
+
+	// maxRetries 为负数
+	s = &ExponentialBackoffRetryStrategy{
+		initialInterval: 1 * time.Second,
+		maxInterval:     4 * time.Second,
+		maxRetries:      -1,
+	}
+
+	intervals = make([]time.Duration, 0, 100)
+	for i := 0; i < 100; i++ {
+		res, _ := s.Next()
+		intervals = append(intervals, res)
+	}
+	assert.Equal(t, wantIntervals, intervals)
 }

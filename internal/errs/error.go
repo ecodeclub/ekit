@@ -32,3 +32,7 @@ func NewErrInvalidType(want, got string) error {
 func NewErrInvalidIntervalValue(interval time.Duration) error {
 	return fmt.Errorf("ekit: 无效的间隔时间 %d, 预期值应大于 0", interval)
 }
+
+func NewErrInvalidMaxIntervalValue(maxInterval, initialInterval time.Duration) error {
+	return fmt.Errorf("ekit: 最大重试间隔的时间 [%d] 应大于等于初始重试的间隔时间 [%d] ", maxInterval, initialInterval)
+}
