@@ -154,11 +154,11 @@ func TestNewExponentialBackoffRetryStrategy_New(t *testing.T) {
 			initialInterval: 2 * time.Second,
 			maxInterval:     2 * time.Minute,
 			maxRetries:      5,
-			want: &ExponentialBackoffRetryStrategy{
-				initialInterval: 2 * time.Second,
-				maxInterval:     2 * time.Minute,
-				maxRetries:      5,
-			},
+			want: func() *ExponentialBackoffRetryStrategy {
+				s, err := NewExponentialBackoffRetryStrategy(2*time.Second, 2*time.Minute, 5)
+				require.NoError(t, err)
+				return s
+			}(),
 			wantErr: nil,
 		},
 		{
