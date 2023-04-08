@@ -161,14 +161,12 @@ func testTaskPoolStatesPoolShutdown(t *testing.T, pool *OnDemandBlockTaskPool, c
 
 	err := pool.Start()
 	assert.Nil(t, err)
-	// 调用 Shutdown 后， 即使 pool 状态关闭也不会调用 shutdownNowCancel
-	shutdownDone, err := pool.Shutdown()
+
+	_, err = pool.Shutdown()
 	assert.Nil(t, err)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	ch, err := pool.States(ctx, time.Millisecond)
+	ch, err := pool.States(context.Background(), time.Millisecond)
 	assert.NoError(t, err)
-	defer cancel()
 	state1 := <-ch
 	assert.Equal(t, closingState.PoolState, state1.PoolState)
 	assert.Equal(t, closingState.QueueSize, state1.QueueSize)
@@ -177,7 +175,6 @@ func testTaskPoolStatesPoolShutdown(t *testing.T, pool *OnDemandBlockTaskPool, c
 	assert.Equal(t, closingState.RunningTasksCnt, state1.RunningTasksCnt)
 
 	close(done)
-	<-shutdownDone
 	for {
 		state2, ok := <-ch
 		if !ok {

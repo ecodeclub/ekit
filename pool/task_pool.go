@@ -132,13 +132,15 @@ type OnDemandBlockTaskPool struct {
 	maxIdleTime time.Duration
 	// 队列积压率
 	queueBacklogRate float64
-	shutdownOnce     sync.Once
 
 	// 协程id方便调试程序
 	id int32
 
 	// 外部信号
-	shutdownDone chan struct{}
+	//shutdownDone   chan struct{}
+	shutdownCtx    context.Context
+	shutdownCancel context.CancelFunc
+
 	// 内部中断信号
 	shutdownNowCtx    context.Context
 	shutdownNowCancel context.CancelFunc
@@ -156,15 +158,15 @@ func NewOnDemandBlockTaskPool(initGo int, queueSize int, opts ...option.Option[O
 		return nil, fmt.Errorf("%w：queueSize应该大于等于0", errInvalidArgument)
 	}
 	b := &OnDemandBlockTaskPool{
-		queue:        make(chan Task, queueSize),
-		shutdownDone: make(chan struct{}, 1),
-		initGo:       int32(initGo),
-		coreGo:       int32(initGo),
-		maxGo:        int32(initGo),
-		maxIdleTime:  defaultMaxIdleTime,
+		queue:       make(chan Task, queueSize),
+		initGo:      int32(initGo),
+		coreGo:      int32(initGo),
+		maxGo:       int32(initGo),
+		maxIdleTime: defaultMaxIdleTime,
 	}
-
-	b.shutdownNowCtx, b.shutdownNowCancel = context.WithCancel(context.Background())
+	ctx := context.Background()
+	b.shutdownCtx, b.shutdownCancel = context.WithCancel(ctx)
+	b.shutdownNowCtx, b.shutdownNowCancel = context.WithCancel(ctx)
 	atomic.StoreInt32(&b.state, stateCreated)
 
 	option.Apply(b, opts...)
@@ -377,13 +379,10 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 				// 绝不会处于运行task中
 				if atomic.LoadInt32(&b.state) == stateClosing && atomic.CompareAndSwapInt32(&b.numGoRunningTasks, 1, 0) {
 					// 在b.queue关闭后，第一个检测到全部task已经自然结束的协程
-					b.shutdownOnce.Do(func() {
-						// 状态迁移
-						atomic.CompareAndSwapInt32(&b.state, stateClosing, stateStopped)
-						// 显示通知外部调用者
-						b.shutdownDone <- struct{}{}
-						close(b.shutdownDone)
-					})
+					// 状态迁移
+					atomic.CompareAndSwapInt32(&b.state, stateClosing, stateStopped)
+					// 显示通知外部调用者
+					b.shutdownCancel()
 
 					b.decreaseTotalGo(1)
 					return
@@ -465,7 +464,8 @@ func (b *OnDemandBlockTaskPool) Shutdown() (<-chan struct{}, error) {
 			// 先关闭等待队列不再允许提交
 			// 同时工作协程能够通过判断b.queue是否被关闭来终止获取任务循环
 			close(b.queue)
-			return b.shutdownDone, nil
+			//return b.shutdownDone, nil
+			return b.shutdownCtx.Done(), nil
 		}
 
 	}
@@ -533,6 +533,9 @@ func (b *OnDemandBlockTaskPool) States(ctx context.Context, interval time.Durati
 	if b.shutdownNowCtx.Err() != nil {
 		return nil, b.shutdownNowCtx.Err()
 	}
+	if b.shutdownCtx.Err() != nil {
+		return nil, b.shutdownCtx.Err()
+	}
 
 	statsChan := make(chan State)
 	go func() {
@@ -547,6 +550,10 @@ func (b *OnDemandBlockTaskPool) States(ctx context.Context, interval time.Durati
 				close(statsChan)
 				return
 			case <-b.shutdownNowCtx.Done():
+				b.sendState(statsChan, time.Now().UnixNano())
+				close(statsChan)
+				return
+			case <-b.shutdownCtx.Done():
 				b.sendState(statsChan, time.Now().UnixNano())
 				close(statsChan)
 				return
