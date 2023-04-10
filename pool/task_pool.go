@@ -380,9 +380,10 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 				if atomic.LoadInt32(&b.state) == stateClosing && atomic.CompareAndSwapInt32(&b.numGoRunningTasks, 1, 0) {
 					// 在b.queue关闭后，第一个检测到全部task已经自然结束的协程
 					// 状态迁移
-					atomic.CompareAndSwapInt32(&b.state, stateClosing, stateStopped)
-					// 显示通知外部调用者
-					b.shutdownCancel()
+					if atomic.CompareAndSwapInt32(&b.state, stateClosing, stateStopped) {
+						// 显示通知外部调用者
+						b.shutdownCancel()
+					}
 
 					b.decreaseTotalGo(1)
 					return
@@ -464,7 +465,6 @@ func (b *OnDemandBlockTaskPool) Shutdown() (<-chan struct{}, error) {
 			// 先关闭等待队列不再允许提交
 			// 同时工作协程能够通过判断b.queue是否被关闭来终止获取任务循环
 			close(b.queue)
-			//return b.shutdownDone, nil
 			return b.shutdownCtx.Done(), nil
 		}
 

@@ -35,6 +35,18 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 		testTaskPoolStatesCtxCanceled(t, p1, context.Canceled)
 	})
 
+	t.Run("shutdownNowCtx canceled", func(t *testing.T) {
+		p1, err := NewOnDemandBlockTaskPool(2, 5)
+		assert.NoError(t, err)
+		testTaskPoolStatesShutdownNowCtxCanceled(t, p1, context.Canceled)
+	})
+
+	t.Run("shutdownCtx canceled", func(t *testing.T) {
+		p1, err := NewOnDemandBlockTaskPool(2, 5)
+		assert.NoError(t, err)
+		testTaskPoolStatesShutdownCtxCanceled(t, p1, context.Canceled)
+	})
+
 	t.Run("ctx Running canceled", func(t *testing.T) {
 		p2, err := NewOnDemandBlockTaskPool(2, 5)
 		assert.NoError(t, err)
@@ -61,8 +73,7 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 	t.Run("pool Shutdown Now", func(t *testing.T) {
 		p, err := NewOnDemandBlockTaskPool(1, 2)
 		assert.NoError(t, err)
-		testTaskPoolStatesPoolShutdownNow(t, p,
-			State{PoolState: stateStopped, GoCnt: 1, WaitingTasksCnt: 0, QueueSize: 2, RunningTasksCnt: 0})
+		testTaskPoolStatesPoolShutdownNow(t, p)
 	})
 }
 
@@ -80,6 +91,46 @@ func testTaskPoolStatesCtxCanceled(t *testing.T, pool *OnDemandBlockTaskPool, wa
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	cancel()
 	_, err = pool.States(ctx, time.Millisecond)
+	assert.Equal(t, wantErr, err)
+	close(done)
+}
+
+func testTaskPoolStatesShutdownNowCtxCanceled(t *testing.T, pool *OnDemandBlockTaskPool, wantErr error) {
+	done := make(chan struct{})
+	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+		<-done
+		return nil
+	}))
+	assert.NoError(t, err)
+
+	err = pool.Start()
+	assert.NoError(t, err)
+	done <- struct{}{}
+	_, err = pool.ShutdownNow()
+	assert.NoError(t, err)
+
+	_, err = pool.States(context.Background(), time.Millisecond)
+	assert.Equal(t, wantErr, err)
+	close(done)
+}
+
+func testTaskPoolStatesShutdownCtxCanceled(t *testing.T, pool *OnDemandBlockTaskPool, wantErr error) {
+	done := make(chan struct{})
+	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+		<-done
+		return nil
+	}))
+	assert.NoError(t, err)
+
+	err = pool.Start()
+	assert.NoError(t, err)
+	// 当 queue 里的任务为 0 个时， 调用 Shutdown() 并不会执行相应的 cancel
+	//done <- struct{}{}
+	_, err = pool.Shutdown()
+	assert.NoError(t, err)
+	done <- struct{}{}
+
+	_, err = pool.States(context.Background(), time.Millisecond)
 	assert.Equal(t, wantErr, err)
 	close(done)
 }
@@ -160,10 +211,10 @@ func testTaskPoolStatesPoolShutdown(t *testing.T, pool *OnDemandBlockTaskPool, c
 	}
 
 	err := pool.Start()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	_, err = pool.Shutdown()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	ch, err := pool.States(context.Background(), time.Millisecond)
 	assert.NoError(t, err)
@@ -188,7 +239,7 @@ func testTaskPoolStatesPoolShutdown(t *testing.T, pool *OnDemandBlockTaskPool, c
 	}
 }
 
-func testTaskPoolStatesPoolShutdownNow(t *testing.T, pool *OnDemandBlockTaskPool, stoppedState State) {
+func testTaskPoolStatesPoolShutdownNow(t *testing.T, pool *OnDemandBlockTaskPool) {
 	done := make(chan struct{})
 	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
 		<-done
@@ -210,7 +261,7 @@ func testTaskPoolStatesPoolShutdownNow(t *testing.T, pool *OnDemandBlockTaskPool
 		if !ok {
 			break
 		}
-		assert.Equal(t, stoppedState.PoolState, state.PoolState)
+		assert.Equal(t, stateStopped, state.PoolState)
 	}
 
 	close(done)
