@@ -22,30 +22,7 @@ import (
 	"github.com/ecodeclub/ekit/internal/errs"
 )
 
-type FixedIntervalRetryStrategy struct {
-	maxRetries int32         // 最大重试次数，如果是 0 或负数，表示无限重试
-	interval   time.Duration // 重试间隔时间
-	retries    int32         // 当前重试次数
-}
-
-func NewFixedIntervalRetryStrategy(maxRetries int32, interval time.Duration) (*FixedIntervalRetryStrategy, error) {
-	if interval <= 0 {
-		return nil, errs.NewErrInvalidIntervalValue(interval)
-	}
-	return &FixedIntervalRetryStrategy{
-		maxRetries: maxRetries,
-		interval:   interval,
-	}, nil
-}
-
-func (s *FixedIntervalRetryStrategy) Next() (time.Duration, bool) {
-	retries := atomic.AddInt32(&s.retries, 1)
-	if s.maxRetries <= 0 || retries <= s.maxRetries {
-		return s.interval, true
-	}
-	return 0, false
-}
-
+// ExponentialBackoffRetryStrategy 指数退避重试
 type ExponentialBackoffRetryStrategy struct {
 	// 初始重试间隔
 	initialInterval time.Duration
