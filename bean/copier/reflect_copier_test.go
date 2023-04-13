@@ -1,4 +1,4 @@
-// Copyright 2021 gotomicro
+// Copyright 2021 ecodeclub
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gotomicro/ekit"
+	"github.com/ecodeclub/ekit"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -667,48 +667,91 @@ type SpecialDst2 struct {
 }
 
 func BenchmarkReflectCopier_Copy(b *testing.B) {
-	copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()
-	if err != nil {
-		b.Fatal(err)
-	}
-	for i := 1; i <= b.N; i++ {
-		_, _ = copier.Copy(&SimpleSrc{
-			Name:    "大明",
-			Age:     ekit.ToPtr[int](18),
-			Friends: []string{"Tom", "Jerry"},
-		})
-	}
+	// 复用 Copier
+	b.Run("reused", func(b *testing.B) {
+		copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()
+		if err != nil {
+			b.Fatal(err)
+		}
+		for i := 1; i <= b.N; i++ {
+			_, _ = copier.Copy(&SimpleSrc{
+				Name:    "大明",
+				Age:     ekit.ToPtr[int](18),
+				Friends: []string{"Tom", "Jerry"},
+			})
+		}
+	})
+
+	// 每次都是新建
+	b.Run("create", func(b *testing.B) {
+		for i := 1; i <= b.N; i++ {
+			copier, _ := NewReflectCopier[SimpleSrc, SimpleDst]()
+			_, _ = copier.Copy(&SimpleSrc{
+				Name:    "大明",
+				Age:     ekit.ToPtr[int](18),
+				Friends: []string{"Tom", "Jerry"},
+			})
+		}
+	})
 }
 
 func BenchmarkReflectCopier_CopyComplexStruct(b *testing.B) {
-	copier, err := NewReflectCopier[ComplexSrc, ComplexDst]()
-	if err != nil {
-		b.Fatal(err)
-	}
-	for i := 1; i <= b.N; i++ {
-		_, _ = copier.Copy(&ComplexSrc{
-			Simple: SimpleSrc{
-				Name:    "xiaohong",
-				Age:     ekit.ToPtr[int](18),
-				Friends: []string{"ha", "ha", "le"},
-			},
-			Embed: &EmbedSrc{
-				SimpleSrc: SimpleSrc{
-					Name:    "xiaopeng",
-					Age:     ekit.ToPtr[int](88),
-					Friends: []string{"la", "ha", "le"},
+	b.Run("reused", func(b *testing.B) {
+		copier, _ := NewReflectCopier[ComplexSrc, ComplexDst]()
+		for i := 1; i <= b.N; i++ {
+			_, _ = copier.Copy(&ComplexSrc{
+				Simple: SimpleSrc{
+					Name:    "xiaohong",
+					Age:     ekit.ToPtr[int](18),
+					Friends: []string{"ha", "ha", "le"},
 				},
-				BasicSrc: &BasicSrc{
-					Name:    "wang",
+				Embed: &EmbedSrc{
+					SimpleSrc: SimpleSrc{
+						Name:    "xiaopeng",
+						Age:     ekit.ToPtr[int](88),
+						Friends: []string{"la", "ha", "le"},
+					},
+					BasicSrc: &BasicSrc{
+						Name:    "wang",
+						Age:     22,
+						CNumber: complex(2, 1),
+					},
+				},
+				BasicSrc: BasicSrc{
+					Name:    "wang11",
 					Age:     22,
 					CNumber: complex(2, 1),
 				},
-			},
-			BasicSrc: BasicSrc{
-				Name:    "wang11",
-				Age:     22,
-				CNumber: complex(2, 1),
-			},
-		})
-	}
+			})
+		}
+	})
+	b.Run("create", func(b *testing.B) {
+		for i := 1; i <= b.N; i++ {
+			copier, _ := NewReflectCopier[ComplexSrc, ComplexDst]()
+			_, _ = copier.Copy(&ComplexSrc{
+				Simple: SimpleSrc{
+					Name:    "xiaohong",
+					Age:     ekit.ToPtr[int](18),
+					Friends: []string{"ha", "ha", "le"},
+				},
+				Embed: &EmbedSrc{
+					SimpleSrc: SimpleSrc{
+						Name:    "xiaopeng",
+						Age:     ekit.ToPtr[int](88),
+						Friends: []string{"la", "ha", "le"},
+					},
+					BasicSrc: &BasicSrc{
+						Name:    "wang",
+						Age:     22,
+						CNumber: complex(2, 1),
+					},
+				},
+				BasicSrc: BasicSrc{
+					Name:    "wang11",
+					Age:     22,
+					CNumber: complex(2, 1),
+				},
+			})
+		}
+	})
 }

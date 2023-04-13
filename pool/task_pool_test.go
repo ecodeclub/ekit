@@ -1,4 +1,4 @@
-// Copyright 2021 gotomicro
+// Copyright 2021 ecodeclub
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,10 +22,250 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gotomicro/ekit/bean/option"
+	"github.com/ecodeclub/ekit/bean/option"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sync/errgroup"
 )
+
+func TestOnDemandBlockTaskPool_States(t *testing.T) {
+	t.Parallel()
+	t.Run("ctx canceled", func(t *testing.T) {
+		p1, err := NewOnDemandBlockTaskPool(2, 5)
+		assert.NoError(t, err)
+		testTaskPoolStatesCtxCanceled(t, p1, context.Canceled)
+	})
+
+	t.Run("shutdownNowCtx canceled", func(t *testing.T) {
+		p1, err := NewOnDemandBlockTaskPool(2, 5)
+		assert.NoError(t, err)
+		testTaskPoolStatesShutdownNowCtxCanceled(t, p1, context.Canceled)
+	})
+
+	t.Run("shutdownCtx canceled", func(t *testing.T) {
+		p1, err := NewOnDemandBlockTaskPool(2, 5)
+		assert.NoError(t, err)
+		testTaskPoolStatesShutdownCtxCanceled(t, p1, context.Canceled)
+	})
+
+	t.Run("ctx Running canceled", func(t *testing.T) {
+		p2, err := NewOnDemandBlockTaskPool(2, 5)
+		assert.NoError(t, err)
+		testTaskPoolStatesCtxRunningCanceled(t, p2,
+			State{PoolState: stateRunning, GoCnt: 2,
+				WaitingTasksCnt: 3, QueueSize: 5, RunningTasksCnt: 2})
+	})
+
+	t.Run("pool not running", func(t *testing.T) {
+		p, err := NewOnDemandBlockTaskPool(2, 5)
+		assert.NoError(t, err)
+		testTaskPoolStatesPoolNotRunning(t, p,
+			State{PoolState: stateCreated, GoCnt: 0, WaitingTasksCnt: 5, QueueSize: 5, RunningTasksCnt: 0})
+	})
+
+	t.Run("pool Shutdown", func(t *testing.T) {
+		p, err := NewOnDemandBlockTaskPool(2, 5)
+		assert.NoError(t, err)
+		testTaskPoolStatesPoolShutdown(t, p,
+			State{PoolState: stateClosing, GoCnt: 2, WaitingTasksCnt: 3, QueueSize: 5, RunningTasksCnt: 2},
+			State{PoolState: stateStopped, GoCnt: 0, WaitingTasksCnt: 0, QueueSize: 5, RunningTasksCnt: 0})
+	})
+
+	t.Run("pool Shutdown Now", func(t *testing.T) {
+		p, err := NewOnDemandBlockTaskPool(1, 2)
+		assert.NoError(t, err)
+		testTaskPoolStatesPoolShutdownNow(t, p)
+	})
+}
+
+func testTaskPoolStatesCtxCanceled(t *testing.T, pool *OnDemandBlockTaskPool, wantErr error) {
+	done := make(chan struct{})
+	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+		<-done
+		return nil
+	}))
+	assert.NoError(t, err)
+
+	err = pool.Start()
+	assert.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	cancel()
+	_, err = pool.States(ctx, time.Millisecond)
+	assert.Equal(t, wantErr, err)
+	close(done)
+}
+
+func testTaskPoolStatesShutdownNowCtxCanceled(t *testing.T, pool *OnDemandBlockTaskPool, wantErr error) {
+	done := make(chan struct{})
+	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+		<-done
+		return nil
+	}))
+	assert.NoError(t, err)
+
+	err = pool.Start()
+	assert.NoError(t, err)
+	done <- struct{}{}
+	_, err = pool.ShutdownNow()
+	assert.NoError(t, err)
+
+	_, err = pool.States(context.Background(), time.Millisecond)
+	assert.Equal(t, wantErr, err)
+	close(done)
+}
+
+func testTaskPoolStatesShutdownCtxCanceled(t *testing.T, pool *OnDemandBlockTaskPool, wantErr error) {
+	done := make(chan struct{})
+	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+		<-done
+		return nil
+	}))
+	assert.NoError(t, err)
+
+	err = pool.Start()
+	assert.NoError(t, err)
+	// 当 queue 里的任务为 0 个时， 调用 Shutdown() 并不会执行相应的 cancel
+	//done <- struct{}{}
+	_, err = pool.Shutdown()
+	assert.NoError(t, err)
+	done <- struct{}{}
+
+	_, err = pool.States(context.Background(), time.Millisecond)
+	assert.Equal(t, wantErr, err)
+	close(done)
+}
+
+func testTaskPoolStatesCtxRunningCanceled(t *testing.T, pool *OnDemandBlockTaskPool, wantState State) {
+	err := pool.Start()
+	assert.NoError(t, err)
+
+	done := make(chan struct{})
+	n := cap(pool.queue)
+
+	for i := 0; i < n; i++ {
+		err = pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+			<-done
+			return nil
+		}))
+		assert.NoError(t, err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ch, err := pool.States(ctx, time.Millisecond)
+	assert.NoError(t, err)
+	state1 := <-ch
+	assert.Equal(t, wantState.PoolState, state1.PoolState)
+	assert.Equal(t, wantState.QueueSize, state1.QueueSize)
+	assert.Equal(t, wantState.GoCnt, state1.GoCnt)
+	assert.Equal(t, wantState.WaitingTasksCnt, state1.WaitingTasksCnt)
+	assert.Equal(t, wantState.RunningTasksCnt, state1.RunningTasksCnt)
+
+	cancel()
+	for {
+		state2, ok := <-ch
+		if !ok {
+			break
+		}
+		assert.Equal(t, wantState.PoolState, state2.PoolState)
+		assert.Equal(t, wantState.QueueSize, state2.QueueSize)
+		assert.Equal(t, wantState.GoCnt, state2.GoCnt)
+		assert.Equal(t, wantState.WaitingTasksCnt, state2.WaitingTasksCnt)
+		assert.Equal(t, wantState.RunningTasksCnt, state2.RunningTasksCnt)
+	}
+	close(done)
+}
+
+func testTaskPoolStatesPoolNotRunning(t *testing.T, pool *OnDemandBlockTaskPool, wantState State) {
+	done := make(chan struct{})
+	n := cap(pool.queue)
+
+	for i := 0; i < n; i++ {
+		err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+			<-done
+			return nil
+		}))
+		assert.NoError(t, err)
+	}
+
+	ch, err := pool.States(context.Background(), time.Millisecond)
+	assert.NoError(t, err)
+	state1 := <-ch
+	assert.Equal(t, wantState.PoolState, state1.PoolState)
+	assert.Equal(t, wantState.QueueSize, state1.QueueSize)
+	assert.Equal(t, wantState.GoCnt, state1.GoCnt)
+	assert.Equal(t, wantState.WaitingTasksCnt, state1.WaitingTasksCnt)
+	assert.Equal(t, wantState.RunningTasksCnt, state1.RunningTasksCnt)
+	close(done)
+}
+
+func testTaskPoolStatesPoolShutdown(t *testing.T, pool *OnDemandBlockTaskPool, closingState, stoppedState State) {
+	done := make(chan struct{})
+	n := cap(pool.queue)
+
+	for i := 0; i < n; i++ {
+		err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+			<-done
+			return nil
+		}))
+		assert.NoError(t, err)
+	}
+
+	err := pool.Start()
+	assert.NoError(t, err)
+
+	_, err = pool.Shutdown()
+	assert.NoError(t, err)
+
+	ch, err := pool.States(context.Background(), time.Millisecond)
+	assert.NoError(t, err)
+	state1 := <-ch
+	assert.Equal(t, closingState.PoolState, state1.PoolState)
+	assert.Equal(t, closingState.QueueSize, state1.QueueSize)
+	assert.Equal(t, closingState.GoCnt, state1.GoCnt)
+	assert.Equal(t, closingState.WaitingTasksCnt, state1.WaitingTasksCnt)
+	assert.Equal(t, closingState.RunningTasksCnt, state1.RunningTasksCnt)
+
+	close(done)
+	for {
+		state2, ok := <-ch
+		if !ok {
+			break
+		}
+		assert.Equal(t, stoppedState.PoolState, state2.PoolState)
+		assert.Equal(t, stoppedState.QueueSize, state2.QueueSize)
+		assert.Equal(t, stoppedState.GoCnt, state2.GoCnt)
+		assert.Equal(t, stoppedState.WaitingTasksCnt, state2.WaitingTasksCnt)
+		assert.Equal(t, stoppedState.RunningTasksCnt, state2.RunningTasksCnt)
+	}
+}
+
+func testTaskPoolStatesPoolShutdownNow(t *testing.T, pool *OnDemandBlockTaskPool) {
+	done := make(chan struct{})
+	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+		<-done
+		return nil
+	}))
+	assert.NoError(t, err)
+
+	err = pool.Start()
+	assert.NoError(t, err)
+
+	ch, err := pool.States(context.Background(), time.Millisecond)
+	assert.NoError(t, err)
+	done <- struct{}{}
+	_, err = pool.ShutdownNow()
+	assert.NoError(t, err)
+
+	for {
+		state, ok := <-ch
+		if !ok {
+			break
+		}
+		assert.Equal(t, stateStopped, state.PoolState)
+	}
+
+	close(done)
+}
 
 /*
 TaskPool有限状态机
@@ -1009,4 +1249,34 @@ func ExampleNewOnDemandBlockTaskPool() {
 	wg.Wait()
 	// Output:
 	// hello, world
+}
+
+func ExampleOnDemandBlockTaskPool_States() {
+	p, _ := NewOnDemandBlockTaskPool(10, 100)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	_ = p.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
+		wg.Done()
+		return nil
+	}))
+	_ = p.Start()
+	ch, err := p.States(context.Background(), time.Second*10)
+	if err == nil {
+		fmt.Println("get ch")
+	}
+	state := <-ch
+	fmt.Println(state.PoolState)
+	fmt.Println(state.RunningTasksCnt)
+	fmt.Println(state.WaitingTasksCnt)
+	fmt.Println(state.GoCnt)
+	fmt.Println(state.QueueSize)
+	wg.Wait()
+
+	// Output:
+	// get ch
+	// 2
+	// 0
+	// 0
+	// 10
+	// 100
 }
