@@ -166,15 +166,17 @@ func TestOnDemandBlockTaskPool_States(t *testing.T) {
 
 /*
 TaskPool有限状态机
-                                                       Start/Submit/ShutdownNow() Error
-                                                                \     /
-                                               Shutdown()  --> CLOSING  ---等待所有任务结束 ----\
-         Submit()nil--执行中状态迁移--Submit()      /    \----------/                            \
-           \    /                    \   /      /                                               \
-New() --> CREATED -- Start() --->  RUNNING -- --                                                 \
-           \   /                    \   /       \           Start/Submit/Shutdown() Error         \
-  Shutdown/ShutdownNow()Error      Start()       \                \    /                           \
-                                               ShutdownNow() ---> STOPPED  -- ShutdownNow() --> STOPPED
+                                                                  Start/Submit/Shutdown/ShutdownNow() Error
+                                                                           \     /
+                                                           Shutdown() --> CLOSING  --> 等待所有任务结束
+        States/Submit()---执行中状态迁移--States/Submit()   /               \    /             ｜
+            \    /                         \   /         /                 States()          ｜
+New() ---> CREATED ----- Start() ------>  RUNNING ------                                     ｜
+           \   /                          \   /          \                                   ｜
+  Shutdown/ShutdownNow()Error            Start()          \                                  ｜
+                                                        ShutdownNow() ---> STOPPED <-------- ｜
+                                                                            \  /
+                                                               Start/Submit/Shutdown/ShutdownNow/States() Error
 */
 
 func TestOnDemandBlockTaskPool_In_Created_State(t *testing.T) {
