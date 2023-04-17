@@ -169,10 +169,10 @@ TaskPool有限状态机
                                                                   Start/Submit/Shutdown/ShutdownNow() Error
                                                                            \     /
                                                            Shutdown() --> CLOSING  --> 等待所有任务结束
-        States/Submit()---执行中状态迁移--States/Submit()   /               \    /             ｜
-            \    /                         \   /         /                 States()          ｜
+        States/Submit()---执行中状态迁移--States/Submit()   /                \   /             ｜
+            \    /                         \   /         /                States()           ｜
 New() ---> CREATED ----- Start() ------>  RUNNING ------                                     ｜
-           \   /                          \   /          \                                   ｜
+           \   /                           \  /          \                                   ｜
   Shutdown/ShutdownNow()Error            Start()          \                                  ｜
                                                         ShutdownNow() ---> STOPPED <-------- ｜
                                                                             \  /
