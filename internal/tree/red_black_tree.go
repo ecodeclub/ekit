@@ -85,10 +85,13 @@ func (rb *RBTree[K, V]) Add(key K, value V) error {
 }
 
 // Delete 删除节点
-func (rb *RBTree[K, V]) Delete(key K) {
+func (rb *RBTree[K, V]) Delete(key K) (V, bool) {
 	if node := rb.findNode(key); node != nil {
 		rb.deleteNode(node)
+		return node.value, true
 	}
+	var v V
+	return v, false
 }
 
 // Find 查找节点
@@ -184,7 +187,8 @@ func (rb *RBTree[K, V]) addNode(node *rbNode[K, V]) error {
 // 着色旋转
 // case1:当删除节点非空且为黑色时,会违反红黑树任何路径黑节点个数相同的约束,所以需要重新平衡
 // case2:当删除红色节点时,不会破坏任何约束,所以不需要平衡
-func (rb *RBTree[K, V]) deleteNode(node *rbNode[K, V]) {
+func (rb *RBTree[K, V]) deleteNode(tgt *rbNode[K, V]) {
+	node := tgt
 	// node左右非空,取后继节点
 	if node.left != nil && node.right != nil {
 		s := rb.findSuccessor(node)
