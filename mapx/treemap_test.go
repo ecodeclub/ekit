@@ -18,6 +18,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/ecodeclub/ekit"
 	"github.com/stretchr/testify/assert"
 )
@@ -277,19 +279,92 @@ func TestTreeMap_Put(t *testing.T) {
 	}
 }
 
-func TestTreeMap_Remove(t *testing.T) {
-	var tests = []struct {
+func TestTreeMap_Keys(t *testing.T) {
+	testCases := []struct {
 		name     string
-		m        map[int]int
-		delKey   int
-		wantVal  int
-		wantBool bool
+		data     map[int]int
+		wantKeys []int
 	}{
 		{
-			name:    "empty-TreeMap",
-			m:       map[int]int{},
-			delKey:  0,
-			wantVal: 0,
+			name:     "no data",
+			wantKeys: []int{},
+		},
+		{
+			name: "data",
+			data: map[int]int{
+				1: 11,
+				2: 12,
+				0: 10,
+				3: 13,
+				5: 15,
+				4: 14,
+			},
+			wantKeys: []int{0, 1, 2, 3, 4, 5},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tm, err := NewTreeMap[int, int](compare())
+			require.NoError(t, err)
+			for k, v := range tc.data {
+				err = tm.Put(k, v)
+				require.NoError(t, err)
+			}
+			keys := tm.Keys()
+			assert.Equal(t, tc.wantKeys, keys)
+		})
+	}
+}
+
+func TestTreeMap_Values(t *testing.T) {
+	testCases := []struct {
+		name       string
+		data       map[int]int
+		wantValues []int
+	}{
+		{
+			name:       "no data",
+			wantValues: []int{},
+		},
+		{
+			name: "data",
+			data: map[int]int{
+				1: 11,
+				2: 12,
+				0: 10,
+				3: 13,
+				5: 15,
+				4: 14,
+			},
+			wantValues: []int{10, 11, 12, 13, 14, 15},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tm, err := NewTreeMap[int, int](compare())
+			require.NoError(t, err)
+			for k, v := range tc.data {
+				err = tm.Put(k, v)
+				require.NoError(t, err)
+			}
+			vals := tm.Values()
+			assert.Equal(t, tc.wantValues, vals)
+		})
+	}
+}
+
+func TestTreeMap_Delete(t *testing.T) {
+	var tests = []struct {
+		name    string
+		m       map[int]int
+		delKey  int
+		delVal  int
+		deleted bool
+	}{
+		{
+			name:   "empty-TreeMap",
+			m:      map[int]int{},
+			delKey: 0,
 		},
 		{
 			name: "find",
@@ -302,7 +377,8 @@ func TestTreeMap_Remove(t *testing.T) {
 				4: 4,
 			},
 			delKey:  2,
-			wantVal: 0,
+			deleted: true,
+			delVal:  2,
 		},
 		{
 			name: "not-find",
@@ -314,17 +390,21 @@ func TestTreeMap_Remove(t *testing.T) {
 				5: 5,
 				4: 4,
 			},
-			delKey:  6,
-			wantVal: 0,
+			delKey: 6,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			treeMap, _ := NewTreeMap[int, int](compare())
-			treeMap.Remove(tt.delKey)
-			val, err := treeMap.Get(tt.delKey)
-			assert.Equal(t, tt.wantBool, err)
-			assert.Equal(t, tt.wantVal, val)
+			for k, v := range tt.m {
+				err := treeMap.Put(k, v)
+				require.NoError(t, err)
+			}
+			delVal, ok := treeMap.Delete(tt.delKey)
+			assert.Equal(t, tt.deleted, ok)
+			assert.Equal(t, tt.delVal, delVal)
+			_, ok = treeMap.Get(tt.delKey)
+			assert.False(t, ok)
 		})
 	}
 }
