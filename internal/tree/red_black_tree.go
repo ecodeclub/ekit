@@ -87,8 +87,9 @@ func (rb *RBTree[K, V]) Add(key K, value V) error {
 // Delete 删除节点
 func (rb *RBTree[K, V]) Delete(key K) (V, bool) {
 	if node := rb.findNode(key); node != nil {
+		value := node.value
 		rb.deleteNode(node)
-		return node.value, true
+		return value, true
 	}
 	var v V
 	return v, false
