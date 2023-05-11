@@ -16,43 +16,85 @@ package sqlx
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"reflect"
 )
 
-func ScanRows(rows *sql.Rows) ([]any, error) {
-	colsInfo, err := rows.ColumnTypes()
-	if err != nil {
-		return nil, err
+var (
+	ErrNoMoreRows              = errors.New("ekit: 已读取完")
+	errInvalidArgument         = errors.New("ekit: 参数非法")
+	_                  Scanner = &sqlRowsScanner{}
+)
+
+// Scanner 用于简化sql.Rows包中的Scan操作
+// Scanner 不会关闭sql.Rows，用户需要对此负责
+type Scanner interface {
+	Scan() (values []any, err error)
+	ScanAll() (allValues [][]any, err error)
+}
+
+type sqlRowsScanner struct {
+	sqlRows             *sql.Rows
+	columnValuePointers []any
+}
+
+// NewSQLRowsScanner 返回一个Scanner
+func NewSQLRowsScanner(r *sql.Rows) (Scanner, error) {
+	if r == nil {
+		return nil, fmt.Errorf("%w *sql.Rows不能为nil", errInvalidArgument)
 	}
-	colsData := make([]any, 0, len(colsInfo))
-	for _, colInfo := range colsInfo {
-		typ := colInfo.ScanType()
-		// 保险起见，循环的去除指针
+	columnTypes, err := r.ColumnTypes()
+	if err != nil || len(columnTypes) < 1 {
+		return nil, fmt.Errorf("%w 无法获取*sql.Rows列类型信息: %v", errInvalidArgument, err)
+	}
+	columnValuePointers := make([]any, len(columnTypes))
+	for i, columnType := range columnTypes {
+		typ := columnType.ScanType()
 		for typ.Kind() == reflect.Pointer {
 			typ = typ.Elem()
 		}
-		newData := reflect.New(typ).Interface()
-		colsData = append(colsData, newData)
+		columnValuePointers[i] = reflect.New(typ).Interface()
 	}
-	err = rows.Scan(colsData...)
+	return &sqlRowsScanner{sqlRows: r, columnValuePointers: columnValuePointers}, nil
+}
+
+// Scan 返回一行
+func (s *sqlRowsScanner) Scan() ([]any, error) {
+	if !s.sqlRows.Next() {
+		if err := s.sqlRows.Err(); err != nil {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("%w", ErrNoMoreRows)
+	}
+	err := s.sqlRows.Scan(s.columnValuePointers...)
 	if err != nil {
 		return nil, err
 	}
-	// 去掉reflect.New的指针
-	for i := 0; i < len(colsData); i++ {
-		colsData[i] = reflect.ValueOf(colsData[i]).Elem().Interface()
-	}
-	return colsData, nil
+	return s.columnValues(), nil
 }
 
-func ScanAll(rows *sql.Rows) ([][]any, error) {
-	res := make([][]any, 0, 32)
-	for rows.Next() {
-		cols, err := ScanRows(rows)
+func (s *sqlRowsScanner) columnValues() []any {
+	values := make([]any, len(s.columnValuePointers))
+	for i := 0; i < len(s.columnValuePointers); i++ {
+		values[i] = reflect.ValueOf(s.columnValuePointers[i]).Elem().Interface()
+	}
+	return values
+}
+
+// ScanAll 返回所有行
+func (s *sqlRowsScanner) ScanAll() ([][]any, error) {
+	all := make([][]any, 0, 32)
+	for {
+		columnValues, err := s.Scan()
 		if err != nil {
+			if errors.Is(err, ErrNoMoreRows) {
+				break
+			}
 			return nil, err
 		}
-		res = append(res, cols)
+		all = append(all, columnValues)
 	}
-	return res, nil
+	return all, nil
 }
