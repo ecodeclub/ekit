@@ -48,8 +48,7 @@ func (s *TreeSet[T]) Exist(key T) bool {
 
 // Keys 方法返回的元素顺序不固定
 func (s *TreeSet[T]) Keys() []T {
-	keys, _ := s.treeMap.KeyValues()
-	return keys
+	return s.treeMap.Keys()
 }
 
 var _ Set[int] = (*TreeSet[int])(nil)

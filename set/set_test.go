@@ -35,7 +35,7 @@ func TestSetx_Add(t *testing.T) {
 	})
 }
 
-func TestSetx_Remove(t *testing.T) {
+func TestSetx_Delete(t *testing.T) {
 	testcases := []struct {
 		name    string
 		delVal  int

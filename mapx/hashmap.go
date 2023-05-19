@@ -118,11 +118,6 @@ func NewHashMap[T Hashable, ValType any](size int) *HashMap[T, ValType] {
 	}
 }
 
-type mapi[T any, ValType any] interface {
-	Put(key T, val ValType) error
-	Get(key T) (ValType, bool)
-}
-
 var _ mapi[Hashable, any] = (*HashMap[Hashable, any])(nil)
 
 // Delete 第一个返回值为删除key的值，第二个是hashmap是否真的有这个key

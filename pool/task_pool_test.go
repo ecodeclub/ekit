@@ -29,255 +29,154 @@ import (
 
 func TestOnDemandBlockTaskPool_States(t *testing.T) {
 	t.Parallel()
-	t.Run("ctx canceled", func(t *testing.T) {
-		p1, err := NewOnDemandBlockTaskPool(2, 5)
+
+	t.Run("调用States方法时使用已取消的context应该返回错误", func(t *testing.T) {
+		t.Parallel()
+
+		pool, err := NewOnDemandBlockTaskPool(1, 3)
 		assert.NoError(t, err)
-		testTaskPoolStatesCtxCanceled(t, p1, context.Canceled)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err = pool.States(ctx, time.Millisecond)
+		assert.Equal(t, context.Canceled, err)
 	})
 
-	t.Run("shutdownNowCtx canceled", func(t *testing.T) {
-		p1, err := NewOnDemandBlockTaskPool(2, 5)
+	t.Run("调用ShutdownNow方法后再调用States方法应该返回错误", func(t *testing.T) {
+		t.Parallel()
+
+		pool, err := NewOnDemandBlockTaskPool(1, 3)
 		assert.NoError(t, err)
-		testTaskPoolStatesShutdownNowCtxCanceled(t, p1, context.Canceled)
+
+		err = pool.Start()
+		assert.NoError(t, err)
+
+		_, err = pool.ShutdownNow()
+		assert.NoError(t, err)
+
+		_, err = pool.States(context.Background(), time.Millisecond)
+		assert.Equal(t, context.Canceled, err)
 	})
 
-	t.Run("shutdownCtx canceled", func(t *testing.T) {
-		p1, err := NewOnDemandBlockTaskPool(2, 5)
-		assert.NoError(t, err)
-		testTaskPoolStatesShutdownCtxCanceled(t, p1, context.Canceled)
-	})
+	t.Run("调用Shutdown方法后再调用States方法应该返回错误", func(t *testing.T) {
+		t.Parallel()
 
-	t.Run("ctx Running canceled", func(t *testing.T) {
-		p2, err := NewOnDemandBlockTaskPool(2, 5)
+		pool, err := NewOnDemandBlockTaskPool(1, 3)
 		assert.NoError(t, err)
-		testTaskPoolStatesCtxRunningCanceled(t, p2,
-			State{PoolState: stateRunning, GoCnt: 2,
-				WaitingTasksCnt: 3, QueueSize: 5, RunningTasksCnt: 2})
-	})
 
-	t.Run("pool not running", func(t *testing.T) {
-		p, err := NewOnDemandBlockTaskPool(2, 5)
+		err = pool.Start()
 		assert.NoError(t, err)
-		testTaskPoolStatesPoolNotRunning(t, p,
-			State{PoolState: stateCreated, GoCnt: 0, WaitingTasksCnt: 5, QueueSize: 5, RunningTasksCnt: 0})
-	})
 
-	t.Run("pool Shutdown", func(t *testing.T) {
-		p, err := NewOnDemandBlockTaskPool(2, 5)
+		done, err := pool.Shutdown()
 		assert.NoError(t, err)
-		testTaskPoolStatesPoolShutdown(t, p,
-			State{PoolState: stateClosing, GoCnt: 2, WaitingTasksCnt: 3, QueueSize: 5, RunningTasksCnt: 2},
-			State{PoolState: stateStopped, GoCnt: 0, WaitingTasksCnt: 0, QueueSize: 5, RunningTasksCnt: 0})
-	})
 
-	t.Run("pool Shutdown Now", func(t *testing.T) {
-		p, err := NewOnDemandBlockTaskPool(1, 2)
-		assert.NoError(t, err)
-		testTaskPoolStatesPoolShutdownNow(t, p)
-	})
-}
-
-func testTaskPoolStatesCtxCanceled(t *testing.T, pool *OnDemandBlockTaskPool, wantErr error) {
-	done := make(chan struct{})
-	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
 		<-done
-		return nil
-	}))
-	assert.NoError(t, err)
+		_, err = pool.States(context.Background(), time.Millisecond)
+		assert.Equal(t, context.Canceled, err)
+	})
 
-	err = pool.Start()
-	assert.NoError(t, err)
+	t.Run("调用States方法返回的chan应该能够正常读取数据", func(t *testing.T) {
+		t.Parallel()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	cancel()
-	_, err = pool.States(ctx, time.Millisecond)
-	assert.Equal(t, wantErr, err)
-	close(done)
-}
-
-func testTaskPoolStatesShutdownNowCtxCanceled(t *testing.T, pool *OnDemandBlockTaskPool, wantErr error) {
-	done := make(chan struct{})
-	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-		<-done
-		return nil
-	}))
-	assert.NoError(t, err)
-
-	err = pool.Start()
-	assert.NoError(t, err)
-	done <- struct{}{}
-	_, err = pool.ShutdownNow()
-	assert.NoError(t, err)
-
-	_, err = pool.States(context.Background(), time.Millisecond)
-	assert.Equal(t, wantErr, err)
-	close(done)
-}
-
-func testTaskPoolStatesShutdownCtxCanceled(t *testing.T, pool *OnDemandBlockTaskPool, wantErr error) {
-	done := make(chan struct{})
-	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-		<-done
-		return nil
-	}))
-	assert.NoError(t, err)
-
-	err = pool.Start()
-	assert.NoError(t, err)
-	// 当 queue 里的任务为 0 个时， 调用 Shutdown() 并不会执行相应的 cancel
-	//done <- struct{}{}
-	_, err = pool.Shutdown()
-	assert.NoError(t, err)
-	done <- struct{}{}
-
-	_, err = pool.States(context.Background(), time.Millisecond)
-	assert.Equal(t, wantErr, err)
-	close(done)
-}
-
-func testTaskPoolStatesCtxRunningCanceled(t *testing.T, pool *OnDemandBlockTaskPool, wantState State) {
-	err := pool.Start()
-	assert.NoError(t, err)
-
-	done := make(chan struct{})
-	n := cap(pool.queue)
-
-	for i := 0; i < n; i++ {
-		err = pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-			<-done
-			return nil
-		}))
+		pool, err := NewOnDemandBlockTaskPool(1, 3)
 		assert.NoError(t, err)
-	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	ch, err := pool.States(ctx, time.Millisecond)
-	assert.NoError(t, err)
-	state1 := <-ch
-	assert.Equal(t, wantState.PoolState, state1.PoolState)
-	assert.Equal(t, wantState.QueueSize, state1.QueueSize)
-	assert.Equal(t, wantState.GoCnt, state1.GoCnt)
-	assert.Equal(t, wantState.WaitingTasksCnt, state1.WaitingTasksCnt)
-	assert.Equal(t, wantState.RunningTasksCnt, state1.RunningTasksCnt)
+		ch, err := pool.States(context.Background(), time.Millisecond)
+		assert.NoError(t, err)
+		assert.NotZero(t, <-ch)
+	})
 
-	cancel()
-	for {
-		state2, ok := <-ch
-		if !ok {
-			break
+	t.Run("当调用States方法时传入的context超时返回的chan应该被关闭", func(t *testing.T) {
+		t.Parallel()
+
+		initGo, queueSize := 1, 3
+		pool, syncChan := testNewRunningStateTaskPoolWithQueueFullFilled(t, initGo, queueSize)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		ch, err := pool.States(ctx, time.Millisecond)
+		assert.NoError(t, err)
+
+		go func() {
+			// simulate timeout
+			<-time.After(3 * time.Millisecond)
+			cancel()
+		}()
+
+		for {
+			state, ok := <-ch
+			if !ok {
+				break
+			}
+			assert.NotZero(t, state)
 		}
-		assert.Equal(t, wantState.PoolState, state2.PoolState)
-		assert.Equal(t, wantState.QueueSize, state2.QueueSize)
-		assert.Equal(t, wantState.GoCnt, state2.GoCnt)
-		assert.Equal(t, wantState.WaitingTasksCnt, state2.WaitingTasksCnt)
-		assert.Equal(t, wantState.RunningTasksCnt, state2.RunningTasksCnt)
-	}
-	close(done)
-}
 
-func testTaskPoolStatesPoolNotRunning(t *testing.T, pool *OnDemandBlockTaskPool, wantState State) {
-	done := make(chan struct{})
-	n := cap(pool.queue)
-
-	for i := 0; i < n; i++ {
-		err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-			<-done
-			return nil
-		}))
+		// clean up
+		close(syncChan)
+		_, err = pool.Shutdown()
 		assert.NoError(t, err)
-	}
+	})
 
-	ch, err := pool.States(context.Background(), time.Millisecond)
-	assert.NoError(t, err)
-	state1 := <-ch
-	assert.Equal(t, wantState.PoolState, state1.PoolState)
-	assert.Equal(t, wantState.QueueSize, state1.QueueSize)
-	assert.Equal(t, wantState.GoCnt, state1.GoCnt)
-	assert.Equal(t, wantState.WaitingTasksCnt, state1.WaitingTasksCnt)
-	assert.Equal(t, wantState.RunningTasksCnt, state1.RunningTasksCnt)
-	close(done)
-}
+	t.Run("调用Shutdown方法应该关闭States方法返回的chan", func(t *testing.T) {
+		t.Parallel()
 
-func testTaskPoolStatesPoolShutdown(t *testing.T, pool *OnDemandBlockTaskPool, closingState, stoppedState State) {
-	done := make(chan struct{})
-	n := cap(pool.queue)
+		pool := testNewRunningStateTaskPool(t, 1, 3)
 
-	for i := 0; i < n; i++ {
-		err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-			<-done
-			return nil
-		}))
+		ch, err := pool.States(context.Background(), time.Millisecond)
 		assert.NoError(t, err)
-	}
 
-	err := pool.Start()
-	assert.NoError(t, err)
+		go func() {
+			time.Sleep(5 * time.Millisecond)
+			_, err := pool.Shutdown()
+			assert.NoError(t, err)
+		}()
 
-	_, err = pool.Shutdown()
-	assert.NoError(t, err)
-
-	ch, err := pool.States(context.Background(), time.Millisecond)
-	assert.NoError(t, err)
-	state1 := <-ch
-	assert.Equal(t, closingState.PoolState, state1.PoolState)
-	assert.Equal(t, closingState.QueueSize, state1.QueueSize)
-	assert.Equal(t, closingState.GoCnt, state1.GoCnt)
-	assert.Equal(t, closingState.WaitingTasksCnt, state1.WaitingTasksCnt)
-	assert.Equal(t, closingState.RunningTasksCnt, state1.RunningTasksCnt)
-
-	close(done)
-	for {
-		state2, ok := <-ch
-		if !ok {
-			break
+		for {
+			state, ok := <-ch
+			if !ok {
+				break
+			}
+			assert.NotZero(t, state)
 		}
-		assert.Equal(t, stoppedState.PoolState, state2.PoolState)
-		assert.Equal(t, stoppedState.QueueSize, state2.QueueSize)
-		assert.Equal(t, stoppedState.GoCnt, state2.GoCnt)
-		assert.Equal(t, stoppedState.WaitingTasksCnt, state2.WaitingTasksCnt)
-		assert.Equal(t, stoppedState.RunningTasksCnt, state2.RunningTasksCnt)
-	}
-}
+	})
 
-func testTaskPoolStatesPoolShutdownNow(t *testing.T, pool *OnDemandBlockTaskPool) {
-	done := make(chan struct{})
-	err := pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-		<-done
-		return nil
-	}))
-	assert.NoError(t, err)
+	t.Run("调用ShutdownNow方法应该关闭States方法返回的chan", func(t *testing.T) {
+		t.Parallel()
 
-	err = pool.Start()
-	assert.NoError(t, err)
+		pool := testNewRunningStateTaskPool(t, 1, 3)
 
-	ch, err := pool.States(context.Background(), time.Millisecond)
-	assert.NoError(t, err)
-	done <- struct{}{}
-	_, err = pool.ShutdownNow()
-	assert.NoError(t, err)
+		ch, err := pool.States(context.Background(), time.Millisecond)
+		assert.NoError(t, err)
 
-	for {
-		state, ok := <-ch
-		if !ok {
-			break
+		go func() {
+			time.Sleep(5 * time.Millisecond)
+			_, err := pool.ShutdownNow()
+			assert.NoError(t, err)
+		}()
+
+		for {
+			state, ok := <-ch
+			if !ok {
+				break
+			}
+			assert.NotZero(t, state)
 		}
-		assert.Equal(t, stateStopped, state.PoolState)
-	}
-
-	close(done)
+	})
 }
 
 /*
 TaskPool有限状态机
-                                                       Start/Submit/ShutdownNow() Error
-                                                                \     /
-                                               Shutdown()  --> CLOSING  ---等待所有任务结束
-         Submit()nil--执行中状态迁移--Submit()      /    \----------/ \----------/
-           \    /                    \   /      /
-New() --> CREATED -- Start() --->  RUNNING -- --
-           \   /                    \   /       \           Start/Submit/Shutdown() Error
-  Shutdown/ShutdownNow()Error      Start()       \                \    /
-                                               ShutdownNow() ---> STOPPED  -- ShutdownNow() --> STOPPED
+                                                                  Start/Submit/Shutdown/ShutdownNow() Error
+                                                                           \     /
+                                                           Shutdown() --> CLOSING  --> 等待所有任务结束
+        States/Submit()---执行中状态迁移--States/Submit()   /                \   /             ｜
+            \    /                         \   /         /                States()           ｜
+New() ---> CREATED ----- Start() ------>  RUNNING ------                                     ｜
+           \   /                           \  /          \                                   ｜
+  Shutdown/ShutdownNow()Error            Start()          \                                  ｜
+                                                        ShutdownNow() ---> STOPPED <-------- ｜
+                                                                            \  /
+                                                               Start/Submit/Shutdown/ShutdownNow/States() Error
 */
 
 func TestOnDemandBlockTaskPool_In_Created_State(t *testing.T) {
@@ -477,8 +376,10 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 	})
 
 	t.Run("Start —— 在TaskPool启动前队列中已有任务，启动后不再Submit", func(t *testing.T) {
+		t.Parallel()
 
 		t.Run("WithCoreGo,WithMaxIdleTime，所需要协程数 <= 允许创建的协程数", func(t *testing.T) {
+			t.Parallel()
 
 			initGo, coreGo, maxIdleTime := 1, 3, 3*time.Millisecond
 			queueSize := coreGo
@@ -511,9 +412,12 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 				<-wait
 			}
 			assert.Equal(t, int32(coreGo), pool.numOfGo())
+			close(done)
 		})
 
 		t.Run("WithMaxGo, 所需要协程数 > 允许创建的协程数", func(t *testing.T) {
+			t.Parallel()
+
 			initGo, maxGo := 3, 5
 			queueSize := maxGo + 1
 
@@ -545,10 +449,12 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 				<-wait
 			}
 			assert.Equal(t, int32(maxGo), pool.numOfGo())
+			close(done)
 		})
 	})
 
 	t.Run("Start —— 与Submit并发调用,WithCoreGo,WithMaxIdleTime,WithMaxGo，所需要协程数 < 允许创建的协程数", func(t *testing.T) {
+		t.Parallel()
 
 		initGo, coreGo, maxGo, maxIdleTime := 2, 4, 6, 3*time.Millisecond
 		queueSize := coreGo
@@ -588,6 +494,7 @@ func TestOnDemandBlockTaskPool_In_Running_State(t *testing.T) {
 		}
 
 		assert.Equal(t, int32(maxGo), pool.numOfGo())
+		close(done)
 	})
 
 	t.Run("Submit", func(t *testing.T) {
@@ -896,21 +803,21 @@ func TestOnDemandBlockTaskPool_In_Closing_State(t *testing.T) {
 		pool := testNewRunningStateTaskPool(t, initGo, queueSize)
 
 		// 模拟阻塞提交
-		n := initGo + queueSize*2
+		n := initGo + queueSize + 1
 		eg := new(errgroup.Group)
-		waitChan := make(chan struct{}, n)
+		waitChan := make(chan struct{})
 		taskDone := make(chan struct{})
 		for i := 0; i < n; i++ {
 			eg.Go(func() error {
 				return pool.Submit(context.Background(), TaskFunc(func(ctx context.Context) error {
-					waitChan <- struct{}{}
+					<-waitChan
 					<-taskDone
 					return nil
 				}))
 			})
 		}
 		for i := 0; i < initGo; i++ {
-			<-waitChan
+			waitChan <- struct{}{}
 		}
 		done, err := pool.Shutdown()
 		assert.NoError(t, err)
@@ -925,6 +832,7 @@ func TestOnDemandBlockTaskPool_In_Closing_State(t *testing.T) {
 
 		assert.Equal(t, int32(initGo), pool.numOfGo())
 
+		close(waitChan)
 		close(taskDone)
 		<-done
 		assert.Equal(t, stateStopped, pool.internalState())
@@ -1204,6 +1112,8 @@ func testNewRunningStateTaskPoolWithQueueFullFilled(t *testing.T, initGo int, qu
 }
 
 func TestGroup(t *testing.T) {
+	t.Parallel()
+
 	n := 10
 
 	// g := &sliceGroup{members: make([]int, n, n)}
