@@ -136,14 +136,9 @@ type OnDemandBlockTaskPool struct {
 	// 协程id方便调试程序
 	id int32
 
-	// 外部信号
-	//shutdownDone   chan struct{}
-	shutdownCtx    context.Context
-	shutdownCancel context.CancelFunc
-
-	// 内部中断信号
-	shutdownNowCtx    context.Context
-	shutdownNowCancel context.CancelFunc
+	// 中断信号
+	interruptCtx    context.Context
+	interruptCancel context.CancelFunc
 }
 
 // NewOnDemandBlockTaskPool 创建一个新的 OnDemandBlockTaskPool
@@ -165,8 +160,7 @@ func NewOnDemandBlockTaskPool(initGo int, queueSize int, opts ...option.Option[O
 		maxIdleTime: defaultMaxIdleTime,
 	}
 	ctx := context.Background()
-	b.shutdownCtx, b.shutdownCancel = context.WithCancel(ctx)
-	b.shutdownNowCtx, b.shutdownNowCancel = context.WithCancel(ctx)
+	b.interruptCtx, b.interruptCancel = context.WithCancel(ctx)
 	atomic.StoreInt32(&b.state, stateCreated)
 
 	option.Apply(b, opts...)
@@ -349,7 +343,7 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 	for {
 		// log.Println("id", id, "working for loop")
 		select {
-		case <-b.shutdownNowCtx.Done():
+		case <-b.interruptCtx.Done():
 			// log.Printf("id %d shutdownNow, timeoutGroup.Size=%d left\n", id, b.timeoutGroup.size())
 			b.decreaseTotalGo(1)
 			return
@@ -382,7 +376,7 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 					// 状态迁移
 					if atomic.CompareAndSwapInt32(&b.state, stateClosing, stateStopped) {
 						// 显示通知外部调用者
-						b.shutdownCancel()
+						b.interruptCancel()
 					}
 
 					b.decreaseTotalGo(1)
@@ -395,7 +389,7 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 				return
 			}
 			// todo handle error
-			_ = task.Run(b.shutdownNowCtx)
+			_ = task.Run(b.interruptCtx)
 			atomic.AddInt32(&b.numGoRunningTasks, -1)
 
 			b.mutex.Lock()
@@ -465,7 +459,7 @@ func (b *OnDemandBlockTaskPool) Shutdown() (<-chan struct{}, error) {
 			// 先关闭等待队列不再允许提交
 			// 同时工作协程能够通过判断b.queue是否被关闭来终止获取任务循环
 			close(b.queue)
-			return b.shutdownCtx.Done(), nil
+			return b.interruptCtx.Done(), nil
 		}
 
 	}
@@ -495,7 +489,7 @@ func (b *OnDemandBlockTaskPool) ShutdownNow() ([]Task, error) {
 			close(b.queue)
 
 			// 发送中断信号，中断工作协程获取任务循环
-			b.shutdownNowCancel()
+			b.interruptCancel()
 
 			// 清空队列并保存
 			tasks := make([]Task, 0, len(b.queue))
@@ -530,11 +524,8 @@ func (b *OnDemandBlockTaskPool) States(ctx context.Context, interval time.Durati
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if b.shutdownNowCtx.Err() != nil {
-		return nil, b.shutdownNowCtx.Err()
-	}
-	if b.shutdownCtx.Err() != nil {
-		return nil, b.shutdownCtx.Err()
+	if b.interruptCtx.Err() != nil {
+		return nil, b.interruptCtx.Err()
 	}
 
 	statsChan := make(chan State)
@@ -549,11 +540,7 @@ func (b *OnDemandBlockTaskPool) States(ctx context.Context, interval time.Durati
 				b.sendState(statsChan, time.Now().UnixNano())
 				close(statsChan)
 				return
-			case <-b.shutdownNowCtx.Done():
-				b.sendState(statsChan, time.Now().UnixNano())
-				close(statsChan)
-				return
-			case <-b.shutdownCtx.Done():
+			case <-b.interruptCtx.Done():
 				b.sendState(statsChan, time.Now().UnixNano())
 				close(statsChan)
 				return
