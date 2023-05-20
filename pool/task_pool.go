@@ -137,8 +137,8 @@ type OnDemandBlockTaskPool struct {
 	id int32
 
 	// 中断信号
-	interruptCtx    context.Context
-	interruptCancel context.CancelFunc
+	interruptCtx       context.Context
+	interruptCtxCancel context.CancelFunc
 }
 
 // NewOnDemandBlockTaskPool 创建一个新的 OnDemandBlockTaskPool
@@ -160,7 +160,7 @@ func NewOnDemandBlockTaskPool(initGo int, queueSize int, opts ...option.Option[O
 		maxIdleTime: defaultMaxIdleTime,
 	}
 	ctx := context.Background()
-	b.interruptCtx, b.interruptCancel = context.WithCancel(ctx)
+	b.interruptCtx, b.interruptCtxCancel = context.WithCancel(ctx)
 	atomic.StoreInt32(&b.state, stateCreated)
 
 	option.Apply(b, opts...)
@@ -322,7 +322,7 @@ func (b *OnDemandBlockTaskPool) numOfGoThatCanBeCreate() int32 {
 func (b *OnDemandBlockTaskPool) goroutine(id int) {
 
 	// 刚启动的协程除非恰巧赶上Shutdown/ShutdownNow被调用，否则应该至少执行一个task
-	idleTimer := time.NewTimer(1)
+	idleTimer := time.NewTimer(0)
 	if !idleTimer.Stop() {
 		<-idleTimer.C
 	}
@@ -353,29 +353,19 @@ func (b *OnDemandBlockTaskPool) goroutine(id int) {
 				}
 				// log.Println("id", id, "out timeoutGroup")
 			}
-			atomic.AddInt32(&b.numGoRunningTasks, 1)
 			if !ok {
-				// b.numGoRunningTasks > 1表示虽然当前协程监听到了b.queue关闭但还有其他协程运行task，当前协程自己退出就好
-				// b.numGoRunningTasks == 1表示只有当前协程"运行task"中，其他协程在一定在"拿到b.queue到已关闭"，这一信号的路上
-				// 绝不会处于运行task中
-				if atomic.LoadInt32(&b.state) == stateClosing && atomic.CompareAndSwapInt32(&b.numGoRunningTasks, 1, 0) {
-					// 在b.queue关闭后，第一个检测到全部task已经自然结束的协程
-					// 状态迁移
-					if atomic.CompareAndSwapInt32(&b.state, stateClosing, stateStopped) {
-						// 显示通知外部调用者
-						b.interruptCancel()
-					}
-
-					b.decreaseTotalGo(1)
-					return
-				}
-
-				// 有其他协程运行task中，自己退出就好。
-				atomic.AddInt32(&b.numGoRunningTasks, -1)
 				b.decreaseTotalGo(1)
+				if b.numOfGo() == 0 {
+					// 因调用Shutdown方法导致的协程退出，最后一个退出的协程负责状态迁移及显示通知外部调用者
+					if atomic.CompareAndSwapInt32(&b.state, stateClosing, stateStopped) {
+						b.interruptCtxCancel()
+					}
+				}
 				return
 			}
+
 			// todo handle error
+			atomic.AddInt32(&b.numGoRunningTasks, 1)
 			_ = task.Run(b.interruptCtx)
 			atomic.AddInt32(&b.numGoRunningTasks, -1)
 
@@ -478,7 +468,7 @@ func (b *OnDemandBlockTaskPool) ShutdownNow() ([]Task, error) {
 			close(b.queue)
 
 			// 发送中断信号，中断工作协程获取任务循环
-			b.interruptCancel()
+			b.interruptCtxCancel()
 
 			// 清空队列并保存
 			tasks := make([]Task, 0, len(b.queue))
