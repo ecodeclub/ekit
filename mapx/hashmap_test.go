@@ -22,6 +22,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// 借助 testData 来验证一下 HashMap 实现了 mapi 接口
+var _ mapi[testData, int] = &HashMap[testData, int]{}
+
 func TestHashMap(t *testing.T) {
 	testKV := []struct {
 		key testData
@@ -541,5 +544,4 @@ func BenchmarkMyHashMap(b *testing.B) {
 			_ = m[uint64(i)]
 		}
 	})
-
 }
