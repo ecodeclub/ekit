@@ -15,13 +15,7 @@
 package mapx
 
 import (
-	"errors"
-
 	"github.com/ecodeclub/ekit"
-)
-
-var (
-	errMultiMapComparatorIsNull = errors.New("ekit: Comparator 不能为 nil")
 )
 
 // MultiMap 多映射的 Map
@@ -34,10 +28,6 @@ type MultiMap[K any, V any] struct {
 // 注意：
 // - comparator 不能为 nil
 func NewMultiTreeMap[K any, V any](comparator ekit.Comparator[K]) (*MultiMap[K, V], error) {
-	if comparator == nil {
-		return nil, errMultiMapComparatorIsNull
-	}
-
 	treeMap, err := NewTreeMap[K, []V](comparator)
 	if err != nil {
 		return nil, err

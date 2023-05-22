@@ -73,7 +73,7 @@ func TestMultiMap_NewMultiTreeMap(t *testing.T) {
 			name:       "match errMultiMapComparatorIsNull error",
 			comparator: nil,
 
-			wantErr: errMultiMapComparatorIsNull,
+			wantErr: errTreeMapComparatorIsNull,
 		},
 	}
 
