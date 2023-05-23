@@ -40,7 +40,7 @@ func TestMultiMap_NewMultiHashMap(t *testing.T) {
 		},
 		{
 			name: "zero size",
-			size: -1,
+			size: 0,
 		},
 		{
 			name: "Positive size",
@@ -156,8 +156,11 @@ func TestMultiMap_Keys(t *testing.T) {
 		},
 	}
 	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run("MultiTreeMap", func(t *testing.T) {
 			assert.ElementsMatch(t, tt.wantMultiTreeMapKeys, tt.multiTreeMap.Keys())
+		})
+
+		t.Run("MultiHashMap", func(t *testing.T) {
 			assert.ElementsMatch(t, tt.wantMultiHashMapKeys, tt.multiHashMap.Keys())
 		})
 	}
@@ -217,12 +220,21 @@ func TestMultiMap_Values(t *testing.T) {
 			wantValues: [][]int{{1}, {2}, {3}},
 		},
 	}
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.ElementsMatch(t, tt.wantValues, tt.multiTreeMap.Values())
-			assert.ElementsMatch(t, tt.wantValues, tt.multiHashMap.Values())
-		})
-	}
+	t.Run("MultiTreeMap", func(t *testing.T) {
+		for _, tt := range testCases {
+			t.Run(tt.name, func(t *testing.T) {
+				assert.ElementsMatch(t, tt.wantValues, tt.multiTreeMap.Values())
+			})
+		}
+	})
+	t.Run("MultiHashMap", func(t *testing.T) {
+		for _, tt := range testCases {
+			t.Run(tt.name, func(t *testing.T) {
+				assert.ElementsMatch(t, tt.wantValues, tt.multiHashMap.Values())
+			})
+		}
+	})
+
 }
 
 func TestMultiMap_Put(t *testing.T) {
@@ -268,7 +280,7 @@ func TestMultiMap_Put(t *testing.T) {
 		},
 	}
 	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run("MultiTreeMap", func(t *testing.T) {
 			multiTreeMap, _ := NewMultiTreeMap[int, int](ekit.ComparatorRealNumber[int])
 			for i := range tt.keys {
 				err := multiTreeMap.Put(tt.keys[i], tt.values[i])
@@ -280,7 +292,9 @@ func TestMultiMap_Put(t *testing.T) {
 				assert.Equal(t, true, b)
 				assert.Equal(t, tt.wantValues[i], v)
 			}
+		})
 
+		t.Run("MultiHashMap", func(t *testing.T) {
 			multiHashMap := NewMultiHashMap[testData, int](10)
 			for i := range tt.keys {
 				err := multiHashMap.Put(testData{id: tt.keys[i]}, tt.values[i])
@@ -357,11 +371,13 @@ func TestMultiMap_Get(t *testing.T) {
 		},
 	}
 	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run("MultiTreeMap", func(t *testing.T) {
 			v, b := tt.multiTreeMap.Get(tt.key)
 			assert.Equal(t, tt.wantBool, b)
 			assert.ElementsMatch(t, tt.wantValue, v)
+		})
 
+		t.Run("MultiHashMap", func(t *testing.T) {
 			v2, b2 := tt.multiHashMap.Get(testData{id: tt.key})
 			assert.Equal(t, tt.wantBool, b2)
 			assert.ElementsMatch(t, tt.wantValue, v2)
@@ -433,14 +449,15 @@ func TestMultiMap_Delete(t *testing.T) {
 		},
 	}
 	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run("MultiTreeMap", func(t *testing.T) {
 			v, b := tt.multiTreeMap.Delete(tt.key)
 			assert.Equal(t, tt.wantBool, b)
 			assert.ElementsMatch(t, tt.delValue, v)
-
-			v2, b2 := tt.multiHashMap.Delete(testData{id: tt.key})
-			assert.Equal(t, tt.wantBool, b2)
-			assert.ElementsMatch(t, tt.delValue, v2)
+		})
+		t.Run("MultiHashMap", func(t *testing.T) {
+			v, b := tt.multiHashMap.Delete(testData{id: tt.key})
+			assert.Equal(t, tt.wantBool, b)
+			assert.ElementsMatch(t, tt.delValue, v)
 		})
 	}
 }

@@ -24,7 +24,7 @@ type MultiMap[K any, V any] struct {
 	m mapi[K, []V]
 }
 
-// NewMultiTreeMap MultiTreeMap 的构造方法，创建一个新的 MultiTreeMap
+// NewMultiTreeMap 创建一个基于 TreeMap 的 MultiMap
 // 注意：
 // - comparator 不能为 nil
 func NewMultiTreeMap[K any, V any](comparator ekit.Comparator[K]) (*MultiMap[K, V], error) {
@@ -37,7 +37,7 @@ func NewMultiTreeMap[K any, V any](comparator ekit.Comparator[K]) (*MultiMap[K, 
 	}, nil
 }
 
-// NewMultiHashMap MultiHashMap 的构造方法，创建一个新的 MultiHashMap
+// NewMultiHashMap 创建一个基于 HashMap 的 MultiMap
 func NewMultiHashMap[K Hashable, V any](size int) *MultiMap[K, V] {
 	var m mapi[K, []V] = NewHashMap[K, []V](size)
 	return &MultiMap[K, V]{
@@ -47,18 +47,14 @@ func NewMultiHashMap[K Hashable, V any](size int) *MultiMap[K, V] {
 
 // Put 在 MultiMap 中添加键值对或向已有键 k 的值追加数据
 func (m *MultiMap[K, V]) Put(k K, v V) error {
-	var val []V
-	var ok bool
-	if val, ok = m.Get(k); ok {
-		val = append(val, v)
-	} else {
-		val = []V{v}
-	}
+	val, _ := m.Get(k)
+	val = append(val, v)
 	return m.m.Put(k, val)
 }
 
 // Get 从 MultiMap 中获取已有键 k 的值
 // 如果键 k 不存在，则返回的 bool 值为 false
+// 返回的切片是一个副本，你对该切片的修改不会影响原本的数据。
 func (m *MultiMap[K, V]) Get(k K) ([]V, bool) {
 	if v, ok := m.m.Get(k); ok {
 		return append([]V{}, v...), ok
