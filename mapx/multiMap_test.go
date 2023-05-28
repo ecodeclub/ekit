@@ -461,3 +461,98 @@ func TestMultiMap_Delete(t *testing.T) {
 		})
 	}
 }
+
+func TestMultiMap_PutMany(t *testing.T) {
+	testCases := []struct {
+		name   string
+		keys   []int
+		values [][]int
+
+		wantKeys   []int
+		wantValues [][]int
+		wantErr    error
+	}{
+		{
+			name:   "one to one",
+			keys:   []int{1},
+			values: [][]int{{1}},
+
+			wantKeys:   []int{1},
+			wantValues: [][]int{{1}},
+			wantErr:    nil,
+		},
+		{
+			name:   "many [one to one]",
+			keys:   []int{1, 2, 3},
+			values: [][]int{{1}, {2}, {3}},
+
+			wantKeys:   []int{1, 2, 3},
+			wantValues: [][]int{{1}, {2}, {3}},
+			wantErr:    nil,
+		},
+		{
+			name:   "one to many",
+			keys:   []int{1},
+			values: [][]int{{1, 2, 3}},
+
+			wantKeys: []int{1},
+			wantValues: [][]int{
+				{1, 2, 3},
+			},
+			wantErr: nil,
+		},
+		{
+			name:   "many [one to many]",
+			keys:   []int{1, 2, 3},
+			values: [][]int{{1, 2, 3}, {1, 2, 3}, {1, 2, 3}},
+
+			wantKeys: []int{1, 2, 3},
+			wantValues: [][]int{
+				{1, 2, 3},
+				{1, 2, 3},
+				{1, 2, 3},
+			},
+			wantErr: nil,
+		},
+		{
+			name:   "the key include the same",
+			keys:   []int{1, 1},
+			values: [][]int{{1, 2, 3}, {4}},
+
+			wantKeys: []int{1},
+			wantValues: [][]int{
+				{1, 2, 3, 4},
+			},
+			wantErr: nil,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run("MultiTreeMap", func(t *testing.T) {
+			multiTreeMap, _ := NewMultiTreeMap[int, int](ekit.ComparatorRealNumber[int])
+			for i := range tt.keys {
+				err := multiTreeMap.PutMany(tt.keys[i], tt.values[i]...)
+				assert.Equal(t, tt.wantErr, err)
+			}
+
+			for i := range tt.wantKeys {
+				v, b := multiTreeMap.Get(tt.wantKeys[i])
+				assert.Equal(t, true, b)
+				assert.Equal(t, tt.wantValues[i], v)
+			}
+		})
+
+		t.Run("MultiHashMap", func(t *testing.T) {
+			multiHashMap := NewMultiHashMap[testData, int](10)
+			for i := range tt.keys {
+				err := multiHashMap.PutMany(testData{id: tt.keys[i]}, tt.values[i]...)
+				assert.Equal(t, tt.wantErr, err)
+			}
+
+			for i := range tt.wantKeys {
+				v, b := multiHashMap.Get(testData{id: tt.wantKeys[i]})
+				assert.Equal(t, true, b)
+				assert.Equal(t, tt.wantValues[i], v)
+			}
+		})
+	}
+}
