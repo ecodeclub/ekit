@@ -515,13 +515,24 @@ func TestMultiMap_PutMany(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name:   "the key include the same",
+			name:   "the key include the same for append one",
 			keys:   []int{1, 1},
-			values: [][]int{{1, 2, 3}, {4}},
+			values: [][]int{{1, 2, 3, 4, 5}, {6}},
 
 			wantKeys: []int{1},
 			wantValues: [][]int{
-				{1, 2, 3, 4},
+				{1, 2, 3, 4, 5, 6},
+			},
+			wantErr: nil,
+		},
+		{
+			name:   "the key include the same for append many",
+			keys:   []int{1, 1},
+			values: [][]int{{1}, {2, 3, 4, 5, 6}},
+
+			wantKeys: []int{1},
+			wantValues: [][]int{
+				{1, 2, 3, 4, 5, 6},
 			},
 			wantErr: nil,
 		},
