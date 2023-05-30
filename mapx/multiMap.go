@@ -47,8 +47,13 @@ func NewMultiHashMap[K Hashable, V any](size int) *MultiMap[K, V] {
 
 // Put 在 MultiMap 中添加键值对或向已有键 k 的值追加数据
 func (m *MultiMap[K, V]) Put(k K, v V) error {
+	return m.PutMany(k, v)
+}
+
+// PutMany 在 MultiMap 中添加键值对或向已有键 k 的值追加多个数据
+func (m *MultiMap[K, V]) PutMany(k K, v ...V) error {
 	val, _ := m.Get(k)
-	val = append(val, v)
+	val = append(val, v...)
 	return m.m.Put(k, val)
 }
 
