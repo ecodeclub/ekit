@@ -19,6 +19,7 @@ import "github.com/ecodeclub/ekit"
 type LinkedMap[K any, V any] struct {
 	m          mapi[K, *linkedKV[K, V]]
 	head, tail *linkedKV[K, V]
+	length     int
 }
 
 type linkedKV[K any, V any] struct {
@@ -29,8 +30,12 @@ type linkedKV[K any, V any] struct {
 
 func NewLinkedHashMap[K Hashable, V any](size int) *LinkedMap[K, V] {
 	hashmap := NewHashMap[K, *linkedKV[K, V]](size)
+	head := &linkedKV[K, V]{}
+	tail := &linkedKV[K, V]{next: head, prev: head}
 	return &LinkedMap[K, V]{
-		m: hashmap,
+		m:    hashmap,
+		head: head,
+		tail: tail,
 	}
 }
 
@@ -39,66 +44,55 @@ func NewLinkedTreeMap[K any, V any](comparator ekit.Comparator[K]) (*LinkedMap[K
 	if err != nil {
 		return nil, err
 	}
+	head := &linkedKV[K, V]{}
+	tail := &linkedKV[K, V]{next: head, prev: head}
 	return &LinkedMap[K, V]{
-		m: treeMap,
+		m:    treeMap,
+		head: head,
+		tail: tail,
 	}, nil
 }
 
 func (l *LinkedMap[K, V]) Put(key K, val V) error {
+	if lk, ok := l.m.Get(key); ok {
+		lk.value = val
+		return nil
+	}
 	lk := &linkedKV[K, V]{
 		key:   key,
 		value: val,
+		prev:  l.tail.prev,
+		next:  l.tail,
 	}
 	if err := l.m.Put(key, lk); err != nil {
 		return err
-	} else {
-		if l.tail != nil {
-			curTail := l.tail
-			curTail.next = lk
-			l.tail = lk
-			l.tail.prev = curTail
-		} else {
-			l.head, l.tail = lk, lk
-		}
 	}
+	lk.prev.next, lk.next.prev = lk, lk
+	l.length++
 	return nil
 }
 
 func (l *LinkedMap[K, V]) Get(key K) (V, bool) {
-	var v V
 	if lk, ok := l.m.Get(key); ok {
 		return lk.value, ok
 	}
+	var v V
 	return v, false
 }
 
 func (l *LinkedMap[K, V]) Delete(key K) (V, bool) {
-	var v V
 	if lk, ok := l.m.Delete(key); ok {
-		prev := lk.prev
-		next := lk.next
-		if prev == nil {
-			if next == nil {
-				l.head, l.tail = nil, nil
-			} else {
-				l.head = next
-				next.prev = nil
-			}
-		} else if next == nil {
-			prev.next = nil
-			l.tail = prev
-		} else {
-			prev.next = next
-		}
+		lk.prev.next = lk.next
+		l.length--
 		return lk.value, ok
 	}
+	var v V
 	return v, false
 }
 
 func (l *LinkedMap[K, V]) Keys() []K {
-	keys := make([]K, 0)
-	cur := l.head
-	for cur != nil {
+	keys := make([]K, 0, l.length)
+	for i, cur := 0, l.head.next; i < l.length; i++ {
 		keys = append(keys, cur.key)
 		cur = cur.next
 	}
@@ -107,8 +101,7 @@ func (l *LinkedMap[K, V]) Keys() []K {
 
 func (l *LinkedMap[K, V]) Values() []V {
 	values := make([]V, 0)
-	cur := l.head
-	for cur != nil {
+	for i, cur := 0, l.head.next; i < l.length; i++ {
 		values = append(values, cur.value)
 		cur = cur.next
 	}
