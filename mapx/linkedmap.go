@@ -32,6 +32,7 @@ func NewLinkedHashMap[K Hashable, V any](size int) *LinkedMap[K, V] {
 	hashmap := NewHashMap[K, *linkedKV[K, V]](size)
 	head := &linkedKV[K, V]{}
 	tail := &linkedKV[K, V]{next: head, prev: head}
+	head.prev, head.next = tail, tail
 	return &LinkedMap[K, V]{
 		m:    hashmap,
 		head: head,
@@ -46,6 +47,7 @@ func NewLinkedTreeMap[K any, V any](comparator ekit.Comparator[K]) (*LinkedMap[K
 	}
 	head := &linkedKV[K, V]{}
 	tail := &linkedKV[K, V]{next: head, prev: head}
+	head.prev, head.next = tail, tail
 	return &LinkedMap[K, V]{
 		m:    treeMap,
 		head: head,
@@ -83,6 +85,7 @@ func (l *LinkedMap[K, V]) Get(key K) (V, bool) {
 func (l *LinkedMap[K, V]) Delete(key K) (V, bool) {
 	if lk, ok := l.m.Delete(key); ok {
 		lk.prev.next = lk.next
+		lk.next.prev = lk.prev
 		l.length--
 		return lk.value, ok
 	}
@@ -92,7 +95,7 @@ func (l *LinkedMap[K, V]) Delete(key K) (V, bool) {
 
 func (l *LinkedMap[K, V]) Keys() []K {
 	keys := make([]K, 0, l.length)
-	for i, cur := 0, l.head.next; i < l.length; i++ {
+	for cur := l.head.next; cur != l.tail; {
 		keys = append(keys, cur.key)
 		cur = cur.next
 	}
@@ -100,8 +103,8 @@ func (l *LinkedMap[K, V]) Keys() []K {
 }
 
 func (l *LinkedMap[K, V]) Values() []V {
-	values := make([]V, 0)
-	for i, cur := 0, l.head.next; i < l.length; i++ {
+	values := make([]V, 0, l.length)
+	for cur := l.head.next; cur != l.tail; {
 		values = append(values, cur.value)
 		cur = cur.next
 	}

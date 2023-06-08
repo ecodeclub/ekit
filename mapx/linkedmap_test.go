@@ -44,6 +44,8 @@ func TestLinkedMap_NewLinkedHashMap(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			multiMap := NewLinkedHashMap[testData, int](tt.size)
 			assert.NotNil(t, multiMap)
+			assert.Equal(t, multiMap.Keys(), []testData{})
+			assert.Equal(t, multiMap.Values(), []int{})
 		})
 	}
 }
@@ -77,6 +79,8 @@ func TestLinkedMap_NewLinkedTreeMap(t *testing.T) {
 				assert.Nil(t, linkedTreeMap)
 			} else {
 				assert.NotNil(t, linkedTreeMap)
+				assert.Equal(t, linkedTreeMap.Keys(), []int{})
+				assert.Equal(t, linkedTreeMap.Values(), []int{})
 			}
 		})
 	}
@@ -119,10 +123,20 @@ func TestLinkedMap_Put(t *testing.T) {
 			wantValues: []int{11, 2, 3},
 			wantErr:    nil,
 		},
+		{
+			name:   "change value of multiple key",
+			keys:   []int{1, 1, 2, 2, 3},
+			values: []int{1, 11, 2, 22, 3},
+
+			wantKeys:   []int{1, 2, 3},
+			wantValues: []int{11, 22, 3},
+			wantErr:    nil,
+		},
 	}
 	for _, tt := range testCases {
-		linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
 		t.Run(tt.name, func(t *testing.T) {
+			linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+			assert.NoError(t, err)
 			for i := range tt.keys {
 				err := linkedTreeMap.Put(tt.keys[i], tt.values[i])
 				assert.Equal(t, tt.wantErr, err)
@@ -143,30 +157,32 @@ func TestLinkedMap_Put(t *testing.T) {
 func TestLinkedMap_Get(t *testing.T) {
 	testCases := []struct {
 		name      string
-		linkedMap *LinkedMap[int, int]
+		linkedMap func(t *testing.T) *LinkedMap[int, int]
 		key       int
 
 		wantValue int
 		wantBool  bool
 	}{
 		{
-			name: "not found (nil) in empty data",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+			name: "can not find value in empty linked map",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
 				return linkedTreeMap
-			}(),
+			},
 			key: 1,
 
 			wantValue: 0,
 			wantBool:  false,
 		},
 		{
-			name: "not found (nil) in data",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+			name: "can not find value in linked map",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
 				_ = linkedTreeMap.Put(1, 1)
 				return linkedTreeMap
-			}(),
+			},
 			key: 2,
 
 			wantValue: 0,
@@ -174,11 +190,12 @@ func TestLinkedMap_Get(t *testing.T) {
 		},
 		{
 			name: "found data",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
 				_ = linkedTreeMap.Put(1, 1)
 				return linkedTreeMap
-			}(),
+			},
 			key: 1,
 
 			wantValue: 1,
@@ -187,7 +204,7 @@ func TestLinkedMap_Get(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			v, b := tt.linkedMap.Get(tt.key)
+			v, b := tt.linkedMap(t).Get(tt.key)
 			assert.Equal(t, tt.wantBool, b)
 			assert.Equal(t, tt.wantValue, v)
 		})
@@ -197,7 +214,7 @@ func TestLinkedMap_Get(t *testing.T) {
 func TestLinkedMap_Delete(t *testing.T) {
 	testCases := []struct {
 		name      string
-		linkedMap *LinkedMap[int, int]
+		linkedMap func(t *testing.T) *LinkedMap[int, int]
 
 		key int
 
@@ -210,11 +227,12 @@ func TestLinkedMap_Delete(t *testing.T) {
 		wantValues []int
 	}{
 		{
-			name: "not found in empty data",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+			name: "delete key in empty linked map",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
 				return linkedTreeMap
-			}(),
+			},
 
 			key: 1,
 
@@ -225,12 +243,13 @@ func TestLinkedMap_Delete(t *testing.T) {
 			wantValues: []int{},
 		},
 		{
-			name: "not found in data",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
-				_ = linkedTreeMap.Put(1, 1)
+			name: "delete unknown key in not empty linked map",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
 				return linkedTreeMap
-			}(),
+			},
 
 			key: 2,
 
@@ -247,11 +266,12 @@ func TestLinkedMap_Delete(t *testing.T) {
 		},
 		{
 			name: "delete head in the data including one",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
-				_ = linkedTreeMap.Put(1, 1)
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
 				return linkedTreeMap
-			}(),
+			},
 			key: 1,
 
 			delValue:   1,
@@ -262,13 +282,14 @@ func TestLinkedMap_Delete(t *testing.T) {
 		},
 		{
 			name: "delete head in the data including much",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
-				_ = linkedTreeMap.Put(1, 1)
-				_ = linkedTreeMap.Put(2, 2)
-				_ = linkedTreeMap.Put(3, 3)
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
+				assert.NoError(t, linkedTreeMap.Put(2, 2))
+				assert.NoError(t, linkedTreeMap.Put(3, 3))
 				return linkedTreeMap
-			}(),
+			},
 			key: 1,
 
 			delValue: 1,
@@ -288,13 +309,14 @@ func TestLinkedMap_Delete(t *testing.T) {
 		},
 		{
 			name: "delete tail in the data including much",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
-				_ = linkedTreeMap.Put(1, 1)
-				_ = linkedTreeMap.Put(2, 2)
-				_ = linkedTreeMap.Put(3, 3)
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
+				assert.NoError(t, linkedTreeMap.Put(2, 2))
+				assert.NoError(t, linkedTreeMap.Put(3, 3))
 				return linkedTreeMap
-			}(),
+			},
 			key: 3,
 
 			delValue: 3,
@@ -314,13 +336,14 @@ func TestLinkedMap_Delete(t *testing.T) {
 		},
 		{
 			name: "delete middle one in the data including much",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
-				_ = linkedTreeMap.Put(1, 1)
-				_ = linkedTreeMap.Put(2, 2)
-				_ = linkedTreeMap.Put(3, 3)
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
+				assert.NoError(t, linkedTreeMap.Put(2, 2))
+				assert.NoError(t, linkedTreeMap.Put(3, 3))
 				return linkedTreeMap
-			}(),
+			},
 			key: 2,
 
 			delValue: 2,
@@ -341,138 +364,154 @@ func TestLinkedMap_Delete(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			v, b := tt.linkedMap.Delete(tt.key)
+			linkedMap := tt.linkedMap(t)
+			v, b := linkedMap.Delete(tt.key)
 			assert.Equal(t, tt.wantBool, b)
 			assert.Equal(t, tt.delValue, v)
 
-			for i, cur := 0, tt.linkedMap.head.next; i < tt.linkedMap.length; i++ {
+			for i, cur := 0, linkedMap.head.next; i < linkedMap.length; i++ {
 				assert.Equal(t, tt.linkedKVs[i].k, cur.key)
 				assert.Equal(t, tt.linkedKVs[i].v, cur.value)
 				cur = cur.next
 			}
-			assert.Equal(t, tt.wantKeys, tt.linkedMap.Keys())
-			assert.Equal(t, tt.wantValues, tt.linkedMap.Values())
+			assert.Equal(t, tt.wantKeys, linkedMap.Keys())
+			assert.Equal(t, tt.wantValues, linkedMap.Values())
 		})
 	}
 }
 
-func TestLinkedMap_Keys(t *testing.T) {
+func TestLinkedMap_PutAndDelete(t *testing.T) {
 	testCases := []struct {
 		name      string
-		linkedMap *LinkedMap[int, int]
+		linkedMap func(t *testing.T) *LinkedMap[int, int]
 
-		wantLinkedMapMapKeys []int
+		wantKeys   []int
+		wantValues []int
 	}{
 		{
-			name: "empty",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+			name: "put k1 → delete k1",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
+				v, ok := linkedTreeMap.Delete(1)
+				assert.Equal(t, 1, v)
+				assert.Equal(t, true, ok)
 				return linkedTreeMap
-			}(),
+			},
 
-			wantLinkedMapMapKeys: []int{},
+			wantKeys:   []int{},
+			wantValues: []int{},
 		},
 		{
-			name: "single one",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
-				_ = linkedTreeMap.Put(1, 1)
+			name: "put k1 → delete k1 → put k1",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
+				v, ok := linkedTreeMap.Delete(1)
+				assert.Equal(t, 1, v)
+				assert.Equal(t, true, ok)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
 				return linkedTreeMap
-			}(),
+			},
 
-			wantLinkedMapMapKeys: []int{1},
+			wantKeys:   []int{1},
+			wantValues: []int{1},
 		},
 		{
-			name: "multiple",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
-				_ = linkedTreeMap.Put(1, 1)
-				_ = linkedTreeMap.Put(2, 2)
-				_ = linkedTreeMap.Put(3, 3)
-				_ = linkedTreeMap.Put(4, 4)
+			name: "put k1 → delete k1 → put k2",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
+				v, ok := linkedTreeMap.Delete(1)
+				assert.Equal(t, 1, v)
+				assert.Equal(t, true, ok)
+				assert.NoError(t, linkedTreeMap.Put(2, 2))
 				return linkedTreeMap
-			}(),
+			},
 
-			wantLinkedMapMapKeys: []int{1, 2, 3, 4},
+			wantKeys:   []int{2},
+			wantValues: []int{2},
 		},
 		{
-			name: "including the same key",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
-				_ = linkedTreeMap.Put(1, 1)
-				_ = linkedTreeMap.Put(1, 11)
-				_ = linkedTreeMap.Put(3, 3)
-				_ = linkedTreeMap.Put(4, 4)
+			name: "put k1 → put k1 → delete k1",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
+				assert.NoError(t, linkedTreeMap.Put(1, 2))
+				v, ok := linkedTreeMap.Delete(1)
+				assert.Equal(t, 2, v)
+				assert.Equal(t, true, ok)
 				return linkedTreeMap
-			}(),
+			},
 
-			wantLinkedMapMapKeys: []int{1, 3, 4},
+			wantKeys:   []int{},
+			wantValues: []int{},
+		},
+		{
+			name: "put k1 → put k2 → delete k1",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
+				assert.NoError(t, linkedTreeMap.Put(2, 2))
+				v, ok := linkedTreeMap.Delete(1)
+				assert.Equal(t, 1, v)
+				assert.Equal(t, true, ok)
+				return linkedTreeMap
+			},
+
+			wantKeys:   []int{2},
+			wantValues: []int{2},
+		},
+		{
+			name: "put k1 → put k2 → delete k2",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
+				assert.NoError(t, linkedTreeMap.Put(2, 2))
+				v, ok := linkedTreeMap.Delete(2)
+				assert.Equal(t, 2, v)
+				assert.Equal(t, true, ok)
+				return linkedTreeMap
+			},
+
+			wantKeys:   []int{1},
+			wantValues: []int{1},
+		},
+		{
+			name: "put k1 → delete k1 → put k2 → put k3",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, err := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, err)
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
+				v, ok := linkedTreeMap.Delete(1)
+				assert.Equal(t, 1, v)
+				assert.Equal(t, true, ok)
+				assert.NoError(t, linkedTreeMap.Put(2, 2))
+				assert.NoError(t, linkedTreeMap.Put(3, 3))
+
+				return linkedTreeMap
+			},
+
+			wantKeys:   []int{2, 3},
+			wantValues: []int{2, 3},
 		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.wantLinkedMapMapKeys, tt.linkedMap.Keys())
+			linkedMap := tt.linkedMap(t)
+			for i := range tt.wantKeys {
+				v, b := linkedMap.Get(tt.wantKeys[i])
+				assert.Equal(t, true, b)
+				assert.Equal(t, tt.wantValues[i], v)
+			}
+			assert.Equal(t, tt.wantKeys, linkedMap.Keys())
+			assert.Equal(t, tt.wantValues, linkedMap.Values())
 		})
-	}
-}
-
-func TestLinkedMap_Values(t *testing.T) {
-	testCases := []struct {
-		name      string
-		linkedMap *LinkedMap[int, int]
-
-		wantLinkedMapMapValues []int
-	}{
-		{
-			name: "empty",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
-				return linkedTreeMap
-			}(),
-
-			wantLinkedMapMapValues: []int{},
-		},
-		{
-			name: "single one",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
-				_ = linkedTreeMap.Put(1, 1)
-				return linkedTreeMap
-			}(),
-
-			wantLinkedMapMapValues: []int{1},
-		},
-		{
-			name: "multiple",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
-				_ = linkedTreeMap.Put(1, 1)
-				_ = linkedTreeMap.Put(2, 2)
-				_ = linkedTreeMap.Put(3, 3)
-				_ = linkedTreeMap.Put(4, 4)
-				return linkedTreeMap
-			}(),
-
-			wantLinkedMapMapValues: []int{1, 2, 3, 4},
-		},
-		{
-			name: "including the same key",
-			linkedMap: func() *LinkedMap[int, int] {
-				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
-				_ = linkedTreeMap.Put(1, 1)
-				_ = linkedTreeMap.Put(1, 11)
-				_ = linkedTreeMap.Put(3, 3)
-				_ = linkedTreeMap.Put(4, 4)
-				return linkedTreeMap
-			}(),
-
-			wantLinkedMapMapValues: []int{11, 3, 4},
-		},
-	}
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.wantLinkedMapMapValues, tt.linkedMap.Values())
-		})
-
 	}
 }
