@@ -227,20 +227,20 @@ func TestLinkedMap_Put(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			errs := make([]error, 0)
-			linkedTreeMap := tt.linkedMap(t)
+			linkedMap := tt.linkedMap(t)
 			for i := range tt.keys {
-				err := linkedTreeMap.Put(tt.keys[i], tt.values[i])
+				err := linkedMap.Put(tt.keys[i], tt.values[i])
 				errs = append(errs, err)
 			}
 
 			for i := range tt.wantKeys {
-				v, b := linkedTreeMap.Get(tt.wantKeys[i])
+				v, b := linkedMap.Get(tt.wantKeys[i])
 				assert.Equal(t, true, b)
 				assert.Equal(t, tt.wantValues[i], v)
 			}
 
-			assert.Equal(t, tt.wantKeys, linkedTreeMap.Keys())
-			assert.Equal(t, tt.wantValues, linkedTreeMap.Values())
+			assert.Equal(t, tt.wantKeys, linkedMap.Keys())
+			assert.Equal(t, tt.wantValues, linkedMap.Values())
 			assert.Equal(t, tt.wantErrs, errs)
 		})
 	}
