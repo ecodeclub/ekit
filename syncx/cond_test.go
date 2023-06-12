@@ -1,10 +1,21 @@
+// Copyright 2021 ecodeclub
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package syncx
 
 import (
 	"context"
-	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"log"
 	"math/rand"
 	"runtime"
@@ -12,6 +23,9 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCondSignal(t *testing.T) {
@@ -205,6 +219,7 @@ func TestCondSignalStealing(t *testing.T) {
 
 		<-ch
 		m.Lock()
+		done := false
 		m.Unlock()
 
 		// We know that the waiter is in the cond.Wait() call because we
@@ -216,7 +231,7 @@ func TestCondSignalStealing(t *testing.T) {
 		//
 		// The new waiter may or may not get notified, but the first one
 		// has to be notified.
-		done := false
+
 		go func() {
 			cond.Broadcast()
 		}()
@@ -400,8 +415,8 @@ func TestNotifyListSignalTimeout(t *testing.T) {
 		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Millisecond*100)
 		defer cancelFunc()
 		err := wait1.waitWithContext(ctx)
-		if err != nil {
-
+		if err == nil {
+			t.Errorf("wait1 sholud return error")
 		}
 	}()
 	go func() {
@@ -490,10 +505,8 @@ func TestCond(t *testing.T) {
 
 // 使用并发阻塞队列进行测试生产和消费的情况
 type ConcurrentBlockingQueue[T any] struct {
-	mutex *sync.Mutex
-	data  []T
-	// notFull chan struct{}
-	// notEmpty chan struct{}
+	mutex   *sync.Mutex
+	data    []T
 	maxSize int
 
 	notEmptyCond *Cond
@@ -503,10 +516,8 @@ type ConcurrentBlockingQueue[T any] struct {
 func NewConcurrentBlockingQueue[T any](maxSize int) *ConcurrentBlockingQueue[T] {
 	m := &sync.Mutex{}
 	return &ConcurrentBlockingQueue[T]{
-		data:  make([]T, 0, maxSize),
-		mutex: m,
-		// notFull: make(chan struct{}, 1),
-		// notEmpty: make(chan struct{}, 1),
+		data:         make([]T, 0, maxSize),
+		mutex:        m,
 		maxSize:      maxSize,
 		notFullCond:  NewCond(m),
 		notEmptyCond: NewCond(m),
@@ -628,30 +639,26 @@ func TestConcurrentBlockingQueue_EnQueue(t *testing.T) {
 
 // 测试可能比较花时间，不知道如何优化这个模拟延迟的缓慢问题
 func TestConcurrentBlockingQueue(t *testing.T) {
-	q := NewConcurrentBlockingQueue[int](20)
+
+	var queueCap int64 = 20
+
+	q := NewConcurrentBlockingQueue[int](int(queueCap))
 	var wg sync.WaitGroup
 	var producedCnt, consumedCnt int64
 
-	producers := [20]int{}
-	consumers := [10]int{}
-	// 使用2w个数据进行测试，使用随机睡眠模拟生产者和消费者
-	go func() {
-		for range time.Tick(time.Second) {
-			// 每秒打印生产和消费的线程状态和成功生产和消费总数
-			log.Println(producers, consumers, atomic.LoadInt64(&producedCnt), atomic.LoadInt64(&consumedCnt))
-		}
-	}()
 	for i := 0; i < 20; i++ {
 		wg.Add(1)
 		go func(idx int) {
 			defer func() {
-				producers[idx] = 1
 				wg.Done()
 			}()
-			n := 1000
+			n := 100
 			for n > 0 {
 				n--
 				// 随机睡眠模拟生产者 -- 模拟出现消费者将队列消费空之后出现error的情况
+				if n%10 == 0 {
+					time.Sleep(time.Duration(rand.Int()%20) * time.Millisecond)
+				}
 				time.Sleep(time.Duration(rand.Int()%20) * time.Millisecond)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 				err := q.EnQueue(ctx, rand.Int())
@@ -670,14 +677,15 @@ func TestConcurrentBlockingQueue(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer func() {
-				consumers[idx] = 1
 				wg.Done()
 			}()
-			n := 2000
+			n := 200
 			for n > 0 {
 				n--
 				// 随机睡眠模拟消费者 -- 模拟出现生产者将队列放满之后出现error的情况
-				time.Sleep(time.Duration(rand.Int()%20) * time.Millisecond)
+				if n%10 == 0 {
+					time.Sleep(time.Duration(rand.Int()%20) * time.Millisecond)
+				}
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 				_, err := q.DeQueue(ctx)
 				if err == nil {
@@ -691,6 +699,14 @@ func TestConcurrentBlockingQueue(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
-	fmt.Println(producedCnt, consumedCnt)
-	// 怎么校验 q 对还是不对
+
+	delta := producedCnt - consumedCnt
+	if delta < 0 {
+		delta = -delta
+	}
+
+	if delta > queueCap {
+		t.Errorf("producedCnt %v, consumedCnt %v", producedCnt, consumedCnt)
+	}
+
 }
