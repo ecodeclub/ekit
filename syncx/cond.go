@@ -20,6 +20,8 @@ import (
 	"sync"
 )
 
+// notifyList is a simple implementation of runtime_notifyList
+// but with the addition of the waitWithContext methods
 type notifyList struct {
 	mu   sync.Mutex
 	list *list.List
@@ -87,11 +89,30 @@ func (l *notifyList) notifyAll() {
 	}
 }
 
+// Cond implements a condition variable, a rendezvous point
+// for goroutines waiting for or announcing the occurrence
+// of an event.
+//
+// Each Cond has an associated Locker L (often a *Mutex or *RWMutex),
+// which must be held when changing the condition and
+// when calling the Wait or WaitWithContext method.
+//
+// A Cond must not be copied after first use.
+//
+// In the terminology of the Go memory model, Cond arranges that
+// a call to Broadcast or Signal “synchronizes before” any Wait or WaitWithContext call
+// that it unblocks.
+//
+// For many simple use cases, users will be better off using channels than a
+// Cond (Broadcast corresponds to closing a channel, and Signal corresponds to
+// sending on a channel).
 type Cond struct {
+	// L is held while observing or changing the condition
 	L          sync.Locker
 	notifyList *notifyList
 }
 
+// NewCond returns a new Cond with Locker l.
 func NewCond(l sync.Locker) *Cond {
 	return &Cond{
 		L:          l,
@@ -99,6 +120,21 @@ func NewCond(l sync.Locker) *Cond {
 	}
 }
 
+// Wait atomically unlocks c.L and suspends execution
+// of the calling goroutine. After later resuming execution,
+// Wait locks c.L before returning. Unlike in other systems,
+// Wait cannot return unless awoken by Broadcast or Signal.
+//
+// Because c.L is not locked when Wait first resumes, the caller
+// typically cannot assume that the condition is true when
+// Wait returns. Instead, the caller should Wait in a loop:
+//
+//	c.L.Lock()
+//	for !condition() {
+//	    c.Wait()
+//	}
+//	... make use of condition ...
+//	c.L.Unlock()
 func (c *Cond) Wait() {
 	t := c.notifyList.add() // 解锁前，将等待的对象放入链表中
 	c.L.Unlock()            // 一定是在等待对象放入链表后再解锁，避免刚解锁就发生协程切换，执行了signal后，再换回来导致永远阻塞
@@ -106,6 +142,26 @@ func (c *Cond) Wait() {
 	c.notifyList.wait(t)
 }
 
+// WaitWithContext atomically unlocks c.L and suspends execution
+// of the calling goroutine. After later resuming execution,
+// WaitWithContext locks c.L before returning. Unlike in other systems,
+// WaitWithContext cannot return unless awoken by Broadcast or Signal or ctx is done.
+//
+// On success, it returns nil. On failure, returns ctx.Err().
+// If ctx is already done, WaitWithContext may still succeed without blocking.
+//
+// Because c.L is not locked when WaitWithContext first resumes, the caller
+// typically cannot assume that the condition is true when
+// WaitWithContext returns. Instead, the caller should WaitWithContext in a loop:
+//
+//		c.L.Lock()
+//		for !condition() {
+//		    if err := c.WaitWithContext(ctx); err != nil {
+//	          // do what you want with failure, it depends on you
+//			}
+//		}
+//		... make use of condition ...
+//		c.L.Unlock()
 func (c *Cond) WaitWithContext(ctx context.Context) error {
 	t := c.notifyList.add()
 	c.L.Unlock()
@@ -113,10 +169,21 @@ func (c *Cond) WaitWithContext(ctx context.Context) error {
 	return c.notifyList.waitWithContext(ctx, t)
 }
 
+// Signal wakes one goroutine waiting on c, if there is any.
+//
+// It is allowed but not required for the caller to hold c.L
+// during the call.
+//
+// Signal() does not affect goroutine scheduling priority; if other goroutines
+// are attempting to lock c.L, they may be awoken before a "waiting" goroutine.
 func (c *Cond) Signal() {
 	c.notifyList.notifyOne()
 }
 
+// Broadcast wakes all goroutines waiting on c.
+//
+// It is allowed but not required for the caller to hold c.L
+// during the call.
 func (c *Cond) Broadcast() {
 	c.notifyList.notifyAll()
 }
