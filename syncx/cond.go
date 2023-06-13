@@ -20,36 +20,6 @@ import (
 	"sync"
 )
 
-type notifyItem struct {
-	list *notifyList
-	ch   chan struct{}
-	elem *list.Element
-}
-
-func newNotifyItem(l *notifyList) *notifyItem {
-	return &notifyItem{list: l, ch: make(chan struct{})}
-}
-
-func (n *notifyItem) notify() {
-	close(n.ch)
-}
-
-func (n *notifyItem) wait() {
-	<-n.ch
-}
-
-func (n *notifyItem) waitWithContext(ctx context.Context) error {
-	select { // 由于会随机选择一条，在超时和通知同时存在的话，如果通知先行，则没有影响，如果超时的同时，又来了通知
-	case <-ctx.Done(): // 进了超时分支，但同时协程发生了切换进入了notifyOne的分支；这个时候，根据remove的成功与否可以知道是否是需要唤醒的
-		if n.list.remove(n) {
-			return ctx.Err()
-		}
-		return nil
-	case <-n.ch:
-		return nil
-	}
-}
-
 type notifyList struct {
 	mu   sync.Mutex
 	list *list.List
@@ -62,24 +32,37 @@ func newNotifyList() *notifyList {
 	}
 }
 
-func (l *notifyList) add() *notifyItem {
+func (l *notifyList) add() *list.Element {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	item := newNotifyItem(l)
-	item.elem = l.list.PushBack(item)
-	return item
+	ch := make(chan struct{})
+	return l.list.PushBack(ch)
 }
 
-func (l *notifyList) remove(item *notifyItem) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	select {
-	case <-item.ch: // 检查是否在加锁前，刚好被通知了，这种情况应该是正常消费的情况，只是因为恰好超时了而已
-		return false
-	default:
-		l.list.Remove(item.elem)
-		item.notify()
-		return true
+func (l *notifyList) wait(elem *list.Element) {
+	ch := elem.Value.(chan struct{})
+	<-ch
+}
+
+func (l *notifyList) waitWithContext(ctx context.Context, elem *list.Element) error {
+	ch := elem.Value.(chan struct{})
+	select { // 由于会随机选择一条，在超时和通知同时存在的话，如果通知先行，则没有影响，如果超时的同时，又来了通知
+	case <-ctx.Done(): // 进了超时分支，但同时协程发生了切换进入了notifyOne的分支；这个时候，根据remove的成功与否可以知道是否是需要唤醒的
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		select {
+		// double check: 检查是否在加锁前，刚好被正常通知了，
+		// 这种情况应该是正常消费的情况，等同于在恰巧超时时刻被唤醒，修正成正常唤醒的情况
+		case <-ch:
+			return nil
+		default:
+			// 这种情况代表加锁成功后，没有被通知到，属于真正的超时的情况，从队列移除等待对象，避免被错误通知唤醒，返回超时错误信息
+			l.list.Remove(elem)
+			close(ch)
+			return ctx.Err()
+		}
+	case <-ch:
+		return nil
 	}
 }
 
@@ -89,18 +72,18 @@ func (l *notifyList) notifyOne() {
 	if l.list.Len() == 0 {
 		return
 	}
-	item := l.list.Front().Value.(*notifyItem)
+	ch := l.list.Front().Value.(chan struct{})
 	l.list.Remove(l.list.Front())
-	item.notify()
+	close(ch)
 }
 
 func (l *notifyList) notifyAll() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	for l.list.Len() != 0 {
-		item := l.list.Front().Value.(*notifyItem)
+		ch := l.list.Front().Value.(chan struct{})
 		l.list.Remove(l.list.Front())
-		item.notify()
+		close(ch)
 	}
 }
 
@@ -117,17 +100,17 @@ func NewCond(l sync.Locker) *Cond {
 }
 
 func (c *Cond) Wait() {
-	notifyItem := c.notifyList.add() // 解锁前，将等待的对象放入链表中
-	c.L.Unlock()                     // 一定是在等待对象放入链表后再解锁，避免刚解锁就发生协程切换，执行了signal后，再换回来导致永远阻塞
+	t := c.notifyList.add() // 解锁前，将等待的对象放入链表中
+	c.L.Unlock()            // 一定是在等待对象放入链表后再解锁，避免刚解锁就发生协程切换，执行了signal后，再换回来导致永远阻塞
 	defer c.L.Lock()
-	notifyItem.wait()
+	c.notifyList.wait(t)
 }
 
 func (c *Cond) WaitWithContext(ctx context.Context) error {
-	notifyItem := c.notifyList.add()
+	t := c.notifyList.add()
 	c.L.Unlock()
 	defer c.L.Lock()
-	return notifyItem.waitWithContext(ctx)
+	return c.notifyList.waitWithContext(ctx, t)
 }
 
 func (c *Cond) Signal() {

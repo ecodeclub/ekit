@@ -16,16 +16,11 @@ package syncx
 
 import (
 	"context"
-	"log"
 	"math/rand"
 	"runtime"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCondSignal(t *testing.T) {
@@ -318,395 +313,220 @@ func benchmarkCond(b *testing.B, waiters int) {
 	}
 }
 
-func TestNotifyListSignal(t *testing.T) {
-	nl := newNotifyList()
+func TestCond_WaitWithContext(t *testing.T) {
 
-	wait1 := nl.add()
-	wait2 := nl.add()
-	wait3 := nl.add()
-	wait4 := nl.add()
-	wait5 := nl.add()
-	var wg sync.WaitGroup
-	wg.Add(5)
-	go func() {
-		wg.Done()
-		wait1.wait()
-	}()
-	go func() {
-		wg.Done()
-		wait2.wait()
-	}()
-	go func() {
-		wg.Done()
-		wait3.wait()
-	}()
-	go func() {
-		wg.Done()
-		wait4.wait()
-	}()
-	go func() {
-		wg.Done()
-		wait5.wait()
-	}()
-	wg.Wait()
-	nl.notifyOne()
-	wait1.wait()
-	nl.notifyOne()
-	wait2.wait()
-	nl.notifyOne()
-	wait3.wait()
-	nl.notifyOne()
-	wait4.wait()
-	nl.notifyOne()
-	wait5.wait()
-}
+	cond := NewCond(&sync.Mutex{})
 
-func TestNotifyListBroadcast(t *testing.T) {
-	nl := newNotifyList()
+	type status struct {
+		i   int
+		err error
+	}
 
-	wait1 := nl.add()
-	wait2 := nl.add()
-	wait3 := nl.add()
-	wait4 := nl.add()
-	wait5 := nl.add()
-	var wg sync.WaitGroup
-	wg.Add(5)
-	go func() {
-		wg.Done()
-		wait1.wait()
-	}()
-	go func() {
-		wg.Done()
-		wait2.wait()
-	}()
-	go func() {
-		wg.Done()
-		wait3.wait()
-	}()
-	go func() {
-		wg.Done()
-		wait4.wait()
-	}()
-	go func() {
-		wg.Done()
-		wait5.wait()
-	}()
-	wg.Wait()
-	nl.notifyAll()
-	wait1.wait()
-	wait2.wait()
-	wait3.wait()
-	wait4.wait()
-	wait5.wait()
-}
+	sleepDuration := time.Millisecond * 100
 
-func TestNotifyListSignalTimeout(t *testing.T) {
-	nl := newNotifyList()
-
-	wait1 := nl.add()
-	wait2 := nl.add()
-	wait3 := nl.add()
-	wait4 := nl.add()
-	wait5 := nl.add()
-	var wg sync.WaitGroup
-	wg.Add(5)
-	go func() {
-		wg.Done()
-		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Millisecond*100)
-		defer cancelFunc()
-		err := wait1.waitWithContext(ctx)
-		if err == nil {
-			t.Errorf("wait1 sholud return error")
+	var n = 100
+	running := make(chan int, n)
+	awake := make(chan status, n)
+	waitSeqs := make([]int, n)
+	normalAwakeSeqs := make([]int, 0, n)
+	timeoutAwakeSeqs := make([]int, 0, n)
+	minTimeoutCnt := 0
+	minNormalCnt := 0
+	seen := make(map[int]bool, n)
+	for i := 0; i < n; i++ {
+		duration := time.Millisecond * 50 * time.Duration(rand.Int()%4+1)
+		if duration < sleepDuration*9/10 {
+			minTimeoutCnt++
+		} else if duration > sleepDuration*11/10 {
+			minNormalCnt++
 		}
-	}()
-	go func() {
-		wg.Done()
-		wait2.wait()
-	}()
-	go func() {
-		wg.Done()
-		wait3.wait()
-	}()
-	go func() {
-		wg.Done()
-		wait4.wait()
-	}()
-	go func() {
-		wg.Done()
-		wait5.wait()
-	}()
-	wg.Wait()
-	time.Sleep(time.Millisecond * 150)
-	nl.notifyOne()
-	wait2.wait()
-	nl.notifyOne()
-	wait3.wait()
-	nl.notifyOne()
-	wait4.wait()
-	nl.notifyOne()
-	wait5.wait()
+		go func(i int) {
+			cond.L.Lock()
+
+			ctx, cancelFunc := context.WithTimeout(context.Background(), duration)
+			defer cancelFunc()
+			running <- i
+			err := cond.WaitWithContext(ctx)
+			awake <- status{
+				i:   i,
+				err: err,
+			}
+			cond.L.Unlock()
+		}(i)
+	}
+	for i := 0; i < n; i++ {
+		waitSeqs[i] = <-running
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	cond.L.Lock()
+	cond.Broadcast()
+	cond.L.Unlock()
+
+	for i := 0; i < n; i++ {
+		stat := <-awake
+		if seen[stat.i] {
+			t.Fatal("goroutine woke up twice")
+		} else {
+			seen[stat.i] = true
+		}
+		if stat.err != nil {
+			timeoutAwakeSeqs = append(timeoutAwakeSeqs, stat.i)
+		} else {
+			normalAwakeSeqs = append(normalAwakeSeqs, stat.i)
+		}
+	}
+
+	if len(normalAwakeSeqs) < minNormalCnt {
+		t.Fatal("goroutine woke up with timeout")
+	}
+
+	if len(timeoutAwakeSeqs) < minTimeoutCnt {
+		t.Fatal("goroutine woke up with normally")
+	}
 }
 
-func TestCond(t *testing.T) {
-	x := 0
-	c := NewCond(&sync.Mutex{})
-	done := make(chan bool)
-	go func() {
-		c.L.Lock()
-		x = 1
-		c.Wait()
-		if x != 2 {
-			log.Fatal("want 2")
+func TestCond_WakeOrder(t *testing.T) {
+
+	cond := NewCond(&sync.Mutex{})
+
+	type status struct {
+		i   int
+		err error
+	}
+
+	sleepDuration := time.Millisecond * 100
+
+	var n = 100
+	running := make(chan int, n)
+	awake := make(chan status, n)
+	waitSeqs := make([]int, n)
+	normalAwakeSeqs := make([]int, 0, n)
+	timeoutAwakeSeqs := make([]int, 0, n)
+	minTimeoutCnt := 0
+	minNormalCnt := 0
+	seen := make(map[int]bool, n)
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		duration := time.Millisecond * 50 * time.Duration(rand.Int()%4+1)
+		if duration < sleepDuration*9/10 {
+			minTimeoutCnt++
+		} else if duration > sleepDuration*11/10 {
+			minNormalCnt++
 		}
-		x = 3
-		c.Broadcast()
-		c.L.Unlock()
-		done <- true
-	}()
+		go func(i int) {
+			cond.L.Lock()
+
+			ctx, cancelFunc := context.WithTimeout(context.Background(), duration)
+			defer cancelFunc()
+			running <- i
+			err := cond.WaitWithContext(ctx)
+			awake <- status{
+				i:   i,
+				err: err,
+			}
+			cond.L.Unlock()
+			wg.Done()
+		}(i)
+	}
+	for i := 0; i < n; i++ {
+		waitSeqs[i] = <-running
+	}
+
 	go func() {
-		c.L.Lock()
+		wg.Wait()
+		close(awake)
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+
+	for i := 0; i < n; i++ {
+		cond.L.Lock()
+		cond.Signal()
+		cond.L.Unlock()
 		for {
-			if x == 1 {
-				x = 2
-				c.Broadcast()
+			stat, ok := <-awake
+			if !ok {
 				break
 			}
-			c.L.Unlock()
-			runtime.Gosched()
-			c.L.Lock()
-		}
-		c.L.Unlock()
-		done <- true
-	}()
-	go func() {
-		c.L.Lock()
-		for {
-			if x == 2 {
-				c.Wait()
-				if x != 3 {
-					log.Fatal("want 3")
-				}
+			if seen[stat.i] {
+				t.Fatal("goroutine woke up twice")
+			} else {
+				seen[stat.i] = true
+			}
+			if stat.err != nil {
+				timeoutAwakeSeqs = append(timeoutAwakeSeqs, stat.i)
+			} else {
+				normalAwakeSeqs = append(normalAwakeSeqs, stat.i)
 				break
 			}
-			if x == 3 {
+		}
+
+	}
+
+	if len(normalAwakeSeqs) < minNormalCnt {
+		t.Fatal("goroutine woke up with timeout")
+	}
+
+	if len(timeoutAwakeSeqs) < minTimeoutCnt {
+		t.Fatal("goroutine woke up with normally")
+	}
+	// 测试singnal唤醒的顺序问题
+	if !isInOrder(normalAwakeSeqs, waitSeqs) {
+		t.Fatal("goroutine woke up not in order")
+	}
+	// 超时唤醒的肯定是乱序的，没有好办法测试顺序
+	//if !isInOrder(timeoutAwakeSeqs, waitSeqs) {
+	//	t.Fatal("goroutine woke up not in order")
+	//}
+}
+
+func isInOrder(partial []int, source []int) bool {
+
+	j := 0
+
+	for i := 0; i < len(partial); i++ {
+		matched := false
+		for j < len(source) {
+			if partial[i] == source[j] {
+				j++
+				matched = true
 				break
 			}
-			c.L.Unlock()
-			runtime.Gosched()
-			c.L.Lock()
+			j++
+			continue
 		}
-		c.L.Unlock()
-		done <- true
-	}()
-	<-done
-	<-done
-	<-done
-}
-
-// 使用并发阻塞队列进行测试生产和消费的情况
-type ConcurrentBlockingQueue[T any] struct {
-	mutex   *sync.Mutex
-	data    []T
-	maxSize int
-
-	notEmptyCond *Cond
-	notFullCond  *Cond
-}
-
-func NewConcurrentBlockingQueue[T any](maxSize int) *ConcurrentBlockingQueue[T] {
-	m := &sync.Mutex{}
-	return &ConcurrentBlockingQueue[T]{
-		data:         make([]T, 0, maxSize),
-		mutex:        m,
-		maxSize:      maxSize,
-		notFullCond:  NewCond(m),
-		notEmptyCond: NewCond(m),
-	}
-}
-
-func (c *ConcurrentBlockingQueue[T]) EnQueue(ctx context.Context, data T) error {
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	for c.isFull() {
-		err := c.notFullCond.WaitWithContext(ctx)
-		if err != nil {
-			return err
+		if !matched {
+			return false
 		}
 	}
-	c.data = append(c.data, data)
-	c.notEmptyCond.Signal()
-	// 没有人等 notEmpty 的信号，这一句就会阻塞住
-	return nil
+
+	return true
 }
 
-func (c *ConcurrentBlockingQueue[T]) DeQueue(ctx context.Context) (T, error) {
-	if ctx.Err() != nil {
-		var t T
-		return t, ctx.Err()
-	}
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	for c.isEmpty() {
-		err := c.notEmptyCond.WaitWithContext(ctx)
-		if err != nil {
-			var t T
-			return t, err
-		}
-	}
-	t := c.data[0]
-	c.data = c.data[1:]
-	c.notFullCond.Signal()
-	// 没有人等 notFull 的信号，这一句就会阻塞住
-	return t, nil
-}
-
-func (c *ConcurrentBlockingQueue[T]) IsFull() bool {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	return c.isFull()
-}
-
-func (c *ConcurrentBlockingQueue[T]) isFull() bool {
-	return len(c.data) == c.maxSize
-}
-
-func (c *ConcurrentBlockingQueue[T]) IsEmpty() bool {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	return c.isEmpty()
-}
-
-func (c *ConcurrentBlockingQueue[T]) isEmpty() bool {
-	return len(c.data) == 0
-}
-
-func (c *ConcurrentBlockingQueue[T]) Len() uint64 {
-	return uint64(len(c.data))
-}
-
-func TestConcurrentBlockingQueue_EnQueue(t *testing.T) {
-	testCases := []struct {
-		name string
-
-		q *ConcurrentBlockingQueue[int]
-
-		timeout time.Duration
-		value   int
-
-		data []int
-
-		wantErr error
+func Test_InOrder(t *testing.T) {
+	testcases := []struct {
+		name    string
+		partial []int
+		source  []int
+		want    bool
 	}{
-		{
-			name:    "enqueue",
-			q:       NewConcurrentBlockingQueue[int](10),
-			value:   1,
-			timeout: time.Minute,
-			data:    []int{1},
-		},
-		{
-			name: "blocking and timeout",
-			q: func() *ConcurrentBlockingQueue[int] {
-				res := NewConcurrentBlockingQueue[int](2)
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-				defer cancel()
-				err := res.EnQueue(ctx, 1)
-				require.NoError(t, err)
-				err = res.EnQueue(ctx, 2)
-				require.NoError(t, err)
-				return res
-			}(),
-			value:   3,
-			timeout: time.Second,
-			data:    []int{1, 2},
-			wantErr: context.DeadlineExceeded,
-		},
+		{"", []int{1}, []int{1}, true},
+		{"", []int{1, 3, 4}, []int{1, 2, 3, 4}, true},
+		{"", []int{1, 3}, []int{1, 2, 3, 4}, true},
+		{"", []int{1, 3, 2}, []int{1, 2, 3, 4}, false},
+		{"", []int{1, 2, 2}, []int{1, 2, 3, 4}, false},
+		{"", []int{1, 2, 3}, []int{1, 3, 2, 4}, false},
+		{"", []int{1, 2, 4}, []int{1, 3, 2, 4}, true},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), tc.timeout)
-			defer cancel()
-			err := tc.q.EnQueue(ctx, tc.value)
-			assert.Equal(t, tc.wantErr, err)
-			assert.Equal(t, tc.data, tc.q.data)
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			if target := isInOrder(tt.partial, tt.source); target != tt.want {
+				t.Errorf("get %v, want %v", target, tt.want)
+			}
 		})
 	}
-}
-
-// 测试可能比较花时间，不知道如何优化这个模拟延迟的缓慢问题
-func TestConcurrentBlockingQueue(t *testing.T) {
-
-	var queueCap int64 = 20
-
-	q := NewConcurrentBlockingQueue[int](int(queueCap))
-	var wg sync.WaitGroup
-	var producedCnt, consumedCnt int64
-
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func(idx int) {
-			defer func() {
-				wg.Done()
-			}()
-			n := 100
-			for n > 0 {
-				n--
-				// 随机睡眠模拟生产者 -- 模拟出现消费者将队列消费空之后出现error的情况
-				if n%10 == 0 {
-					time.Sleep(time.Duration(rand.Int()%20) * time.Millisecond)
-				}
-				time.Sleep(time.Duration(rand.Int()%20) * time.Millisecond)
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-				err := q.EnQueue(ctx, rand.Int())
-				if err == nil {
-					// 成功生产的数据量
-					atomic.AddInt64(&producedCnt, 1)
-				}
-				//fmt.Println(err)
-				// 怎么断言 error
-				cancel()
-			}
-		}(i)
-	}
-
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func(idx int) {
-			defer func() {
-				wg.Done()
-			}()
-			n := 200
-			for n > 0 {
-				n--
-				// 随机睡眠模拟消费者 -- 模拟出现生产者将队列放满之后出现error的情况
-				if n%10 == 0 {
-					time.Sleep(time.Duration(rand.Int()%20) * time.Millisecond)
-				}
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-				_, err := q.DeQueue(ctx)
-				if err == nil {
-					// 成功消费的数据量
-					atomic.AddInt64(&consumedCnt, 1)
-				}
-				//fmt.Println(val, err)
-				// 又怎么断言 val, 和 err
-				cancel()
-			}
-		}(i)
-	}
-	wg.Wait()
-
-	delta := producedCnt - consumedCnt
-	if delta < 0 {
-		delta = -delta
-	}
-
-	if delta > queueCap {
-		t.Errorf("producedCnt %v, consumedCnt %v", producedCnt, consumedCnt)
-	}
-
 }
