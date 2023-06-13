@@ -26,4 +26,4 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Check License Lines
-        uses: kt3k/license_checker@v1.0.6
+        uses: kt3k/deno_license_checker@v3.2.2
