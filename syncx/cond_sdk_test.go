@@ -23,7 +23,7 @@ func TestCondSignal(t *testing.T) {
 		go func() {
 			m.Lock()
 			running <- true
-			c.Wait()
+			_ = c.Wait(nil)
 			awake <- true
 			m.Unlock()
 		}()
@@ -61,7 +61,7 @@ func TestCondSignalGenerations(t *testing.T) {
 		go func(i int) {
 			m.Lock()
 			running <- true
-			c.Wait()
+			_ = c.Wait(nil)
 			awake <- i
 			m.Unlock()
 		}(i)
@@ -90,7 +90,7 @@ func TestCondBroadcast(t *testing.T) {
 			m.Lock()
 			for !exit {
 				running <- g
-				c.Wait()
+				_ = c.Wait(nil)
 				awake <- g
 			}
 			m.Unlock()
@@ -137,7 +137,7 @@ func TestRace(t *testing.T) {
 	go func() {
 		c.L.Lock()
 		x = 1
-		c.Wait()
+		_ = c.Wait(nil)
 		if x != 2 {
 			t.Error("want 2")
 		}
@@ -165,7 +165,7 @@ func TestRace(t *testing.T) {
 		c.L.Lock()
 		for {
 			if x == 2 {
-				c.Wait()
+				_ = c.Wait(nil)
 				if x != 3 {
 					t.Error("want 3")
 				}
@@ -196,7 +196,7 @@ func TestCondSignalStealing(t *testing.T) {
 		go func() {
 			m.Lock()
 			ch <- struct{}{}
-			cond.Wait()
+			_ = cond.Wait(nil)
 			m.Unlock()
 
 			ch <- struct{}{}
@@ -224,7 +224,7 @@ func TestCondSignalStealing(t *testing.T) {
 		go func() {
 			m.Lock()
 			for !done {
-				cond.Wait()
+				_ = cond.Wait(nil)
 			}
 			m.Unlock()
 		}()
@@ -287,7 +287,7 @@ func benchmarkCond(b *testing.B, waiters int) {
 					id = 0
 					c.Broadcast()
 				} else {
-					c.Wait()
+					_ = c.Wait(nil)
 				}
 				c.L.Unlock()
 			}

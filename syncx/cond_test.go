@@ -55,7 +55,7 @@ func TestCond_WaitWithContext(t *testing.T) {
 			ctx, cancelFunc := context.WithTimeout(context.Background(), duration)
 			defer cancelFunc()
 			running <- i
-			err := cond.WaitWithContext(ctx)
+			err := cond.Wait(ctx)
 			awake <- status{
 				i:   i,
 				err: err,
@@ -131,7 +131,7 @@ func TestCond_WakeOrder(t *testing.T) {
 			ctx, cancelFunc := context.WithTimeout(context.Background(), duration)
 			defer cancelFunc()
 			running <- i
-			err := cond.WaitWithContext(ctx)
+			err := cond.Wait(ctx)
 			awake <- status{
 				i:   i,
 				err: err,
