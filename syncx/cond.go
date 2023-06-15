@@ -57,14 +57,19 @@ func (l *notifyList) waitWithContext(ctx context.Context, elem *list.Element) er
 		select {
 		// double check: 检查是否在加锁前，刚好被正常通知了，
 		// 这种情况应该是正常消费的情况，等同于在恰巧超时时刻被唤醒，修正成正常唤醒的情况
-		case <-ch: // 如果取到数据，代表被正常唤醒了，ch也因为被取了一次消息，意味着可以再次复用
-			return nil
+		case <-ch: // 如果取到数据，代表收到了信号了，ch也因为被取了一次消息，意味着可以再次复用
+			// 转移信号到下一个
+			// 如果没有下一个等待的，就返回
+			if l.list.Len() == 0 {
+				return ctx.Err()
+			}
+			// 如果有下一个等待的，就唤醒它
+			l.notifyNext()
 		default: // 如果取不到数据，代表不可能被正常唤醒了，ch也意味着没有被使用
 			// 这种情况代表加锁成功后，没有被通知到，属于真正的超时的情况，从队列移除等待对象，避免被错误通知唤醒，返回超时错误信息
 			l.list.Remove(elem)
-			//close(ch)
-			return ctx.Err()
 		}
+		return ctx.Err()
 	case <-ch: // 如果取到数据，代表被正常唤醒了，ch也因为被取了一次消息，意味着可以再次复用
 		return nil
 	}
@@ -76,8 +81,13 @@ func (l *notifyList) notifyOne() {
 	if l.list.Len() == 0 {
 		return
 	}
-	ch := l.list.Front().Value.(chan struct{})
-	l.list.Remove(l.list.Front())
+	l.notifyNext()
+}
+
+func (l *notifyList) notifyNext() {
+	front := l.list.Front()
+	ch := front.Value.(chan struct{})
+	l.list.Remove(front)
 	ch <- struct{}{}
 }
 
@@ -85,9 +95,7 @@ func (l *notifyList) notifyAll() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	for l.list.Len() != 0 {
-		ch := l.list.Front().Value.(chan struct{})
-		l.list.Remove(l.list.Front())
-		ch <- struct{}{}
+		l.notifyNext()
 	}
 }
 
