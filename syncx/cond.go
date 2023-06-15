@@ -56,7 +56,6 @@ func (l *notifyList) waitWithContext(ctx context.Context, elem *list.Element) er
 		defer l.mu.Unlock()
 		select {
 		// double check: 检查是否在加锁前，刚好被正常通知了，
-		// 这种情况应该是正常消费的情况，等同于在恰巧超时时刻被唤醒，修正成正常唤醒的情况
 		case <-ch: // 如果取到数据，代表收到了信号了，ch也因为被取了一次消息，意味着可以再次复用
 			// 转移信号到下一个
 			// 如果没有下一个等待的，就返回
