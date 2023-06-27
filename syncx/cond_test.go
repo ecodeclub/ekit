@@ -17,12 +17,13 @@ package syncx
 import (
 	"context"
 	"math/rand"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
 )
 
-func TestCond_WaitWithContext(t *testing.T) {
+func TestCond_Broadcast(t *testing.T) {
 
 	cond := NewCond(&sync.Mutex{})
 
@@ -96,7 +97,7 @@ func TestCond_WaitWithContext(t *testing.T) {
 	}
 }
 
-func TestCond_WakeOrder(t *testing.T) {
+func TestCond_Signal(t *testing.T) {
 
 	cond := NewCond(&sync.Mutex{})
 
@@ -237,5 +238,60 @@ func Test_InOrder(t *testing.T) {
 				t.Errorf("get %v, want %v", target, tt.want)
 			}
 		})
+	}
+}
+
+// TestChanList 测试有序，和清空后重复使用是否有问题
+func TestChanList(t *testing.T) {
+
+	l := newChanList()
+
+	testcases := []struct {
+		name string
+		num  int
+	}{
+		{"", 5},
+		{"", 3},
+		{"", 10},
+	}
+
+	for _, testcase := range testcases {
+		t.Run(testcase.name, func(tt *testing.T) {
+			inputNodes := make([]*node, 0, testcase.num)
+			inputChans := make([]chan struct{}, 0, testcase.num)
+			for i := 0; i < testcase.num; i++ {
+				ele := l.alloc()
+				inputNodes = append(inputNodes, ele)
+				inputChans = append(inputChans, ele.Value)
+				l.PushBack(ele)
+			}
+			if length := l.Len(); length != testcase.num {
+				t.Errorf("list.Len() = %v, want %v", length, testcase.num)
+			}
+			outNodes := make([]*node, 0, testcase.num)
+			outChans := make([]chan struct{}, 0, testcase.num)
+			for l.Len() != 0 {
+				front := l.Front()
+				outNodes = append(outNodes, front)
+				outChans = append(outChans, front.Value)
+				l.Remove(front)
+			}
+			if !reflect.DeepEqual(outChans, inputChans) {
+				t.Errorf("chan list is %v, but got %v", inputChans, outChans)
+			}
+			if !reflect.DeepEqual(outNodes, inputNodes) {
+				t.Errorf("element list is %v, but got %v", inputNodes, outNodes)
+			}
+		})
+	}
+}
+
+// BenchmarkChanList 测试有无内存分配增加的情况
+func BenchmarkChanList(b *testing.B) {
+	l := newChanList()
+	for i := 0; i < b.N; i++ {
+		elem := l.alloc()
+		l.PushBack(elem)
+		l.Remove(elem)
 	}
 }
