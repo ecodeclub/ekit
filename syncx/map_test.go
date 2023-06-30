@@ -15,6 +15,7 @@
 package syncx
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -85,6 +86,32 @@ func TestMap_LoadOrStore(t *testing.T) {
 	val, loaded = m.LoadOrStore("Jerry", &User{Name: "Jerry"})
 	assert.True(t, loaded)
 	assert.Nil(t, val)
+}
+
+func TestMap_LoadOrStoreFunc(t *testing.T) {
+	var m = Map[string, *User]{}
+	val, loaded, err := m.LoadOrStoreFunc("Tom", func() (*User, error) {
+		return &User{Name: "Tom"}, nil
+	})
+	assert.NoError(t, err)
+	assert.False(t, loaded)
+	assert.Equal(t, &User{Name: "Tom"}, val)
+
+	// 测试 Tom 存在的情况
+	val, loaded, err = m.LoadOrStoreFunc("Tom", func() (*User, error) {
+		return &User{Name: "Tom"}, nil
+	})
+	assert.NoError(t, err)
+	assert.True(t, loaded)
+	assert.Equal(t, &User{Name: "Tom"}, val)
+
+	// 测试初始化失败
+	val, loaded, err = m.LoadOrStoreFunc("Jerry", func() (*User, error) {
+		return nil, errors.New("初始话失败")
+	})
+	assert.Equal(t, err, errors.New("初始话失败"))
+	assert.False(t, loaded)
+	assert.Equal(t, (*User)(nil), val)
 }
 
 func TestMap_LoadAndDelete(t *testing.T) {
@@ -202,6 +229,54 @@ func ExampleMap_LoadOrStore() {
 	// 加载旧值 Tom
 	// 设置了新值 nil
 	// 加载旧值 <nil>
+}
+
+func ExampleMap_LoadOrStoreFunc() {
+	var m = Map[string, *User]{}
+	_, loaded, _ := m.LoadOrStoreFunc("Tom", func() (*User, error) {
+		return &User{Name: "Tom"}, nil
+	})
+	// 执行存储
+	if !loaded {
+		fmt.Println("设置了新值 Tom")
+	}
+
+	_, loaded, _ = m.LoadOrStoreFunc("Tom", func() (*User, error) {
+		return &User{Name: "Tom-copy"}, nil
+	})
+	// Tom 这个 key 已经存在，执行加载
+	if loaded {
+		fmt.Println("加载旧值 Tom")
+	}
+
+	_, loaded, _ = m.LoadOrStoreFunc("Jerry", func() (*User, error) {
+		return nil, nil
+	})
+	// 执行存储，注意值是 nil
+	if !loaded {
+		fmt.Println("设置了新值 nil")
+	}
+	val, loaded, _ := m.LoadOrStoreFunc("Jerry", func() (*User, error) {
+		return &User{Name: "Jerry"}, nil
+	})
+	// Jerry 这个 key 已经存在，执行加载，于是把原本的 nil 加载出来
+	if loaded {
+		fmt.Printf("加载旧值 %v\n", val)
+	}
+
+	_, _, err := m.LoadOrStoreFunc("Kitty", func() (*User, error) {
+		return nil, errors.New("初始化失败")
+	})
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	// Output:
+	// 设置了新值 Tom
+	// 加载旧值 Tom
+	// 设置了新值 nil
+	// 加载旧值 <nil>
+	// 初始化失败
 }
 
 func ExampleMap_Range() {
