@@ -24,6 +24,9 @@ type ReflectCopier[Src any, Dst any] struct {
 
 	// rootField 字典树的根节点
 	rootField fieldNode
+
+	// options 执行复制操作时的可选配置
+	options *options
 }
 
 // fieldNode 字段的前缀树
@@ -142,9 +145,9 @@ func createFieldNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 	return nil
 }
 
-func (r *ReflectCopier[Src, Dst]) Copy(src *Src) (*Dst, error) {
+func (r *ReflectCopier[Src, Dst]) Copy(src *Src, opts ...Option) (*Dst, error) {
 	dst := new(Dst)
-	err := r.CopyTo(src, dst)
+	err := r.CopyTo(src, dst, opts...)
 	return dst, err
 }
 
@@ -154,7 +157,16 @@ func (r *ReflectCopier[Src, Dst]) Copy(src *Src) (*Dst, error) {
 // 2. 如果 Src 和 Dst 中匹配的字段，其类型是基本类型（及其指针）或者内置类型（及其指针），并且类型一样，则直接用 Src 的值
 // 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，则会深入复制
 // 4. 否则，忽略字段
-func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst) error {
+func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst, opts ...Option) error {
+	//
+	opt := &options{}
+	if 0 < len(opts) {
+		for i := len(opts) - 1; i >= 0; i-- {
+			opts[i](opt)
+		}
+	}
+	r.options = opt
+
 	return r.copyToWithTree(src, dst)
 }
 
@@ -191,6 +203,12 @@ func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue ref
 
 	for i := range root.fields {
 		child := &root.fields[i]
+
+		// 只要结构体属性的名字在需要忽略的字段里面，就不走下面的复制逻辑
+		if r.options.InIgnoreFields(child.name) {
+			continue
+		}
+
 		childSrcTyp := srcTyp.Field(child.srcIndex)
 		childSrcValue := srcValue.Field(child.srcIndex)
 

@@ -505,6 +505,581 @@ func TestReflectCopier_Copy(t *testing.T) {
 			},
 			wantDst: &SpecialDst2{A: 1},
 		},
+		{
+			name: "simple struct with ignore",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&SimpleSrc{
+					Name:    "大明",
+					Age:     ekit.ToPtr[int](18),
+					Friends: []string{"Tom", "Jerry"},
+				}, IgnoreFields("Age"))
+			},
+			wantDst: &SimpleDst{
+				Name:    "大明",
+				Age:     nil,
+				Friends: []string{"Tom", "Jerry"},
+			},
+		},
+		{
+			name: "simple struct with ignore 2",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&SimpleSrc{
+					Name:    "大明",
+					Age:     ekit.ToPtr[int](18),
+					Friends: []string{"Tom", "Jerry"},
+				}, IgnoreFields("Age"), IgnoreFields("Friends"))
+			},
+			wantDst: &SimpleDst{
+				Name:    "大明",
+				Age:     nil,
+				Friends: nil,
+			},
+		},
+		{
+			name: "simple struct with ignore 3",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&SimpleSrc{
+					Name:    "大明",
+					Age:     ekit.ToPtr[int](18),
+					Friends: []string{"Tom", "Jerry"},
+				}, IgnoreFields("Name"), IgnoreFields("Age"), IgnoreFields("Friends"))
+			},
+			wantDst: &SimpleDst{},
+		},
+		{
+			name: "simple struct 空切片, 空指针 with ignore",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&SimpleSrc{
+					Name: "大明",
+				}, IgnoreFields("Name"))
+			},
+			wantDst: &SimpleDst{
+				Name: "",
+			},
+		},
+		{
+			name: "组合 struct with ignore",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[EmbedSrc, EmbedDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&EmbedSrc{
+					SimpleSrc: SimpleSrc{
+						Name:    "xiaoli",
+						Age:     ekit.ToPtr[int](19),
+						Friends: []string{},
+					},
+					BasicSrc: &BasicSrc{
+						Name:    "xiaowang",
+						Age:     20,
+						CNumber: complex(2, 2),
+					},
+				}, IgnoreFields("Age"))
+			},
+			wantDst: &EmbedDst{
+				SimpleSrc: SimpleSrc{
+					Name:    "xiaoli",
+					Age:     nil,
+					Friends: []string{},
+				},
+				BasicSrc: &BasicSrc{
+					Name:    "xiaowang",
+					Age:     0,
+					CNumber: complex(2, 2),
+				},
+			},
+		},
+		{
+			name: "组合 struct with ignore 2",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[EmbedSrc, EmbedDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&EmbedSrc{
+					SimpleSrc: SimpleSrc{
+						Name:    "xiaoli",
+						Age:     ekit.ToPtr[int](19),
+						Friends: []string{},
+					},
+					BasicSrc: &BasicSrc{
+						Name:    "xiaowang",
+						Age:     20,
+						CNumber: complex(2, 2),
+					},
+				}, IgnoreFields("CNumber"))
+			},
+			wantDst: &EmbedDst{
+				SimpleSrc: SimpleSrc{
+					Name:    "xiaoli",
+					Age:     ekit.ToPtr[int](19),
+					Friends: []string{},
+				},
+				BasicSrc: &BasicSrc{
+					Name:    "xiaowang",
+					Age:     20,
+					CNumber: complex(0, 0),
+				},
+			},
+		},
+		{
+			name: "组合 struct with ignore 3",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[EmbedSrc, EmbedDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&EmbedSrc{
+					SimpleSrc: SimpleSrc{
+						Name:    "xiaoli",
+						Age:     ekit.ToPtr[int](19),
+						Friends: []string{},
+					},
+					BasicSrc: &BasicSrc{
+						Name:    "xiaowang",
+						Age:     20,
+						CNumber: complex(2, 2),
+					},
+				}, IgnoreFields("SimpleSrc"))
+			},
+			wantDst: &EmbedDst{
+				SimpleSrc: SimpleSrc{},
+				BasicSrc: &BasicSrc{
+					Name:    "xiaowang",
+					Age:     20,
+					CNumber: complex(2, 2),
+				},
+			},
+		},
+		{
+			name: "组合 struct with ignore 4",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[EmbedSrc, EmbedDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&EmbedSrc{
+					SimpleSrc: SimpleSrc{
+						Name:    "xiaoli",
+						Age:     ekit.ToPtr[int](19),
+						Friends: []string{},
+					},
+					BasicSrc: &BasicSrc{
+						Name:    "xiaowang",
+						Age:     20,
+						CNumber: complex(2, 2),
+					},
+				}, IgnoreFields("BasicSrc"))
+			},
+			wantDst: &EmbedDst{
+				SimpleSrc: SimpleSrc{
+					Name:    "xiaoli",
+					Age:     ekit.ToPtr[int](19),
+					Friends: []string{},
+				},
+				BasicSrc: nil,
+			},
+		},
+		{
+			name: "复杂 Struct with ignore",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ComplexSrc, ComplexDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&ComplexSrc{
+					Simple: SimpleSrc{
+						Name:    "xiaohong",
+						Age:     ekit.ToPtr[int](18),
+						Friends: []string{"ha", "ha", "le"},
+					},
+					Embed: &EmbedSrc{
+						SimpleSrc: SimpleSrc{
+							Name:    "xiaopeng",
+							Age:     ekit.ToPtr[int](88),
+							Friends: []string{"la", "ha", "le"},
+						},
+						BasicSrc: &BasicSrc{
+							Name:    "wang",
+							Age:     22,
+							CNumber: complex(2, 1),
+						},
+					},
+					BasicSrc: BasicSrc{
+						Name:    "wang11",
+						Age:     22,
+						CNumber: complex(2, 1),
+					},
+				}, IgnoreFields("Age"))
+			},
+			wantDst: &ComplexDst{
+				Simple: SimpleDst{
+					Name:    "xiaohong",
+					Age:     nil,
+					Friends: []string{"ha", "ha", "le"},
+				},
+				Embed: &EmbedDst{
+					SimpleSrc: SimpleSrc{
+						Name:    "xiaopeng",
+						Age:     nil,
+						Friends: []string{"la", "ha", "le"},
+					},
+					BasicSrc: &BasicSrc{
+						Name:    "wang",
+						Age:     0,
+						CNumber: complex(2, 1),
+					},
+				},
+				BasicSrc: BasicSrc{
+					Name:    "wang11",
+					Age:     0,
+					CNumber: complex(2, 1),
+				},
+			},
+		},
+		{
+			name: "复杂 Struct with ignore 2",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ComplexSrc, ComplexDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&ComplexSrc{
+					Simple: SimpleSrc{
+						Name:    "xiaohong",
+						Age:     ekit.ToPtr[int](18),
+						Friends: []string{"ha", "ha", "le"},
+					},
+					Embed: &EmbedSrc{
+						SimpleSrc: SimpleSrc{
+							Name:    "xiaopeng",
+							Age:     ekit.ToPtr[int](88),
+							Friends: []string{"la", "ha", "le"},
+						},
+						BasicSrc: &BasicSrc{
+							Name:    "wang",
+							Age:     22,
+							CNumber: complex(2, 1),
+						},
+					},
+					BasicSrc: BasicSrc{
+						Name:    "wang11",
+						Age:     22,
+						CNumber: complex(2, 1),
+					},
+				}, IgnoreFields("SimpleSrc"))
+			},
+			wantDst: &ComplexDst{
+				Simple: SimpleDst{
+					Name:    "xiaohong",
+					Age:     ekit.ToPtr[int](18),
+					Friends: []string{"ha", "ha", "le"},
+				},
+				Embed: &EmbedDst{
+					SimpleSrc: SimpleSrc{},
+					BasicSrc: &BasicSrc{
+						Name:    "wang",
+						Age:     22,
+						CNumber: complex(2, 1),
+					},
+				},
+				BasicSrc: BasicSrc{
+					Name:    "wang11",
+					Age:     22,
+					CNumber: complex(2, 1),
+				},
+			},
+		},
+		{
+			name: "复杂 Struct with ignore 3",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ComplexSrc, ComplexDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&ComplexSrc{
+					Simple: SimpleSrc{
+						Name:    "xiaohong",
+						Age:     ekit.ToPtr[int](18),
+						Friends: []string{"ha", "ha", "le"},
+					},
+					Embed: &EmbedSrc{
+						SimpleSrc: SimpleSrc{
+							Name:    "xiaopeng",
+							Age:     ekit.ToPtr[int](88),
+							Friends: []string{"la", "ha", "le"},
+						},
+						BasicSrc: &BasicSrc{
+							Name:    "wang",
+							Age:     22,
+							CNumber: complex(2, 1),
+						},
+					},
+					BasicSrc: BasicSrc{
+						Name:    "wang11",
+						Age:     22,
+						CNumber: complex(2, 1),
+					},
+				}, IgnoreFields("BasicSrc"))
+			},
+			wantDst: &ComplexDst{
+				Simple: SimpleDst{
+					Name:    "xiaohong",
+					Age:     ekit.ToPtr[int](18),
+					Friends: []string{"ha", "ha", "le"},
+				},
+				Embed: &EmbedDst{
+					SimpleSrc: SimpleSrc{
+						Name:    "xiaopeng",
+						Age:     ekit.ToPtr[int](88),
+						Friends: []string{"la", "ha", "le"},
+					},
+					BasicSrc: nil,
+				},
+				BasicSrc: BasicSrc{},
+			},
+		},
+		{
+			name: "复杂 Struct with ignore 4",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ComplexSrc, ComplexDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&ComplexSrc{
+					Simple: SimpleSrc{
+						Name:    "xiaohong",
+						Age:     ekit.ToPtr[int](18),
+						Friends: []string{"ha", "ha", "le"},
+					},
+					Embed: &EmbedSrc{
+						SimpleSrc: SimpleSrc{
+							Name:    "xiaopeng",
+							Age:     ekit.ToPtr[int](88),
+							Friends: []string{"la", "ha", "le"},
+						},
+						BasicSrc: &BasicSrc{
+							Name:    "wang",
+							Age:     22,
+							CNumber: complex(2, 1),
+						},
+					},
+					BasicSrc: BasicSrc{
+						Name:    "wang11",
+						Age:     22,
+						CNumber: complex(2, 1),
+					},
+				}, IgnoreFields("Embed"))
+			},
+			wantDst: &ComplexDst{
+				Simple: SimpleDst{
+					Name:    "xiaohong",
+					Age:     ekit.ToPtr[int](18),
+					Friends: []string{"ha", "ha", "le"},
+				},
+				Embed: nil,
+				BasicSrc: BasicSrc{
+					Name:    "wang11",
+					Age:     22,
+					CNumber: complex(2, 1),
+				},
+			},
+		},
+		{
+			name: "特殊类型 with ignore",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[SpecialSrc, SpecialDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&SpecialSrc{
+					Arr: [3]float32{1, 2, 3},
+					M: map[string]int{
+						"ha": 1,
+						"o":  2,
+					},
+				}, IgnoreFields("Arr"))
+			},
+			wantDst: &SpecialDst{
+				Arr: [3]float32{},
+				M: map[string]int{
+					"ha": 1,
+					"o":  2,
+				},
+			},
+		},
+		{
+			name: "特殊类型 with ignore 2",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[SpecialSrc, SpecialDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&SpecialSrc{
+					Arr: [3]float32{1, 2, 3},
+					M: map[string]int{
+						"ha": 1,
+						"o":  2,
+					},
+				}, IgnoreFields("M"))
+			},
+			wantDst: &SpecialDst{
+				Arr: [3]float32{1, 2, 3},
+				M:   nil,
+			},
+		},
+		{
+			name: "dst 有额外字段 with ignore",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[DiffSrc, DiffDst]()
+				if err != nil {
+					return nil, err
+				}
+				dst := &DiffDst{
+					A: "66",
+					B: 1,
+					d: SimpleSrc{
+						Name: "wodemingzi",
+						Age:  ekit.ToPtr(int(10)),
+					},
+					G: BasicSrc{
+						Name:    "nidemingzi",
+						Age:     23,
+						CNumber: complex(1, 2),
+					},
+				}
+				err = copier.CopyTo(&DiffSrc{
+					A: "xiaowang",
+					B: 100,
+					c: SimpleSrc{
+						Name: "66",
+						Age:  ekit.ToPtr[int](100),
+					},
+					F: BasicSrc{
+						Name:    "good name",
+						Age:     200,
+						CNumber: complex(2, 2),
+					},
+				}, dst, IgnoreFields("A"))
+				return dst, err
+			},
+			wantDst: &DiffDst{
+				A: "66",
+				B: 100,
+				d: SimpleSrc{
+					Name: "wodemingzi",
+					Age:  ekit.ToPtr(int(10)),
+				},
+				G: BasicSrc{
+					Name:    "nidemingzi",
+					Age:     23,
+					CNumber: complex(1, 2),
+				},
+			},
+		},
+		{
+			name: "dst 有额外字段 with ignore 2",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[DiffSrc, DiffDst]()
+				if err != nil {
+					return nil, err
+				}
+				dst := &DiffDst{
+					A: "66",
+					B: 1,
+					d: SimpleSrc{
+						Name: "wodemingzi",
+						Age:  ekit.ToPtr(int(10)),
+					},
+					G: BasicSrc{
+						Name:    "nidemingzi",
+						Age:     23,
+						CNumber: complex(1, 2),
+					},
+				}
+				err = copier.CopyTo(&DiffSrc{
+					A: "xiaowang",
+					B: 100,
+					c: SimpleSrc{
+						Name: "66",
+						Age:  ekit.ToPtr[int](100),
+					},
+					F: BasicSrc{
+						Name:    "good name",
+						Age:     200,
+						CNumber: complex(2, 2),
+					},
+				}, dst, IgnoreFields("G"))
+				return dst, err
+			},
+			wantDst: &DiffDst{
+				A: "xiaowang",
+				B: 100,
+				d: SimpleSrc{
+					Name: "wodemingzi",
+					Age:  ekit.ToPtr(int(10)),
+				},
+				G: BasicSrc{
+					Name:    "nidemingzi",
+					Age:     23,
+					CNumber: complex(1, 2),
+				},
+			},
+		},
+		{
+			name: "成员为结构体数组 with ignore",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ArraySrc, ArrayDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&ArraySrc{
+					A: []SimpleSrc{
+						{
+							Name:    "大明",
+							Age:     ekit.ToPtr[int](18),
+							Friends: []string{"Tom", "Jerry"},
+						},
+						{
+							Name:    "小明",
+							Age:     ekit.ToPtr[int](8),
+							Friends: []string{"Tom"},
+						},
+					},
+				}, IgnoreFields("Age"))
+			},
+			wantDst: &ArrayDst{
+				A: []SimpleSrc{
+					{
+						Name:    "大明",
+						Age:     ekit.ToPtr[int](18),
+						Friends: []string{"Tom", "Jerry"},
+					},
+					{
+						Name:    "小明",
+						Age:     ekit.ToPtr[int](8),
+						Friends: []string{"Tom"},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
