@@ -37,9 +37,15 @@ type options struct {
 	ignoreFields *set.MapSet[string]
 }
 
-func newOptions() *options {
-	return &options{
-		ignoreFields: set.NewMapSet[string](10),
+func newOptions(opts ...option.Option[options]) *options {
+	opt := &options{}
+	option.Apply(opt, opts...)
+	return opt
+}
+
+func initIgnoreFields(size int) option.Option[options] {
+	return func(opt *options) {
+		opt.ignoreFields = set.NewMapSet[string](size)
 	}
 }
 
@@ -50,12 +56,12 @@ func (r *options) InIgnoreFields(str string) bool {
 
 // IgnoreFields 设置复制时要忽略的字段（option 设计模式）
 func IgnoreFields(fields ...string) option.Option[options] {
-	return func(opts *options) {
+	return func(opt *options) {
 		if len(fields) < 1 {
 			return
 		}
 		for i := 0; i < len(fields); i++ {
-			opts.ignoreFields.Add(fields[i])
+			opt.ignoreFields.Add(fields[i])
 		}
 	}
 }
