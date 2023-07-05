@@ -37,20 +37,16 @@ type options struct {
 	ignoreFields *set.MapSet[string]
 }
 
-func newOptions(opts ...option.Option[options]) *options {
-	opt := &options{}
-	option.Apply(opt, opts...)
-	return opt
-}
-
-func initIgnoreFields(size int) option.Option[options] {
-	return func(opt *options) {
-		opt.ignoreFields = set.NewMapSet[string](size)
-	}
+func newOptions() *options {
+	return &options{}
 }
 
 // InIgnoreFields 判断 str 是不是在 ignoreFields 里面
 func (r *options) InIgnoreFields(str string) bool {
+	// 如果没有设置过忽略的字段的话，ignoreFields 就有可能是 nil，这里需要判断一下
+	if r.ignoreFields == nil {
+		return false
+	}
 	return r.ignoreFields.Exist(str)
 }
 
@@ -59,6 +55,10 @@ func IgnoreFields(fields ...string) option.Option[options] {
 	return func(opt *options) {
 		if len(fields) < 1 {
 			return
+		}
+		// 需要用的时候再延迟初始化 ignoreFields
+		if opt.ignoreFields == nil {
+			opt.ignoreFields = set.NewMapSet[string](10)
 		}
 		for i := 0; i < len(fields); i++ {
 			opt.ignoreFields.Add(fields[i])
