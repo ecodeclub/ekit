@@ -506,6 +506,25 @@ func TestReflectCopier_Copy(t *testing.T) {
 			wantDst: &SpecialDst2{A: 1},
 		},
 		{
+			name: "simple_struct_忽略字段的时候传空",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&SimpleSrc{
+					Name:    "大明",
+					Age:     ekit.ToPtr[int](18),
+					Friends: []string{"Tom", "Jerry"},
+				}, IgnoreFields())
+			},
+			wantDst: &SimpleDst{
+				Name:    "大明",
+				Age:     ekit.ToPtr[int](18),
+				Friends: []string{"Tom", "Jerry"},
+			},
+		},
+		{
 			name: "simple_struct_忽略一个字段",
 			copyFunc: func() (any, error) {
 				copier, err := NewReflectCopier[SimpleSrc, SimpleDst]()

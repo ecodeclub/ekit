@@ -15,8 +15,9 @@
 package copier
 
 import (
-	"github.com/ecodeclub/ekit/bean/option"
 	"reflect"
+
+	"github.com/ecodeclub/ekit/bean/option"
 )
 
 // ReflectCopier 基于反射的实现

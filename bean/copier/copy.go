@@ -58,7 +58,7 @@ func IgnoreFields(fields ...string) option.Option[options] {
 		}
 		// 需要用的时候再延迟初始化 ignoreFields
 		if opt.ignoreFields == nil {
-			opt.ignoreFields = set.NewMapSet[string](10)
+			opt.ignoreFields = set.NewMapSet[string](len(fields))
 		}
 		for i := 0; i < len(fields); i++ {
 			opt.ignoreFields.Add(fields[i])
