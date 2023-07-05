@@ -14,6 +14,11 @@
 
 package copier
 
+import (
+	"github.com/ecodeclub/ekit/bean/option"
+	"github.com/ecodeclub/ekit/set"
+)
+
 // Copier 复制数据
 // 1. 深拷贝亦或是浅拷贝，取决于具体的实现。每个实现都要声明清楚这一点；
 // 2. Src 和 Dst 都必须是普通的结构体，支持组合
@@ -21,34 +26,36 @@ package copier
 // 这种设计设计，即使用 *Src 和 *Dst 可能加剧内存逃逸
 type Copier[Src any, Dst any] interface {
 	// CopyTo 将 src 中的数据复制到 dst 中
-	CopyTo(src *Src, dst *Dst, opts ...Option) error
+	CopyTo(src *Src, dst *Dst, opts ...option.Option[options]) error
 	// Copy 将创建一个 Dst 的实例，并且将 Src 中的数据复制过去
-	Copy(src *Src, opts ...Option) (*Dst, error)
+	Copy(src *Src, opts ...option.Option[options]) (*Dst, error)
 }
 
 // options 执行复制操作时的可选配置
 type options struct {
 	// ignoreFields 执行复制操作时，需要忽略的字段
-	ignoreFields []string
+	ignoreFields *set.MapSet[string]
+}
+
+func newOptions() *options {
+	return &options{
+		ignoreFields: set.NewMapSet[string](10),
+	}
 }
 
 // InIgnoreFields 判断 str 是不是在 ignoreFields 里面
 func (r *options) InIgnoreFields(str string) bool {
-	if len(r.ignoreFields) < 1 {
-		return false
-	}
-	for _, s := range r.ignoreFields {
-		if s == str {
-			return true
-		}
-	}
-	return false
+	return r.ignoreFields.Exist(str)
 }
 
-type Option func(*options)
-
-func IgnoreFields(fields ...string) Option {
+// IgnoreFields 设置复制时要忽略的字段（option 设计模式）
+func IgnoreFields(fields ...string) option.Option[options] {
 	return func(opts *options) {
-		opts.ignoreFields = append(opts.ignoreFields, fields...)
+		if len(fields) < 1 {
+			return
+		}
+		for i := 0; i < len(fields); i++ {
+			opts.ignoreFields.Add(fields[i])
+		}
 	}
 }

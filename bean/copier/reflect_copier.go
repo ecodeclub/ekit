@@ -15,6 +15,7 @@
 package copier
 
 import (
+	"github.com/ecodeclub/ekit/bean/option"
 	"reflect"
 )
 
@@ -145,7 +146,7 @@ func createFieldNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 	return nil
 }
 
-func (r *ReflectCopier[Src, Dst]) Copy(src *Src, opts ...Option) (*Dst, error) {
+func (r *ReflectCopier[Src, Dst]) Copy(src *Src, opts ...option.Option[options]) (*Dst, error) {
 	dst := new(Dst)
 	err := r.CopyTo(src, dst, opts...)
 	return dst, err
@@ -157,14 +158,9 @@ func (r *ReflectCopier[Src, Dst]) Copy(src *Src, opts ...Option) (*Dst, error) {
 // 2. 如果 Src 和 Dst 中匹配的字段，其类型是基本类型（及其指针）或者内置类型（及其指针），并且类型一样，则直接用 Src 的值
 // 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，则会深入复制
 // 4. 否则，忽略字段
-func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst, opts ...Option) error {
-	//
-	opt := &options{}
-	if 0 < len(opts) {
-		for i := len(opts) - 1; i >= 0; i-- {
-			opts[i](opt)
-		}
-	}
+func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst, opts ...option.Option[options]) error {
+	opt := newOptions()
+	option.Apply(opt, opts...)
 	r.options = opt
 
 	return r.copyToWithTree(src, dst)
