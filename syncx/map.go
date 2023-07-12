@@ -56,7 +56,6 @@ func (m *Map[K, V]) LoadOrStore(key K, value V) (actual V, loaded bool) {
 // 它的代价就是 Key 不存在的时候会多一次 Load 调用。
 // 当 fn 返回 error 的时候，LoadOrStoreFunc 也会返回 error。
 func (m *Map[K, V]) LoadOrStoreFunc(key K, fn func() (V, error)) (actual V, loaded bool, err error) {
-	var anyVal any
 	val, ok := m.Load(key)
 	if ok {
 		return val, true, nil
@@ -65,10 +64,7 @@ func (m *Map[K, V]) LoadOrStoreFunc(key K, fn func() (V, error)) (actual V, load
 	if err != nil {
 		return
 	}
-	anyVal, loaded = m.m.LoadOrStore(key, val)
-	if anyVal != nil {
-		actual = anyVal.(V)
-	}
+	actual, loaded = m.LoadOrStore(key, val)
 	return
 }
 
