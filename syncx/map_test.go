@@ -57,127 +57,213 @@ func TestMap_Load(t *testing.T) {
 		},
 	}
 	var mu Map[string, *User]
-	mu.Store("found", &User{Name: "found"})
-	mu.Store("found but empty", &User{})
+	mu.Store("found", testCases[0].wantVal)
+	mu.Store("found but empty", testCases[1].wantVal)
 	mu.Store("found but nil", nil)
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			val, ok := mu.Load(tc.key)
 			assert.Equal(t, tc.wantOk, ok)
-			assert.Equal(t, tc.wantVal, val)
+			assert.Same(t, tc.wantVal, val)
 		})
 	}
 }
 
 func TestMap_LoadOrStore(t *testing.T) {
-	var m = Map[string, *User]{}
-	val, loaded := m.LoadOrStore("Tom", &User{Name: "Tom"})
-	assert.False(t, loaded)
-	assert.Equal(t, &User{Name: "Tom"}, val)
 
-	val, loaded = m.LoadOrStore("Tom", &User{Name: "Tom-copy"})
-	assert.True(t, loaded)
-	assert.Equal(t, &User{Name: "Tom"}, val)
+	t.Run("store non-nil value", func(t *testing.T) {
+		m, user := Map[string, *User]{}, &User{Name: "Tom"}
+		val, loaded := m.LoadOrStore(user.Name, user)
+		assert.False(t, loaded)
+		assert.Same(t, user, val)
+	})
 
-	val, loaded = m.LoadOrStore("Jerry", nil)
-	assert.False(t, loaded)
-	assert.Nil(t, val)
+	t.Run("load non-nil value", func(t *testing.T) {
+		m, user := Map[string, *User]{}, &User{Name: "Tom"}
+		val, loaded := m.LoadOrStore(user.Name, user)
+		assert.False(t, loaded)
+		assert.Same(t, user, val)
 
-	val, loaded = m.LoadOrStore("Jerry", &User{Name: "Jerry"})
-	assert.True(t, loaded)
-	assert.Nil(t, val)
+		val, loaded = m.LoadOrStore("Tom", &User{Name: "Tom-copy"})
+
+		assert.True(t, loaded)
+		assert.Same(t, user, val)
+	})
+
+	t.Run("store nil value", func(t *testing.T) {
+		m, user := Map[string, *User]{}, &User{Name: "Jerry"}
+		val, loaded := m.LoadOrStore(user.Name, nil)
+		assert.False(t, loaded)
+		assert.Nil(t, val)
+	})
+
+	t.Run("load nil value", func(t *testing.T) {
+		m, user := Map[string, *User]{}, &User{Name: "Jerry"}
+		val, loaded := m.LoadOrStore(user.Name, nil)
+		assert.False(t, loaded)
+		assert.Nil(t, val)
+
+		val, loaded = m.LoadOrStore(user.Name, user)
+
+		assert.True(t, loaded)
+		assert.Nil(t, val)
+	})
 }
 
 func TestMap_LoadOrStoreFunc(t *testing.T) {
-	var m = Map[string, *User]{}
-	val, loaded, err := m.LoadOrStoreFunc("Tom", func() (*User, error) {
-		return &User{Name: "Tom"}, nil
-	})
-	assert.NoError(t, err)
-	assert.False(t, loaded)
-	assert.Equal(t, &User{Name: "Tom"}, val)
 
-	// 测试 Tom 存在的情况
-	val, loaded, err = m.LoadOrStoreFunc("Tom", func() (*User, error) {
-		return &User{Name: "Tom"}, nil
-	})
-	assert.NoError(t, err)
-	assert.True(t, loaded)
-	assert.Equal(t, &User{Name: "Tom"}, val)
+	t.Run("store non-nil value returned by func", func(t *testing.T) {
+		m, user := Map[string, *User]{}, &User{Name: "Tom"}
 
-	// 测试初始化失败
-	val, loaded, err = m.LoadOrStoreFunc("Jerry", func() (*User, error) {
-		return nil, errors.New("初始话失败")
+		val, loaded, err := m.LoadOrStoreFunc(user.Name, func() (*User, error) {
+			return user, nil
+		})
+
+		assert.NoError(t, err)
+		assert.False(t, loaded)
+		assert.Same(t, user, val)
 	})
-	assert.Equal(t, err, errors.New("初始话失败"))
-	assert.False(t, loaded)
-	assert.Equal(t, (*User)(nil), val)
+
+	t.Run("load non-nil value returned by func", func(t *testing.T) {
+		m, user := Map[string, *User]{}, &User{Name: "Tom"}
+		val, loaded, err := m.LoadOrStoreFunc(user.Name, func() (*User, error) {
+			return user, nil
+		})
+		assert.NoError(t, err)
+		assert.False(t, loaded)
+		assert.Same(t, user, val)
+
+		val, loaded, err = m.LoadOrStoreFunc(user.Name, func() (*User, error) {
+			return &User{Name: "Tom"}, nil
+		})
+
+		assert.NoError(t, err)
+		assert.True(t, loaded)
+		assert.Same(t, user, val)
+	})
+
+	t.Run("store nil value returned by func", func(t *testing.T) {
+		m, user := Map[string, *User]{}, &User{Name: "Tom"}
+
+		val, loaded, err := m.LoadOrStoreFunc(user.Name, func() (*User, error) {
+			return nil, nil
+		})
+
+		assert.NoError(t, err)
+		assert.False(t, loaded)
+		assert.Nil(t, val)
+	})
+
+	t.Run("load nil value returned by func", func(t *testing.T) {
+		m, user := Map[string, *User]{}, &User{Name: "Tom"}
+		val, loaded, err := m.LoadOrStoreFunc(user.Name, func() (*User, error) {
+			return nil, nil
+		})
+		assert.NoError(t, err)
+		assert.False(t, loaded)
+		assert.Nil(t, val)
+
+		val, loaded, err = m.LoadOrStoreFunc(user.Name, func() (*User, error) {
+			return nil, nil
+		})
+
+		assert.NoError(t, err)
+		assert.True(t, loaded)
+		assert.Nil(t, val)
+	})
+
+	t.Run("got error returned by func", func(t *testing.T) {
+		m := Map[string, *User]{}
+		val, loaded, err := m.LoadOrStoreFunc("Jerry", func() (*User, error) {
+			return nil, errors.New("初始话失败")
+		})
+		assert.Equal(t, err, errors.New("初始话失败"))
+		assert.False(t, loaded)
+		assert.Equal(t, (*User)(nil), val)
+	})
 }
 
 func TestMap_LoadAndDelete(t *testing.T) {
-	var m = Map[string, *User]{}
-	m.Store("Tom", nil)
-	val, loaded := m.LoadAndDelete("Tom")
-	assert.True(t, loaded)
-	assert.Nil(t, val)
 
-	val, loaded = m.LoadAndDelete("Tom")
-	assert.False(t, loaded)
-	assert.Nil(t, val)
+	t.Run("non-nil value", func(t *testing.T) {
+		m, user := Map[string, *User]{}, &User{Name: "Jerry"}
+		m.Store("Jerry", user)
 
-	m.Store("Jerry", &User{Name: "Jerry"})
-	val, loaded = m.LoadAndDelete("Jerry")
-	assert.True(t, loaded)
-	assert.Equal(t, &User{Name: "Jerry"}, val)
+		val, loaded := m.LoadAndDelete(user.Name)
+		assert.True(t, loaded)
+		assert.Same(t, user, val)
 
-	val, loaded = m.LoadAndDelete("Jerry")
-	assert.False(t, loaded)
-	assert.Nil(t, val)
+		val, loaded = m.LoadAndDelete(user.Name)
+		assert.False(t, loaded)
+		assert.Nil(t, val)
+	})
+
+	t.Run("nil value", func(t *testing.T) {
+		m, user := Map[string, *User]{}, &User{Name: "Tom"}
+		m.Store(user.Name, nil)
+
+		val, loaded := m.LoadAndDelete(user.Name)
+		assert.True(t, loaded)
+		assert.Nil(t, val)
+
+		val, loaded = m.LoadAndDelete(user.Name)
+		assert.False(t, loaded)
+		assert.Nil(t, val)
+	})
 }
 
 func TestMap_Delete(t *testing.T) {
-	var m = Map[string, *User]{}
-	m.Store("Tom", &User{Name: "Tom"})
-	val, ok := m.Load("Tom")
+	m, user := Map[string, *User]{}, &User{Name: "Tom"}
+	m.Store(user.Name, user)
+	val, ok := m.Load(user.Name)
 	assert.True(t, ok)
-	assert.Equal(t, &User{Name: "Tom"}, val)
-	m.Delete("Tom")
-	val, ok = m.Load("Tom")
+	assert.Same(t, user, val)
+
+	m.Delete(user.Name)
+
+	val, ok = m.Load(user.Name)
 	assert.False(t, ok)
 	assert.Nil(t, val)
 }
 
 func TestMap_Range(t *testing.T) {
-	var m = Map[string, *User]{}
-	m.Store("Tom", &User{Name: "Tom"})
-	m.Store("Jerry", &User{Name: "Jerry"})
-	m.Store("nil", nil)
 
-	shadow := make(map[string]*User, 3)
-	m.Range(func(key string, val *User) bool {
-		shadow[key] = val
-		return true
-	})
-	assert.Equal(t, map[string]*User{
-		"Tom":   {Name: "Tom"},
-		"Jerry": {Name: "Jerry"},
-		"nil":   nil,
-	}, shadow)
+	t.Run("non-pointer type key", func(t *testing.T) {
+		m, tom, jerry := Map[string, *User]{}, &User{Name: "Tom"}, &User{Name: "Jerry"}
+		var zero *User
+		m.Store(tom.Name, tom)
+		m.Store(jerry.Name, jerry)
+		m.Store("zero", zero)
+		m.Store("nil", nil)
 
-	var ptrKeyMap Map[*User, string]
-	key1 := &User{Name: "Tom"}
-	var key2 *User
-	ptrKeyMap.Store(key1, "Tom")
-	ptrKeyMap.Store(key2, "nil")
-	ptrShadow := make(map[*User]string, 2)
-	ptrKeyMap.Range(func(key *User, val string) bool {
-		ptrShadow[key] = val
-		return true
+		shadow := make(map[string]*User, 4)
+		m.Range(func(key string, val *User) bool {
+			shadow[key] = val
+			return true
+		})
+
+		assert.Same(t, tom, shadow[tom.Name])
+		assert.Same(t, jerry, shadow[jerry.Name])
+		assert.Same(t, zero, shadow["zero"])
+		assert.Same(t, (*User)(nil), shadow["nil"])
 	})
-	assert.Equal(t, map[*User]string{
-		key1: "Tom",
-		nil:  "nil",
-	}, ptrShadow)
+
+	t.Run("pointer type key", func(t *testing.T) {
+		m, tom := Map[*User, string]{}, &User{Name: "Tom"}
+		var zero *User
+		m.Store(tom, "Tom")
+		m.Store(zero, "nil")
+
+		shadow := make(map[*User]string, 2)
+		m.Range(func(key *User, val string) bool {
+			shadow[key] = val
+			return true
+		})
+
+		assert.Equal(t, shadow[tom], tom.Name)
+		assert.Equal(t, shadow[zero], "nil")
+		assert.Equal(t, shadow[nil], "nil")
+	})
 }
 
 func ExampleMap_LoadAndDelete() {
