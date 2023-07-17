@@ -17,6 +17,8 @@ package syncx
 import (
 	"context"
 	"sync"
+	"sync/atomic"
+	"unsafe"
 )
 
 // Cond 实现了一个条件变量，是等待或宣布一个事件发生的goroutines的汇合点。
@@ -32,14 +34,15 @@ type Cond struct {
 	// L 在观察或改变条件时被加锁
 	L          sync.Locker
 	notifyList *notifyList
+	// 用于指向自身的指针，可以用于检测是否被复制使用
+	checker unsafe.Pointer
+	// 用于初始化notifyList
+	once sync.Once
 }
 
 // NewCond 返回 关联了 l 的新 Cond .
 func NewCond(l sync.Locker) *Cond {
-	return &Cond{
-		L:          l,
-		notifyList: newNotifyList(),
-	}
+	return &Cond{L: l}
 }
 
 // Wait 自动解锁 c.L 并挂起当前调用的 goroutine. 在恢复执行之后 Wait 在返回前将加 c.L 锁成功.
@@ -60,6 +63,8 @@ func NewCond(l sync.Locker) *Cond {
 //		... condition 满足了，do work ...
 //		c.L.Unlock()
 func (c *Cond) Wait(ctx context.Context) error {
+	c.checkCopy()
+	c.checkFirstUse()
 	t := c.notifyList.add() // 解锁前，将等待的对象放入链表中
 	c.L.Unlock()            // 一定是在等待对象放入链表后再解锁，避免刚解锁就发生协程切换，执行了signal后，再换回来导致永远阻塞
 	defer c.L.Lock()
@@ -73,6 +78,8 @@ func (c *Cond) Wait(ctx context.Context) error {
 // Signal() 不影响 goroutine 调度的优先级; 如果其它的 goroutines
 // 尝试着锁定 c.L, 它们可能在 "waiting" goroutine 之前被唤醒.
 func (c *Cond) Signal() {
+	c.checkCopy()
+	c.checkFirstUse()
 	c.notifyList.notifyOne()
 }
 
@@ -80,7 +87,30 @@ func (c *Cond) Signal() {
 //
 // 调用时，caller 可以持有也可以不持有 c.L 锁
 func (c *Cond) Broadcast() {
+	c.checkCopy()
+	c.checkFirstUse()
 	c.notifyList.notifyAll()
+}
+
+// checkCopy 检查是否被拷贝使用
+func (c *Cond) checkCopy() {
+	// 判断checker保存的指针是否等于当前的指针（初始化时，并没有初始化checker的值，所以也会出现不相等）
+	if c.checker != unsafe.Pointer(c) &&
+		// 由于初次初始化时，c.checker为0值，所以顺便进行一次原子替换，辅助初始化
+		!atomic.CompareAndSwapPointer(&c.checker, nil, unsafe.Pointer(c)) &&
+		// 再度检查checker保留指针是否等于当前指针
+		c.checker != unsafe.Pointer(c) {
+		panic("syncx.Cond is copied")
+	}
+}
+
+// checkFirstUse 用于初始化notifyList
+func (c *Cond) checkFirstUse() {
+	c.once.Do(func() {
+		if c.notifyList == nil {
+			c.notifyList = newNotifyList()
+		}
+	})
 }
 
 // notifyList 是一个简单的 runtime_notifyList 实现，但增强了 wait 方法
@@ -100,7 +130,7 @@ func (l *notifyList) add() *node {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	el := l.list.alloc()
-	l.list.PushBack(el)
+	l.list.pushBack(el)
 	return el
 }
 
@@ -111,20 +141,21 @@ func (l *notifyList) wait(ctx context.Context, elem *node) error {
 	// 由于ch是挂在elem上的，所以elem在ch被回收之前，不可以被错误回收，所以必须在这里进行回收
 	defer l.list.free(elem)
 	select { // 由于会随机选择一条，在超时和通知同时存在的话，如果通知先行，则没有影响，如果超时的同时，又来了通知
-	case <-ctx.Done(): // 进了超时分支，但同时协程发生了切换进入了notifyOne的分支；这个时候，根据remove的成功与否可以知道是否是需要唤醒的
+	case <-ctx.Done(): // 进了超时分支
 		l.mu.Lock()
 		defer l.mu.Unlock()
 		select {
 		// double check: 检查是否在加锁前，刚好被正常通知了，
-		case <-ch: // 如果取到数据，代表收到了信号了，ch也因为被取了一次消息，意味着可以再次复用
-			// 转移信号到下一个
-			// 如果有下一个等待的，就唤醒它
-			if l.list.Len() != 0 {
+		// 如果取到数据，代表收到了信号了，ch也因为被取了一次消息，意味着可以再次复用
+		// 转移信号到下一个
+		// 如果有下一个等待的，就唤醒它
+		case <-ch:
+			if l.list.len() != 0 {
 				l.notifyNext()
 			}
-		default: // 如果取不到数据，代表不可能被正常唤醒了，ch也意味着没有被使用
-			// 这种情况代表加锁成功后，没有被通知到，属于真正的超时的情况，从队列移除等待对象，避免被错误通知唤醒，返回超时错误信息
-			l.list.Remove(elem)
+		// 如果取不到数据，代表不可能被正常唤醒了，ch也意味着没有被使用，可以从队列移除等待对象
+		default:
+			l.list.remove(elem)
 		}
 		return ctx.Err()
 	case <-ch: // 如果取到数据，代表被正常唤醒了，ch也因为被取了一次消息，意味着可以再次复用
@@ -135,23 +166,23 @@ func (l *notifyList) wait(ctx context.Context, elem *node) error {
 func (l *notifyList) notifyOne() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.list.Len() == 0 {
+	if l.list.len() == 0 {
 		return
 	}
 	l.notifyNext()
 }
 
 func (l *notifyList) notifyNext() {
-	front := l.list.Front()
+	front := l.list.front()
 	ch := front.Value
-	l.list.Remove(front)
+	l.list.remove(front)
 	ch <- struct{}{}
 }
 
 func (l *notifyList) notifyAll() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	for l.list.Len() != 0 {
+	for l.list.len() != 0 {
 		l.notifyNext()
 	}
 }
@@ -188,13 +219,13 @@ func newChanList() *chanList {
 	}
 }
 
-// Len 获取链表长度
-func (l *chanList) Len() int {
+// len 获取链表长度
+func (l *chanList) len() int {
 	return l.size
 }
 
-// Front 获取队首元素
-func (l *chanList) Front() *node {
+// front 获取队首元素
+func (l *chanList) front() *node {
 	return l.sentinel.next
 }
 
@@ -204,8 +235,8 @@ func (l *chanList) alloc() *node {
 	return elem
 }
 
-// PushBack 追加元素到队尾
-func (l *chanList) PushBack(elem *node) {
+// pushBack 追加元素到队尾
+func (l *chanList) pushBack(elem *node) {
 	elem.next = l.sentinel
 	elem.prev = l.sentinel.prev
 	l.sentinel.prev.next = elem
@@ -213,8 +244,8 @@ func (l *chanList) PushBack(elem *node) {
 	l.size++
 }
 
-// Remove 元素移除时，还不能回收该元素，避免元素上的chan被错误覆盖
-func (l *chanList) Remove(elem *node) {
+// remove 元素移除时，还不能回收该元素，避免元素上的chan被错误覆盖
+func (l *chanList) remove(elem *node) {
 	elem.prev.next = elem.next
 	elem.next.prev = elem.prev
 	elem.prev = nil

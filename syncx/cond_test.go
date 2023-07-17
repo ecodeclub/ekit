@@ -263,18 +263,18 @@ func TestChanList(t *testing.T) {
 				ele := l.alloc()
 				inputNodes = append(inputNodes, ele)
 				inputChans = append(inputChans, ele.Value)
-				l.PushBack(ele)
+				l.pushBack(ele)
 			}
-			if length := l.Len(); length != testcase.num {
-				t.Errorf("list.Len() = %v, want %v", length, testcase.num)
+			if length := l.len(); length != testcase.num {
+				t.Errorf("list.len() = %v, want %v", length, testcase.num)
 			}
 			outNodes := make([]*node, 0, testcase.num)
 			outChans := make([]chan struct{}, 0, testcase.num)
-			for l.Len() != 0 {
-				front := l.Front()
+			for l.len() != 0 {
+				front := l.front()
 				outNodes = append(outNodes, front)
 				outChans = append(outChans, front.Value)
-				l.Remove(front)
+				l.remove(front)
 			}
 			if !reflect.DeepEqual(outChans, inputChans) {
 				t.Errorf("chan list is %v, but got %v", inputChans, outChans)
@@ -291,7 +291,7 @@ func BenchmarkChanList(b *testing.B) {
 	l := newChanList()
 	for i := 0; i < b.N; i++ {
 		elem := l.alloc()
-		l.PushBack(elem)
-		l.Remove(elem)
+		l.pushBack(elem)
+		l.remove(elem)
 	}
 }

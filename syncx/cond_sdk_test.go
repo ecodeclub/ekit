@@ -22,6 +22,7 @@ package syncx
 
 import (
 	"context"
+	"reflect"
 	"runtime"
 	"sync"
 	"testing"
@@ -258,6 +259,20 @@ func TestCondSignalStealing(t *testing.T) {
 		m.Unlock()
 		cond.Broadcast()
 	}
+}
+
+func TestCondCopy(t *testing.T) {
+	defer func() {
+		err := recover()
+		if err == nil || err.(string) != "syncx.Cond is copied" {
+			t.Fatalf("got %v, expect syncx.Cond is copied", err)
+		}
+	}()
+	c := Cond{L: &sync.Mutex{}}
+	c.Signal()
+	var c2 Cond
+	reflect.ValueOf(&c2).Elem().Set(reflect.ValueOf(&c).Elem()) // c2 := c, hidden from vet
+	c2.Signal()
 }
 
 func BenchmarkCond1(b *testing.B) {
