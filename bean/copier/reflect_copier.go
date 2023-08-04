@@ -16,6 +16,7 @@ package copier
 
 import (
 	"reflect"
+	"time"
 
 	"github.com/ecodeclub/ekit/bean/option"
 )
@@ -50,7 +51,7 @@ type fieldNode struct {
 }
 
 // NewReflectCopier 如果类型不匹配, 创建时直接检查报错.
-func NewReflectCopier[Src any, Dst any]() (*ReflectCopier[Src, Dst], error) {
+func NewReflectCopier[Src any, Dst any](opts ...option.Option[options]) (*ReflectCopier[Src, Dst], error) {
 	src := new(Src)
 	srcTyp := reflect.TypeOf(src).Elem()
 	dst := new(Dst)
@@ -72,6 +73,11 @@ func NewReflectCopier[Src any, Dst any]() (*ReflectCopier[Src, Dst], error) {
 	copier := &ReflectCopier[Src, Dst]{
 		rootField: root,
 	}
+
+	opt := newOptions()
+	option.Apply(opt, opts...)
+	copier.options = opt
+
 	return copier, nil
 }
 
@@ -98,17 +104,12 @@ func createFieldNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 			continue
 		}
 		srcFieldTypStruct := srcTyp.Field(srcIndex)
-		if srcFieldTypStruct.Type.Kind() != dstFieldTypStruct.Type.Kind() {
-			return newErrKindNotMatchError(srcFieldTypStruct.Type.Kind(), dstFieldTypStruct.Type.Kind(), dstFieldTypStruct.Name)
-		}
 
-		if srcFieldTypStruct.Type.Kind() == reflect.Pointer {
-			if srcFieldTypStruct.Type.Elem().Kind() != dstFieldTypStruct.Type.Elem().Kind() {
-				return newErrKindNotMatchError(srcFieldTypStruct.Type.Kind(), dstFieldTypStruct.Type.Kind(), dstFieldTypStruct.Name)
-			}
-			if srcFieldTypStruct.Type.Elem().Kind() == reflect.Pointer {
-				return newErrMultiPointer(dstFieldTypStruct.Name)
-			}
+		if srcFieldTypStruct.Type.Kind() == reflect.Pointer && srcFieldTypStruct.Type.Elem().Kind() == reflect.Pointer {
+			return newErrMultiPointer(srcFieldTypStruct.Name)
+		}
+		if dstFieldTypStruct.Type.Kind() == reflect.Pointer && dstFieldTypStruct.Type.Elem().Kind() == reflect.Pointer {
+			return newErrMultiPointer(dstFieldTypStruct.Name)
 		}
 
 		child := fieldNode{
@@ -123,15 +124,17 @@ func createFieldNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 		fieldDstTyp := dstFieldTypStruct.Type
 		if fieldSrcTyp.Kind() == reflect.Pointer {
 			fieldSrcTyp = fieldSrcTyp.Elem()
+		}
+
+		if fieldDstTyp.Kind() == reflect.Pointer {
 			fieldDstTyp = fieldDstTyp.Elem()
 		}
 
 		if isShadowCopyType(fieldSrcTyp.Kind()) {
 			// 内置类型，但不匹配，如别名、map和slice
-			if fieldSrcTyp != fieldDstTyp {
-				return newErrTypeNotMatchError(srcFieldTypStruct.Type, dstFieldTypStruct.Type, dstFieldTypStruct.Name)
-			}
 			// 说明当前节点是叶子节点, 直接拷贝
+			child.isLeaf = true
+		} else if fieldSrcTyp == reflect.TypeOf(time.Time{}) {
 			child.isLeaf = true
 		} else if fieldSrcTyp.Kind() == reflect.Struct {
 			if err := createFieldNodes(&child, fieldSrcTyp, fieldDstTyp); err != nil {
@@ -160,9 +163,13 @@ func (r *ReflectCopier[Src, Dst]) Copy(src *Src, opts ...option.Option[options])
 // 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，则会深入复制
 // 4. 否则，忽略字段
 func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst, opts ...option.Option[options]) error {
-	opt := newOptions()
-	option.Apply(opt, opts...)
-	r.options = opt
+	if r.options == nil {
+		opt := newOptions()
+		option.Apply(opt, opts...)
+		r.options = opt
+	} else {
+		option.Apply(r.options, opts...)
+	}
 
 	return r.copyToWithTree(src, dst)
 }
@@ -177,24 +184,64 @@ func (r *ReflectCopier[Src, Dst]) copyToWithTree(src *Src, dst *Dst) error {
 }
 
 func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue reflect.Value, dstType reflect.Type, dstValue reflect.Value, root *fieldNode) error {
+	originSrcVal := srcValue
+	originDstVal := dstValue
 	if srcValue.Kind() == reflect.Pointer {
 		if srcValue.IsNil() {
 			return nil
 		}
+		srcValue = srcValue.Elem()
+		srcTyp = srcTyp.Elem()
+	}
+
+	if dstValue.Kind() == reflect.Pointer {
 		if dstValue.IsNil() {
 			dstValue.Set(reflect.New(dstType.Elem()))
 		}
-		srcValue = srcValue.Elem()
-		srcTyp = srcTyp.Elem()
-
 		dstValue = dstValue.Elem()
 		dstType = dstType.Elem()
 	}
+
 	// 执行拷贝
 	if root.isLeaf {
-		if dstValue.CanSet() {
-			dstValue.Set(srcValue)
+		convert, ok := r.options.convertFields[root.name]
+		// 获取convert失败，就需要检测类型是否匹配
+		if !ok && srcTyp.Kind() != dstType.Kind() {
+			return newErrKindNotMatchError(srcTyp.Kind(), dstType.Kind(), root.name)
 		}
+		if !ok && srcTyp != dstType {
+			return newErrTypeNotMatchError(srcTyp, dstType, root.name)
+		}
+		// 获取convert失败，类型匹配就直接set
+		if !ok && dstValue.CanSet() {
+			if srcValue.IsZero() {
+				return nil
+			}
+			dstValue.Set(srcValue)
+			return nil
+		}
+
+		// 字段执行转换函数时，需要用到原始类型进行判断
+		srcConv, err := convert(originSrcVal.Interface())
+		if err != nil {
+			return err
+		}
+
+		srcConvType := reflect.TypeOf(srcConv)
+		srcConvVal := reflect.ValueOf(srcConv)
+		// 待设置的value和转换获取的value类型不匹配
+		if srcConvType != originDstVal.Type() {
+			return newErrTypeNotMatchError(srcConvType, originDstVal.Type(), root.name)
+		}
+
+		if srcConvType.Kind() == reflect.Ptr {
+			srcConvVal = srcConvVal.Elem()
+		}
+
+		if dstValue.CanSet() && srcConvVal.IsValid() {
+			dstValue.Set(srcConvVal)
+		}
+
 		return nil
 	}
 

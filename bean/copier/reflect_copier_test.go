@@ -15,8 +15,10 @@
 package copier
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/ecodeclub/ekit"
 	"github.com/stretchr/testify/assert"
@@ -1040,6 +1042,234 @@ func TestReflectCopier_Copy(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "指定convert time2string,src为nil",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ConvSimpleSrc, ConvSimpleDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&ConvSimpleSrc{}, ConvertField[time.Time, string]("BirthDay", Time2String{Pattern: "2006-01-02 15:04:05"}))
+			},
+			wantDst: &ConvSimpleDst{
+				BirthDay: "0001-01-01 00:00:00",
+			},
+		},
+		{
+			name: "指定convert time2string",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ConvSimpleSrc, ConvSimpleDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&ConvSimpleSrc{
+					Name:     "大明",
+					BirthDay: time.Date(2023, time.July, 26, 9, 15, 22, 213, time.UTC),
+					Friends:  []string{"Tom", "Jerry"},
+				}, ConvertField[time.Time, string]("BirthDay", Time2String{Pattern: "2006-01-02 15:04:05"}))
+			},
+			wantDst: &ConvSimpleDst{
+				Name:     "大明",
+				BirthDay: "2023-07-26 09:15:22",
+				Friends:  []string{"Tom", "Jerry"},
+			},
+		},
+		{
+			name: "指定convert func, src为nil",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ConvSimpleSrc, ConvSimpleDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(
+					&ConvSimpleSrc{},
+					ConvertField[string, string](
+						"Name",
+						ConverterFunc[string, string](func(src string) (string, error) {
+							var newS string
+							newS = fmt.Sprintf("%s plus", src)
+							return newS, nil
+						}),
+					),
+					ConvertField[time.Time, string](
+						"BirthDay",
+						ConverterFunc[time.Time, string](func(src time.Time) (string, error) {
+							return src.Format("2006-01-02 15:04:05"), nil
+						}),
+					),
+					ConvertField[*int, *int](
+						"Age",
+						ConverterFunc[*int, *int](func(src *int) (*int, error) {
+							var newS int
+							newS = *src + 1
+							return &newS, nil
+						}),
+					),
+					ConvertField[[]string, []string](
+						"Friends",
+						ConverterFunc[[]string, []string](func(src []string) ([]string, error) {
+							return []string{"Tom", "Jerry"}, nil
+						}),
+					),
+				)
+			},
+			wantDst: &ConvSimpleDst{
+				Name:     " plus",
+				Age:      nil,
+				BirthDay: "0001-01-01 00:00:00",
+				Friends:  []string{"Tom", "Jerry"},
+			},
+		},
+		{
+			name: "指定convert func, dst值为nil",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ConvSimpleSrc, ConvSimpleDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(
+					&ConvSimpleSrc{
+						Name:     "大明",
+						Age:      ekit.ToPtr[int](11),
+						BirthDay: time.Now(),
+						Friends:  []string{"Tom", "Jerry"},
+					},
+					ConvertField[string, string](
+						"Name",
+						ConverterFunc[string, string](func(src string) (string, error) {
+							return "", nil
+						}),
+					),
+					ConvertField[time.Time, string](
+						"BirthDay",
+						ConverterFunc[time.Time, string](func(src time.Time) (string, error) {
+							return "", nil
+						}),
+					),
+					ConvertField[*int, *int](
+						"Age",
+						ConverterFunc[*int, *int](func(src *int) (*int, error) {
+							return nil, nil
+						}),
+					),
+					ConvertField[[]string, []string](
+						"Friends",
+						ConverterFunc[[]string, []string](func(src []string) ([]string, error) {
+							return nil, nil
+						}),
+					),
+				)
+			},
+			wantDst: &ConvSimpleDst{
+				Name:     "",
+				BirthDay: "",
+				Age:      ekit.ToPtr[int](0),
+				Friends:  nil,
+			},
+		},
+		{
+			name: "指定convert func",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ConvSimpleSrc, ConvSimpleDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(
+					&ConvSimpleSrc{
+						Name:     "大明",
+						Age:      ekit.ToPtr[int](15),
+						BirthDay: time.Date(2023, time.July, 26, 9, 15, 22, 213, time.UTC),
+						Friends:  []string{"Tom", "Jerry"},
+					},
+					ConvertField[string, string](
+						"Name",
+						ConverterFunc[string, string](func(src string) (string, error) {
+							var newS string
+							newS = fmt.Sprintf("%s plus", src)
+							return newS, nil
+						}),
+					),
+					ConvertField[time.Time, string](
+						"BirthDay",
+						ConverterFunc[time.Time, string](func(src time.Time) (string, error) {
+							return src.Format("2006-01-02 15:04:05"), nil
+						}),
+					),
+					ConvertField[*int, *int](
+						"Age",
+						ConverterFunc[*int, *int](func(src *int) (*int, error) {
+							var newS int
+							newS = *src + 1
+							return &newS, nil
+						}),
+					),
+				)
+			},
+			wantDst: &ConvSimpleDst{
+				Name:     "大明 plus",
+				Age:      ekit.ToPtr[int](16),
+				BirthDay: "2023-07-26 09:15:22",
+				Friends:  []string{"Tom", "Jerry"},
+			},
+		},
+		{
+			name: "指定返回特殊类型的convert func",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ConvSpecialSrc, ConvSpecialDst]()
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&ConvSpecialSrc{
+					Arr:  [3]float32{1, 2, 3},
+					M:    map[string]int{"a": 4, "b": 5, "c": 6},
+					Diff: map[string]int{"a1": 41, "b1": 51, "c1": 61},
+				}, ConvertField[map[string]int, map[string]int](
+					"M",
+					ConverterFunc[map[string]int, map[string]int](func(src map[string]int) (map[string]int, error) {
+						newM := map[string]int{"a1": 41, "b1": 51, "c1": 61}
+						return newM, nil
+					})),
+					ConvertField[map[string]int, []int](
+						"Diff",
+						ConverterFunc[map[string]int, []int](func(src map[string]int) ([]int, error) {
+							newM := []int{1, 1, 1}
+							return newM, nil
+						})),
+				)
+			},
+			wantDst: &ConvSpecialDst{
+				Arr:  [3]float32{1, 2, 3},
+				M:    map[string]int{"a1": 41, "b1": 51, "c1": 61},
+				Diff: []int{1, 1, 1},
+			},
+		},
+		{
+			name: "创建时指定默认converter",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ConvSimpleSrc, ConvSimpleDst](
+					ConvertField[time.Time, string](
+						"BirthDay",
+						Time2String{Pattern: "2006-01-02 15:04:05"},
+					),
+				)
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&ConvSimpleSrc{
+					Name:     "大明",
+					BirthDay: time.Date(2023, time.July, 26, 9, 15, 22, 213, time.UTC),
+					Friends:  []string{"Tom", "Jerry"},
+				}, ConvertField[string, string]("Name", ConverterFunc[string, string](func(src string) (string, error) {
+					newS := fmt.Sprintf("%s plus", src)
+					return newS, nil
+				})))
+			},
+			wantDst: &ConvSimpleDst{
+				Name:     "大明 plus",
+				BirthDay: "2023-07-26 09:15:22",
+				Friends:  []string{"Tom", "Jerry"},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1199,6 +1429,32 @@ type SpecialDst1 struct {
 type aliasInt1 = int
 type SpecialDst2 struct {
 	A aliasInt1
+}
+
+type ConvSimpleSrc struct {
+	Name     string
+	Age      *int
+	BirthDay time.Time
+	Friends  []string
+}
+
+type ConvSimpleDst struct {
+	Name     string
+	Age      *int
+	BirthDay string
+	Friends  []string
+}
+
+type ConvSpecialSrc struct {
+	Arr  [3]float32
+	M    map[string]int
+	Diff map[string]int
+}
+
+type ConvSpecialDst struct {
+	Arr  [3]float32
+	M    map[string]int
+	Diff []int
 }
 
 func BenchmarkReflectCopier_Copy(b *testing.B) {

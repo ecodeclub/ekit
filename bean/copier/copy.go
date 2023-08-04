@@ -35,7 +35,11 @@ type Copier[Src any, Dst any] interface {
 type options struct {
 	// ignoreFields 执行复制操作时，需要忽略的字段
 	ignoreFields *set.MapSet[string]
+	// convertFields 执行转换的field和转化接口的泛型包装
+	convertFields map[string]converterWrapper
 }
+
+type converterWrapper func(src any) (any, error)
 
 func newOptions() *options {
 	return &options{}
@@ -62,6 +66,25 @@ func IgnoreFields(fields ...string) option.Option[options] {
 		}
 		for i := 0; i < len(fields); i++ {
 			opt.ignoreFields.Add(fields[i])
+		}
+	}
+}
+
+func ConvertField[Src any, Dst any](field string, converter Converter[Src, Dst]) option.Option[options] {
+	return func(opt *options) {
+		if field == "" || converter == nil {
+			return
+		}
+		if opt.convertFields == nil {
+			opt.convertFields = make(map[string]converterWrapper, 16)
+		}
+		opt.convertFields[field] = func(src any) (any, error) {
+			var dst Dst
+			srcVal, ok := src.(Src)
+			if !ok {
+				return dst, ErrConvertFieldTypeNotMatch
+			}
+			return converter.Convert(srcVal)
 		}
 	}
 }
