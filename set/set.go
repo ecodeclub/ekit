@@ -16,8 +16,8 @@ package set
 
 type Set[T comparable] interface {
 	Add(key T)
-	// 返回是否存在这个元素
 	Delete(key T)
+	// Exist 返回是否存在这个元素
 	Exist(key T) bool
 	Keys() []T
 }
