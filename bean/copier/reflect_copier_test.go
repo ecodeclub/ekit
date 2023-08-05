@@ -269,7 +269,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 					S: struct{ A string }{A: "a"},
 				})
 			},
-			wantErr: newErrKindNotMatchError(reflect.String, reflect.Int, "A"),
+			wantErr: newErrTypeNotMatchError(reflect.TypeOf(""), reflect.TypeOf(0), "A"),
 		},
 		{
 			name: "多重指针",
@@ -1086,8 +1086,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 					ConvertField[string, string](
 						"Name",
 						ConverterFunc[string, string](func(src string) (string, error) {
-							var newS string
-							newS = fmt.Sprintf("%s plus", src)
+							newS := fmt.Sprintf("%s plus", src)
 							return newS, nil
 						}),
 					),
@@ -1100,8 +1099,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 					ConvertField[*int, *int](
 						"Age",
 						ConverterFunc[*int, *int](func(src *int) (*int, error) {
-							var newS int
-							newS = *src + 1
+							newS := *src + 1
 							return &newS, nil
 						}),
 					),
@@ -1163,7 +1161,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 			wantDst: &ConvSimpleDst{
 				Name:     "",
 				BirthDay: "",
-				Age:      ekit.ToPtr[int](0),
+				Age:      nil,
 				Friends:  nil,
 			},
 		},
@@ -1184,8 +1182,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 					ConvertField[string, string](
 						"Name",
 						ConverterFunc[string, string](func(src string) (string, error) {
-							var newS string
-							newS = fmt.Sprintf("%s plus", src)
+							newS := fmt.Sprintf("%s plus", src)
 							return newS, nil
 						}),
 					),
@@ -1198,8 +1195,7 @@ func TestReflectCopier_Copy(t *testing.T) {
 					ConvertField[*int, *int](
 						"Age",
 						ConverterFunc[*int, *int](func(src *int) (*int, error) {
-							var newS int
-							newS = *src + 1
+							newS := *src + 1
 							return &newS, nil
 						}),
 					),
@@ -1268,6 +1264,84 @@ func TestReflectCopier_Copy(t *testing.T) {
 				Name:     "大明 plus",
 				BirthDay: "2023-07-26 09:15:22",
 				Friends:  []string{"Tom", "Jerry"},
+			},
+		},
+		{
+			name: "创建时指定默认converter,convert同一个字段会覆盖",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ConvSimpleSrc, ConvSimpleDst](
+					ConvertField[time.Time, string](
+						"BirthDay",
+						Time2String{Pattern: "2006-01-02 15:04:05"},
+					),
+				)
+				if err != nil {
+					return nil, err
+				}
+				return copier.Copy(&ConvSimpleSrc{
+					BirthDay: time.Date(2023, time.July, 26, 9, 15, 22, 213, time.UTC),
+				}, ConvertField[time.Time, string]("BirthDay", ConverterFunc[time.Time, string](func(src time.Time) (string, error) {
+					return "1234567", nil
+				})))
+			},
+			wantDst: &ConvSimpleDst{
+				BirthDay: "1234567",
+			},
+		},
+		{
+			name: "创建时指定默认converter,convert同一个字段会覆盖,覆盖后不影响默认配置",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[ConvSimpleSrc, ConvSimpleDst](
+					ConvertField[time.Time, string](
+						"BirthDay",
+						Time2String{Pattern: "2006-01-02 15:04:05"},
+					),
+				)
+				if err != nil {
+					return nil, err
+				}
+				// 第一次执行Copy,函数中指定converter
+				_, err = copier.Copy(
+					&ConvSimpleSrc{BirthDay: time.Date(2023, time.July, 26, 9, 15, 22, 213, time.UTC)},
+					ConvertField[time.Time, string](
+						"BirthDay",
+						ConverterFunc[time.Time, string](func(src time.Time) (string, error) {
+							return "1234567", nil
+						})))
+				if err != nil {
+					return nil, err
+				}
+				// 第二次执行Copy,函数中不指定converter,走默认
+				return copier.Copy(&ConvSimpleSrc{
+					BirthDay: time.Date(2023, time.July, 26, 9, 15, 22, 213, time.UTC),
+				})
+			},
+			wantDst: &ConvSimpleDst{
+				BirthDay: "2023-07-26 09:15:22",
+			},
+		},
+		{
+			name: "创建时指定默认忽略字段,Copy()时指定的忽略字段不影响吗默认",
+			copyFunc: func() (any, error) {
+				copier, err := NewReflectCopier[SimpleSrc, SimpleDst](IgnoreFields("Age"))
+				if err != nil {
+					return nil, err
+				}
+				// 第一次执行Copy,函数中指定ignore字段
+				_, err = copier.Copy(&SimpleSrc{
+					Name: "大明",
+					Age:  ekit.ToPtr[int](11),
+				}, IgnoreFields("Name"))
+				if err != nil {
+					return nil, err
+				}
+				// 第二次执行Copy,函数中不指定ignore字段,走默认
+				return copier.Copy(&SimpleSrc{
+					Name: "大明",
+				})
+			},
+			wantDst: &SimpleDst{
+				Name: "大明",
 			},
 		},
 	}

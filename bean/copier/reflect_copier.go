@@ -15,11 +15,16 @@
 package copier
 
 import (
+	"github.com/ecodeclub/ekit/set"
 	"reflect"
 	"time"
 
 	"github.com/ecodeclub/ekit/bean/option"
 )
+
+var defaultAtomicTypes = []reflect.Type{
+	reflect.TypeOf(time.Time{}),
+}
 
 // ReflectCopier 基于反射的实现
 // ReflectCopier 是浅拷贝
@@ -28,8 +33,14 @@ type ReflectCopier[Src any, Dst any] struct {
 	// rootField 字典树的根节点
 	rootField fieldNode
 
-	// options 执行复制操作时的可选配置
-	options *options
+	// options 执行复制操作时的可选配置.
+	// 如果默认配置和Copy()/CopyTo()中的配置同名,会替换defaultOptions拷贝到此options的同名内容
+	options options
+
+	// 初始化时的默认配置,仅作为记录,执行时会拷贝到options中
+	defaultOptions options
+
+	atomicTypes []reflect.Type
 }
 
 // fieldNode 字段的前缀树
@@ -72,12 +83,12 @@ func NewReflectCopier[Src any, Dst any](opts ...option.Option[options]) (*Reflec
 
 	copier := &ReflectCopier[Src, Dst]{
 		rootField: root,
+		options:   newOptions(),
 	}
 
-	opt := newOptions()
-	option.Apply(opt, opts...)
-	copier.options = opt
-
+	defaultOpts := newOptions()
+	option.Apply(&defaultOpts, opts...)
+	copier.defaultOptions = defaultOpts
 	return copier, nil
 }
 
@@ -134,7 +145,9 @@ func createFieldNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 			// 内置类型，但不匹配，如别名、map和slice
 			// 说明当前节点是叶子节点, 直接拷贝
 			child.isLeaf = true
-		} else if fieldSrcTyp == reflect.TypeOf(time.Time{}) {
+		} else if isAtomicType(fieldSrcTyp) {
+			// 指定可作为一个整体的类型,不用递归
+			// 同上，当当前节点是叶子节点时, 直接拷贝
 			child.isLeaf = true
 		} else if fieldSrcTyp.Kind() == reflect.Struct {
 			if err := createFieldNodes(&child, fieldSrcTyp, fieldDstTyp); err != nil {
@@ -163,14 +176,24 @@ func (r *ReflectCopier[Src, Dst]) Copy(src *Src, opts ...option.Option[options])
 // 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，则会深入复制
 // 4. 否则，忽略字段
 func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst, opts ...option.Option[options]) error {
-	if r.options == nil {
-		opt := newOptions()
-		option.Apply(opt, opts...)
-		r.options = opt
-	} else {
-		option.Apply(r.options, opts...)
+	// 复制ignoreFields default配置
+	if r.defaultOptions.ignoreFields != nil {
+		ignoreFields := set.NewMapSet[string](8)
+		for _, key := range r.defaultOptions.ignoreFields.Keys() {
+			ignoreFields.Add(key)
+		}
+		r.options.ignoreFields = ignoreFields
 	}
 
+	// 复制convertFields default配置
+	for field, convert := range r.defaultOptions.convertFields {
+		if r.options.convertFields == nil {
+			r.options.convertFields = make(map[string]converterWrapper, 8)
+		}
+		r.options.convertFields[field] = convert
+	}
+
+	option.Apply(&r.options, opts...)
 	return r.copyToWithTree(src, dst)
 }
 
@@ -205,15 +228,14 @@ func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue ref
 	// 执行拷贝
 	if root.isLeaf {
 		convert, ok := r.options.convertFields[root.name]
-		// 获取convert失败，就需要检测类型是否匹配
-		if !ok && srcTyp.Kind() != dstType.Kind() {
-			return newErrKindNotMatchError(srcTyp.Kind(), dstType.Kind(), root.name)
+		if !dstValue.CanSet() {
+			return nil
 		}
-		if !ok && srcTyp != dstType {
-			return newErrTypeNotMatchError(srcTyp, dstType, root.name)
-		}
-		// 获取convert失败，类型匹配就直接set
-		if !ok && dstValue.CanSet() {
+		// 获取convert失败,就需要检测类型是否匹配,类型匹配就直接set
+		if !ok {
+			if srcTyp != dstType {
+				return newErrTypeNotMatchError(srcTyp, dstType, root.name)
+			}
 			if srcValue.IsZero() {
 				return nil
 			}
@@ -221,7 +243,10 @@ func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue ref
 			return nil
 		}
 
-		// 字段执行转换函数时，需要用到原始类型进行判断
+		// 字段执行转换函数时,需要用到原始类型进行判断,set的时候也是根据原始value设置
+		if !originDstVal.CanSet() {
+			return nil
+		}
 		srcConv, err := convert(originSrcVal.Interface())
 		if err != nil {
 			return err
@@ -234,14 +259,7 @@ func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue ref
 			return newErrTypeNotMatchError(srcConvType, originDstVal.Type(), root.name)
 		}
 
-		if srcConvType.Kind() == reflect.Ptr {
-			srcConvVal = srcConvVal.Elem()
-		}
-
-		if dstValue.CanSet() && srcConvVal.IsValid() {
-			dstValue.Set(srcConvVal)
-		}
-
+		originDstVal.Set(srcConvVal)
 		return nil
 	}
 
@@ -263,6 +281,15 @@ func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue ref
 		}
 	}
 	return nil
+}
+
+func isAtomicType(typ reflect.Type) bool {
+	for _, dt := range defaultAtomicTypes {
+		if dt == typ {
+			return true
+		}
+	}
+	return false
 }
 
 func isShadowCopyType(kind reflect.Kind) bool {

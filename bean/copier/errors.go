@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	ErrConvertFieldTypeNotMatch = errors.New("ekit: 转化字段类型不匹配")
+	errConvertFieldTypeNotMatch = errors.New("ekit: 转化字段类型不匹配")
 )
 
 // newErrTypeError copier 不支持的类型

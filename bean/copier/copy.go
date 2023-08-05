@@ -41,8 +41,8 @@ type options struct {
 
 type converterWrapper func(src any) (any, error)
 
-func newOptions() *options {
-	return &options{}
+func newOptions() options {
+	return options{}
 }
 
 // InIgnoreFields 判断 str 是不是在 ignoreFields 里面
@@ -76,13 +76,13 @@ func ConvertField[Src any, Dst any](field string, converter Converter[Src, Dst])
 			return
 		}
 		if opt.convertFields == nil {
-			opt.convertFields = make(map[string]converterWrapper, 16)
+			opt.convertFields = make(map[string]converterWrapper, 8)
 		}
 		opt.convertFields[field] = func(src any) (any, error) {
 			var dst Dst
 			srcVal, ok := src.(Src)
 			if !ok {
-				return dst, ErrConvertFieldTypeNotMatch
+				return dst, errConvertFieldTypeNotMatch
 			}
 			return converter.Convert(srcVal)
 		}
