@@ -15,9 +15,10 @@
 package copier
 
 import (
-	"github.com/ecodeclub/ekit/set"
 	"reflect"
 	"time"
+
+	"github.com/ecodeclub/ekit/set"
 
 	"github.com/ecodeclub/ekit/bean/option"
 )
@@ -77,14 +78,16 @@ func NewReflectCopier[Src any, Dst any](opts ...option.Option[options]) (*Reflec
 	if dstTyp.Kind() != reflect.Struct {
 		return nil, newErrTypeError(dstTyp)
 	}
-	if err := createFieldNodes(&root, srcTyp, dstTyp); err != nil {
-		return nil, err
-	}
 
 	copier := &ReflectCopier[Src, Dst]{
-		rootField: root,
-		options:   newOptions(),
+		options:     newOptions(),
+		atomicTypes: defaultAtomicTypes,
 	}
+
+	if err := copier.createFieldNodes(&root, srcTyp, dstTyp); err != nil {
+		return nil, err
+	}
+	copier.rootField = root
 
 	defaultOpts := newOptions()
 	option.Apply(&defaultOpts, opts...)
@@ -93,7 +96,7 @@ func NewReflectCopier[Src any, Dst any](opts ...option.Option[options]) (*Reflec
 }
 
 // createFieldNodes 递归创建 field 的前缀树, srcTyp 和 dstTyp 只能是结构体
-func createFieldNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
+func (r *ReflectCopier[Src, Dst]) createFieldNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 
 	fieldMap := map[string]int{}
 	for i := 0; i < srcTyp.NumField(); i++ {
@@ -145,12 +148,12 @@ func createFieldNodes(root *fieldNode, srcTyp, dstTyp reflect.Type) error {
 			// 内置类型，但不匹配，如别名、map和slice
 			// 说明当前节点是叶子节点, 直接拷贝
 			child.isLeaf = true
-		} else if isAtomicType(fieldSrcTyp) {
+		} else if r.isAtomicType(fieldSrcTyp) {
 			// 指定可作为一个整体的类型,不用递归
 			// 同上，当当前节点是叶子节点时, 直接拷贝
 			child.isLeaf = true
 		} else if fieldSrcTyp.Kind() == reflect.Struct {
-			if err := createFieldNodes(&child, fieldSrcTyp, fieldDstTyp); err != nil {
+			if err := r.createFieldNodes(&child, fieldSrcTyp, fieldDstTyp); err != nil {
 				return err
 			}
 		} else {
@@ -283,8 +286,8 @@ func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue ref
 	return nil
 }
 
-func isAtomicType(typ reflect.Type) bool {
-	for _, dt := range defaultAtomicTypes {
+func (r *ReflectCopier[Src, Dst]) isAtomicType(typ reflect.Type) bool {
+	for _, dt := range r.atomicTypes {
 		if dt == typ {
 			return true
 		}
