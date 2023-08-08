@@ -34,10 +34,8 @@ type ReflectCopier[Src any, Dst any] struct {
 	// rootField 字典树的根节点
 	rootField fieldNode
 
-	// options 执行复制操作时的可选配置.
-	// 如果默认配置和Copy()/CopyTo()中的配置同名,会替换defaultOptions拷贝到此options的同名内容
-	options options
-
+	// options 执行复制操作时的可选配置
+	// 如果默认配置和Copy()/CopyTo()中的配置同名,会替换defaultOptions同名内容
 	// 初始化时的默认配置,仅作为记录,执行时会拷贝到options中
 	defaultOptions options
 
@@ -80,7 +78,6 @@ func NewReflectCopier[Src any, Dst any](opts ...option.Option[options]) (*Reflec
 	}
 
 	copier := &ReflectCopier[Src, Dst]{
-		options:     newOptions(),
 		atomicTypes: defaultAtomicTypes,
 	}
 
@@ -179,37 +176,39 @@ func (r *ReflectCopier[Src, Dst]) Copy(src *Src, opts ...option.Option[options])
 // 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，则会深入复制
 // 4. 否则，忽略字段
 func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst, opts ...option.Option[options]) error {
+	localOption := newOptions()
 	// 复制ignoreFields default配置
 	if r.defaultOptions.ignoreFields != nil {
 		ignoreFields := set.NewMapSet[string](8)
 		for _, key := range r.defaultOptions.ignoreFields.Keys() {
 			ignoreFields.Add(key)
 		}
-		r.options.ignoreFields = ignoreFields
+		localOption.ignoreFields = ignoreFields
 	}
 
 	// 复制convertFields default配置
 	for field, convert := range r.defaultOptions.convertFields {
-		if r.options.convertFields == nil {
-			r.options.convertFields = make(map[string]converterWrapper, 8)
+		if localOption.convertFields == nil {
+			localOption.convertFields = make(map[string]converterWrapper, 8)
 		}
-		r.options.convertFields[field] = convert
+		localOption.convertFields[field] = convert
 	}
 
-	option.Apply(&r.options, opts...)
-	return r.copyToWithTree(src, dst)
+	option.Apply(&localOption, opts...)
+	return r.copyToWithTree(src, dst, localOption)
 }
 
-func (r *ReflectCopier[Src, Dst]) copyToWithTree(src *Src, dst *Dst) error {
+func (r *ReflectCopier[Src, Dst]) copyToWithTree(src *Src, dst *Dst, opts options) error {
 	srcTyp := reflect.TypeOf(src)
 	dstTyp := reflect.TypeOf(dst)
 	srcValue := reflect.ValueOf(src)
 	dstValue := reflect.ValueOf(dst)
 
-	return r.copyTreeNode(srcTyp, srcValue, dstTyp, dstValue, &r.rootField)
+	return r.copyTreeNode(srcTyp, srcValue, dstTyp, dstValue, &r.rootField, opts)
 }
 
-func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue reflect.Value, dstType reflect.Type, dstValue reflect.Value, root *fieldNode) error {
+func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue reflect.Value,
+	dstType reflect.Type, dstValue reflect.Value, root *fieldNode, opts options) error {
 	originSrcVal := srcValue
 	originDstVal := dstValue
 	if srcValue.Kind() == reflect.Pointer {
@@ -230,7 +229,7 @@ func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue ref
 
 	// 执行拷贝
 	if root.isLeaf {
-		convert, ok := r.options.convertFields[root.name]
+		convert, ok := opts.convertFields[root.name]
 		if !dstValue.CanSet() {
 			return nil
 		}
@@ -270,7 +269,7 @@ func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue ref
 		child := &root.fields[i]
 
 		// 只要结构体属性的名字在需要忽略的字段里面，就不走下面的复制逻辑
-		if r.options.InIgnoreFields(child.name) {
+		if opts.InIgnoreFields(child.name) {
 			continue
 		}
 
@@ -279,7 +278,7 @@ func (r *ReflectCopier[Src, Dst]) copyTreeNode(srcTyp reflect.Type, srcValue ref
 
 		childDstTyp := dstType.Field(child.dstIndex)
 		childDstValue := dstValue.Field(child.dstIndex)
-		if err := r.copyTreeNode(childSrcTyp.Type, childSrcValue, childDstTyp.Type, childDstValue, child); err != nil {
+		if err := r.copyTreeNode(childSrcTyp.Type, childSrcValue, childDstTyp.Type, childDstValue, child, opts); err != nil {
 			return err
 		}
 	}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package copier
+package converter
 
 type Converter[Src any, Dst any] interface {
 	Convert(src Src) (Dst, error)

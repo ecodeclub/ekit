@@ -15,6 +15,7 @@
 package copier
 
 import (
+	"github.com/ecodeclub/ekit/bean/copier/converter"
 	"github.com/ecodeclub/ekit/bean/option"
 	"github.com/ecodeclub/ekit/set"
 )
@@ -70,7 +71,7 @@ func IgnoreFields(fields ...string) option.Option[options] {
 	}
 }
 
-func ConvertField[Src any, Dst any](field string, converter Converter[Src, Dst]) option.Option[options] {
+func ConvertField[Src any, Dst any](field string, converter converter.Converter[Src, Dst]) option.Option[options] {
 	return func(opt *options) {
 		if field == "" || converter == nil {
 			return
