@@ -22,14 +22,12 @@ func Delete[T any](src []T, index int) ([]T, T, error) {
 		var zero T
 		return nil, zero, errs.NewErrIndexOutOfRange(length, index)
 	}
-	j := 0
 	res := src[index]
-	for i, v := range src {
-		if i != index {
-			src[j] = v
-			j++
-		}
+	//从index位置开始，后面的元素依次往前挪1个位置
+	for i := index; i+1 < length; i++ {
+		src[i] = src[i+1]
 	}
-	src = src[:j]
+	//去掉最后一个重复元素
+	src = src[:length-1]
 	return src, res, nil
 }
