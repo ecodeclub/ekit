@@ -176,6 +176,13 @@ func (r *ReflectCopier[Src, Dst]) Copy(src *Src, opts ...option.Option[options])
 // 3. 如果 Src 和 Dst 中匹配的字段，其类型都是结构体，或者都是结构体指针，则会深入复制
 // 4. 否则，忽略字段
 func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst, opts ...option.Option[options]) error {
+	localOption := r.copyDefaultOptions()
+	option.Apply(&localOption, opts...)
+	return r.copyToWithTree(src, dst, localOption)
+}
+
+// copyDefaultOptions 复制默认配置
+func (r *ReflectCopier[Src, Dst]) copyDefaultOptions() options {
 	localOption := newOptions()
 	// 复制ignoreFields default配置
 	if r.defaultOptions.ignoreFields != nil {
@@ -193,9 +200,7 @@ func (r *ReflectCopier[Src, Dst]) CopyTo(src *Src, dst *Dst, opts ...option.Opti
 		}
 		localOption.convertFields[field] = convert
 	}
-
-	option.Apply(&localOption, opts...)
-	return r.copyToWithTree(src, dst, localOption)
+	return localOption
 }
 
 func (r *ReflectCopier[Src, Dst]) copyToWithTree(src *Src, dst *Dst, opts options) error {

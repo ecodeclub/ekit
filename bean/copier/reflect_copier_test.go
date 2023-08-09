@@ -16,12 +16,13 @@ package copier
 
 import (
 	"fmt"
-	"github.com/ecodeclub/ekit/bean/copier/converter"
 	"reflect"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/ecodeclub/ekit/bean/copier/converter"
 
 	"github.com/ecodeclub/ekit"
 	"github.com/stretchr/testify/assert"
