@@ -15,6 +15,7 @@
 package copier
 
 import (
+	"github.com/ecodeclub/ekit/bean/copier/converter"
 	"github.com/ecodeclub/ekit/bean/option"
 	"github.com/ecodeclub/ekit/set"
 )
@@ -35,10 +36,14 @@ type Copier[Src any, Dst any] interface {
 type options struct {
 	// ignoreFields 执行复制操作时，需要忽略的字段
 	ignoreFields *set.MapSet[string]
+	// convertFields 执行转换的field和转化接口的泛型包装
+	convertFields map[string]converterWrapper
 }
 
-func newOptions() *options {
-	return &options{}
+type converterWrapper func(src any) (any, error)
+
+func newOptions() options {
+	return options{}
 }
 
 // InIgnoreFields 判断 str 是不是在 ignoreFields 里面
@@ -62,6 +67,25 @@ func IgnoreFields(fields ...string) option.Option[options] {
 		}
 		for i := 0; i < len(fields); i++ {
 			opt.ignoreFields.Add(fields[i])
+		}
+	}
+}
+
+func ConvertField[Src any, Dst any](field string, converter converter.Converter[Src, Dst]) option.Option[options] {
+	return func(opt *options) {
+		if field == "" || converter == nil {
+			return
+		}
+		if opt.convertFields == nil {
+			opt.convertFields = make(map[string]converterWrapper, 8)
+		}
+		opt.convertFields[field] = func(src any) (any, error) {
+			var dst Dst
+			srcVal, ok := src.(Src)
+			if !ok {
+				return dst, errConvertFieldTypeNotMatch
+			}
+			return converter.Convert(srcVal)
 		}
 	}
 }
