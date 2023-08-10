@@ -90,6 +90,33 @@ func TestMultiMap_NewMultiTreeMap(t *testing.T) {
 	}
 }
 
+func TestNewMultiBuiltinMap(t *testing.T) {
+	testCases := []struct {
+		name string
+		size int
+	}{
+		{
+			name: "negative size",
+			size: -1,
+		},
+		{
+			name: "zero size",
+			size: 0,
+		},
+		{
+			name: "Positive size",
+			size: 1,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			multiMap := NewMultiBuiltinMap[testData, int](tt.size)
+			assert.NotNil(t, multiMap)
+		})
+	}
+}
+
 func TestMultiMap_Keys(t *testing.T) {
 	testCases := []struct {
 		name         string

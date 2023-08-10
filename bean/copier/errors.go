@@ -15,8 +15,13 @@
 package copier
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
+)
+
+var (
+	errConvertFieldTypeNotMatch = errors.New("ekit: 转化字段类型不匹配")
 )
 
 // newErrTypeError copier 不支持的类型

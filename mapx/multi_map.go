@@ -45,6 +45,13 @@ func NewMultiHashMap[K Hashable, V any](size int) *MultiMap[K, V] {
 	}
 }
 
+func NewMultiBuiltinMap[K comparable, V any](size int) *MultiMap[K, V] {
+	var m mapi[K, []V] = newBuiltinMap[K, []V](size)
+	return &MultiMap[K, V]{
+		m: m,
+	}
+}
+
 // Put 在 MultiMap 中添加键值对或向已有键 k 的值追加数据
 func (m *MultiMap[K, V]) Put(k K, v V) error {
 	return m.PutMany(k, v)
