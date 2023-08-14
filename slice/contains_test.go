@@ -92,8 +92,8 @@ func TestContainsFunc(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.want, ContainsFunc[int](test.src, test.dst, func(src, dst int) bool {
-				return src == dst
+			assert.Equal(t, test.want, ContainsFunc[int](test.src, func(src int) bool {
+				return src == test.dst
 			}))
 		})
 	}
@@ -287,8 +287,8 @@ func ExampleContains() {
 }
 
 func ExampleContainsFunc() {
-	res := ContainsFunc[int]([]int{1, 2, 3}, 3, func(src, dst int) bool {
-		return src == dst
+	res := ContainsFunc[int]([]int{1, 2, 3}, func(src int) bool {
+		return src == 3
 	})
 	fmt.Println(res)
 	// Output:
