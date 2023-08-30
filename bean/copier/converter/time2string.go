@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package slice
+package converter
 
-// equalFunc 比较两个元素是否相等
-type equalFunc[T any] func(src, dst T) bool
+import "time"
 
-type matchFunc[T any] func(src T) bool
+type Time2String struct {
+	Pattern string
+}
+
+func (t Time2String) Convert(src time.Time) (string, error) {
+	return src.Format(t.Pattern), nil
+}
