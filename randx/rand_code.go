@@ -57,16 +57,17 @@ func generate(source string, length, idxBits int) string {
 	idxMask := 1<<idxBits - 1
 
 	// 63位最多可以使用多少次
-	idxMax := 63 / idxBits
+	remain := 63 / idxBits
+
+	//cache 随机位缓存
+	cache := rand.Int63()
 
 	result := make([]byte, length)
 
-	//cache 随机位缓存
-	//remain 当前还可以使用几次
-	for i, cache, remain := 0, rand.Int63(), idxMax; i < length; {
+	for i := 0; i < length; {
 		//如果使用次数剩余0，重新获取随机
 		if remain == 0 {
-			cache, remain = rand.Int63(), idxMax
+			cache, remain = rand.Int63(), 63/idxBits
 		}
 
 		//利用掩码获取有效的随机数位
