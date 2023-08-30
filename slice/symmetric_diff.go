@@ -54,12 +54,16 @@ func SymmetricDiffSetFunc[T any](src, dst []T, equal equalFunc[T]) []T {
 
 	ret := make([]T, 0, len(src)+len(dst)-len(interSection)*2)
 	for _, v := range src {
-		if !ContainsFunc[T](interSection, v, equal) {
+		if !ContainsFunc[T](interSection, func(src T) bool {
+			return equal(src, v)
+		}) {
 			ret = append(ret, v)
 		}
 	}
 	for _, v := range dst {
-		if !ContainsFunc[T](interSection, v, equal) {
+		if !ContainsFunc[T](interSection, func(src T) bool {
+			return equal(src, v)
+		}) {
 			ret = append(ret, v)
 		}
 	}

@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package slice
+package converter
 
-// equalFunc 比较两个元素是否相等
-type equalFunc[T any] func(src, dst T) bool
+type Converter[Src any, Dst any] interface {
+	Convert(src Src) (Dst, error)
+}
 
-type matchFunc[T any] func(src T) bool
+type ConverterFunc[Src any, Dst any] func(src Src) (Dst, error)
+
+func (cf ConverterFunc[Src, Dst]) Convert(src Src) (Dst, error) {
+	return cf(src)
+}

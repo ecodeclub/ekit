@@ -104,8 +104,8 @@ func TestIndexFunc(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.want, IndexFunc[int](test.src, test.dst, func(src, dst int) bool {
-				return src == dst
+			assert.Equal(t, test.want, IndexFunc[int](test.src, func(src int) bool {
+				return src == test.dst
 			}))
 		})
 	}
@@ -191,8 +191,8 @@ func TestLastIndexFunc(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		assert.Equal(t, test.want, LastIndexFunc[int](test.src, test.dst, func(src, dst int) bool {
-			return src == dst
+		assert.Equal(t, test.want, LastIndexFunc[int](test.src, func(src int) bool {
+			return src == test.dst
 		}))
 	}
 }
@@ -268,8 +268,8 @@ func TestIndexAllFunc(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		res := IndexAllFunc[int](test.src, test.dst, func(src, dst int) bool {
-			return src == dst
+		res := IndexAllFunc[int](test.src, func(src int) bool {
+			return src == test.dst
 		})
 		assert.ElementsMatch(t, test.want, res)
 	}
@@ -286,12 +286,12 @@ func ExampleIndex() {
 }
 
 func ExampleIndexFunc() {
-	res := IndexFunc[int]([]int{1, 2, 3}, 1, func(src, dst int) bool {
-		return src == dst
+	res := IndexFunc[int]([]int{1, 2, 3}, func(src int) bool {
+		return src == 1
 	})
 	fmt.Println(res)
-	res = IndexFunc[int]([]int{1, 2, 3}, 4, func(src, dst int) bool {
-		return src == dst
+	res = IndexFunc[int]([]int{1, 2, 3}, func(src int) bool {
+		return src == 4
 	})
 	fmt.Println(res)
 	// Output:
@@ -310,12 +310,12 @@ func ExampleIndexAll() {
 }
 
 func ExampleIndexAllFunc() {
-	res := IndexAllFunc[int]([]int{1, 2, 3, 4, 5, 3, 9}, 3, func(src, dst int) bool {
-		return src == dst
+	res := IndexAllFunc[int]([]int{1, 2, 3, 4, 5, 3, 9}, func(src int) bool {
+		return src == 3
 	})
 	fmt.Println(res)
-	res = IndexAllFunc[int]([]int{1, 2, 3}, 4, func(src, dst int) bool {
-		return src == dst
+	res = IndexAllFunc[int]([]int{1, 2, 3}, func(src int) bool {
+		return src == 4
 	})
 	fmt.Println(res)
 	// Output:

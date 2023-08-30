@@ -16,17 +16,17 @@ package slice
 
 // Contains 判断 src 里面是否存在 dst
 func Contains[T comparable](src []T, dst T) bool {
-	return ContainsFunc[T](src, dst, func(src, dst T) bool {
+	return ContainsFunc[T](src, func(src T) bool {
 		return src == dst
 	})
 }
 
 // ContainsFunc 判断 src 里面是否存在 dst
 // 你应该优先使用 Contains
-func ContainsFunc[T any](src []T, dst T, equal equalFunc[T]) bool {
+func ContainsFunc[T any](src []T, equal func(src T) bool) bool {
 	// 遍历调用equal函数进行判断
 	for _, v := range src {
-		if equal(v, dst) {
+		if equal(v) {
 			return true
 		}
 	}
@@ -72,7 +72,9 @@ func ContainsAll[T comparable](src, dst []T) bool {
 // 你应该优先使用 ContainsAll
 func ContainsAllFunc[T any](src, dst []T, equal equalFunc[T]) bool {
 	for _, valDst := range dst {
-		if !ContainsFunc[T](src, valDst, equal) {
+		if !ContainsFunc[T](src, func(src T) bool {
+			return equal(src, valDst)
+		}) {
 			return false
 		}
 	}
