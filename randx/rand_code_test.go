@@ -93,3 +93,33 @@ func TestRandCode_Mixed(t *testing.T) {
 		t.Error("expected all letters code")
 	}
 }
+
+func TestRandCode_Default(t *testing.T) {
+	// 类似的测试字母表生成
+	code, err := RandCode(6, TYPE_DEFAULT)
+	t.Log(code)
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if len(code) != 6 {
+		t.Errorf("expected 6 letters but got %d", len(code))
+	}
+
+	matched, err := regexp.MatchString("^[0-9]+$", code)
+	if !matched || err != nil {
+		t.Error("expected all numbers code")
+	}
+}
+
+func TestRandCode_TypeNotSupported(t *testing.T) {
+	_, err := RandCode(6, 1000)
+	if err == nil {
+		t.Error("expected error")
+	}
+	if err != ERRTYPENOTSUPPORTTED {
+		t.Errorf("expected error %v	 but got %v", ERRTYPENOTSUPPORTTED, err)
+	}
+
+}
