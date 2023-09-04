@@ -15,7 +15,6 @@
 package sqlx
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"reflect"
@@ -35,12 +34,12 @@ type Scanner interface {
 }
 
 type sqlRowsScanner struct {
-	sqlRows             *sql.Rows
+	sqlRows             Rows
 	columnValuePointers []any
 }
 
 // NewSQLRowsScanner 返回一个Scanner
-func NewSQLRowsScanner(r *sql.Rows) (Scanner, error) {
+func NewSQLRowsScanner(r Rows) (Scanner, error) {
 	if r == nil {
 		return nil, fmt.Errorf("%w *sql.Rows不能为nil", errInvalidArgument)
 	}
