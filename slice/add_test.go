@@ -24,7 +24,7 @@ import (
 )
 
 func TestAdd(t *testing.T) {
-	// Delete 主要依赖于 internal/slice.Delete 来保证正确性
+	// Add 主要依赖于 internal/slice.Add 来保证正确性
 	testCases := []struct {
 		name      string
 		slice     []int

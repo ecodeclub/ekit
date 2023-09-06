@@ -33,12 +33,11 @@ func IntersectSet[T comparable](src []T, dst []T) []T {
 // 已去重
 func IntersectSetFunc[T any](src []T, dst []T, equal equalFunc[T]) []T {
 	var ret = make([]T, 0, len(src))
-	for _, valSrc := range src {
-		for _, valDst := range dst {
-			if equal(valDst, valSrc) {
-				ret = append(ret, valSrc)
-				break
-			}
+	for _, v := range dst {
+		if ContainsFunc[T](src, func(t T) bool {
+			return equal(t, v)
+		}) {
+			ret = append(ret, v)
 		}
 	}
 	return deduplicateFunc[T](ret, equal)
