@@ -71,12 +71,20 @@ func TestRandCode(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			code, err := RandCode(tc.length, tc.typ)
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("unexpected error: %v", err)
-			}
-			matched, _ := regexp.MatchString(tc.wantMatch, code)
-			if !matched {
-				t.Errorf("expected %s but got %s", tc.wantMatch, code)
+			if err != nil {
+				if !errors.Is(err, tc.wantErr) {
+					t.Errorf("unexpected error: %v", err)
+				}
+			} else {
+				//长度检验
+				if len(code) != tc.length {
+					t.Errorf("expected length: %d but got length:%d  ", tc.length, len(code))
+				}
+				//模式检验
+				matched, _ := regexp.MatchString(tc.wantMatch, code)
+				if !matched {
+					t.Errorf("expected %s but got %s", tc.wantMatch, code)
+				}
 			}
 		})
 	}
