@@ -15,111 +15,70 @@
 package randx
 
 import (
+	"errors"
 	"regexp"
 	"testing"
 )
 
-func TestRandCode_Digit(t *testing.T) {
-	code, err := RandCode(6, TYPE_DIGIT)
-	t.Log(code)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+func TestRandCode(t *testing.T) {
+	testCases := []struct {
+		name      string
+		length    int
+		typ       TYPE
+		wantMatch string
+		wantErr   error
+	}{
+		{
+			name:      "默认类型",
+			length:    8,
+			typ:       TYPE_DEFAULT,
+			wantMatch: "^[0-9]+$",
+			wantErr:   nil,
+		},
+		{
+			name:      "数字验证码",
+			length:    8,
+			typ:       TYPE_DIGIT,
+			wantMatch: "^[0-9]+$",
+			wantErr:   nil,
+		}, {
+			name:      "小写字母验证码",
+			length:    8,
+			typ:       TYPE_LETTER,
+			wantMatch: "^[a-z]+$",
+			wantErr:   nil,
+		}, {
+			name:      "大写字母验证码",
+			length:    8,
+			typ:       TYPE_CAPITAL,
+			wantMatch: "^[A-Z]+$",
+			wantErr:   nil,
+		}, {
+			name:      "混合验证码",
+			length:    8,
+			typ:       TYPE_MIXED,
+			wantMatch: "^[0-9a-zA-Z]+$",
+			wantErr:   nil,
+		}, {
+			name:      "未定义类型",
+			length:    8,
+			typ:       9,
+			wantMatch: "",
+			wantErr:   ERRTYPENOTSUPPORTTED,
+		},
 	}
 
-	if len(code) != 6 {
-		t.Errorf("expected 6 digits but got %d", len(code))
-	}
-
-	matched, err := regexp.MatchString("^[0-9]+$", code)
-	if !matched || err != nil {
-		t.Error("expected all digits code")
-	}
-}
-
-func TestRandCode_Letter(t *testing.T) {
-
-	// 类似的测试字母表生成
-	code, err := RandCode(6, TYPE_LETTER)
-	t.Log(code)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	if len(code) != 6 {
-		t.Errorf("expected 6 letters but got %d", len(code))
-	}
-
-	matched, err := regexp.MatchString("^[a-z]+$", code)
-	if !matched || err != nil {
-		t.Error("expected all letters code")
-	}
-}
-
-func TestRandCode_Capital(t *testing.T) {
-
-	// 类似的测试字母表生成
-	code, err := RandCode(6, TYPE_CAPITAL)
-	t.Log(code)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	if len(code) != 6 {
-		t.Errorf("expected 6 letters but got %d", len(code))
-	}
-
-	matched, err := regexp.MatchString("^[A-Z]+$", code)
-	if !matched || err != nil {
-		t.Error("expected all letters code")
-	}
-}
-
-func TestRandCode_Mixed(t *testing.T) {
-
-	// 类似的测试字母表生成
-	code, err := RandCode(6, TYPE_MIXED)
-	t.Log(code)
-
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	if len(code) != 6 {
-		t.Errorf("expected 6 letters but got %d", len(code))
-	}
-
-	matched, err := regexp.MatchString("^[A-Za-z0-9]+$", code)
-	if !matched || err != nil {
-		t.Error("expected all letters code")
-	}
-}
-
-func TestRandCode_Default(t *testing.T) {
-	// 类似的测试字母表生成
-	code, err := RandCode(6, TYPE_DEFAULT)
-	t.Log(code)
-
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	if len(code) != 6 {
-		t.Errorf("expected 6 letters but got %d", len(code))
-	}
-
-	matched, err := regexp.MatchString("^[0-9]+$", code)
-	if !matched || err != nil {
-		t.Error("expected all numbers code")
-	}
-}
-
-func TestRandCode_TypeNotSupported(t *testing.T) {
-	_, err := RandCode(6, 1000)
-	if err == nil {
-		t.Error("expected error")
-	}
-	if err != ERRTYPENOTSUPPORTTED {
-		t.Errorf("expected error %v	 but got %v", ERRTYPENOTSUPPORTTED, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			code, err := RandCode(tc.length, tc.typ)
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("unexpected error: %v", err)
+			}
+			matched, _ := regexp.MatchString(tc.wantMatch, code)
+			if !matched {
+				t.Errorf("expected %s but got %s", tc.wantMatch, code)
+			}
+		})
 	}
 
 }
