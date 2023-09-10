@@ -93,9 +93,6 @@ func (e *EncryptColumn[T]) Scan(src any) error {
 		b, err = e.aesDecrypt(value)
 	case string:
 		b, err = e.aesDecrypt([]byte(value))
-		if err != nil {
-			return nil
-		}
 	default:
 		return fmt.Errorf("ekit：EncryptColumn.Scan 不支持 src 类型 %v", src)
 	}
