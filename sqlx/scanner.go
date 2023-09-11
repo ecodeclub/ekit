@@ -30,7 +30,10 @@ var (
 // Scanner 不会关闭sql.Rows，用户需要对此负责
 type Scanner interface {
 	Scan() (values []any, err error)
+	// ScanAll 扫描当前结果集的全部数据
 	ScanAll() (allValues [][]any, err error)
+	// NextResultSet 移动到下一个结果集
+	NextResultSet() bool
 }
 
 type sqlRowsScanner struct {
@@ -56,6 +59,10 @@ func NewSQLRowsScanner(r Rows) (Scanner, error) {
 		columnValuePointers[i] = reflect.New(typ).Interface()
 	}
 	return &sqlRowsScanner{sqlRows: r, columnValuePointers: columnValuePointers}, nil
+}
+
+func (s *sqlRowsScanner) NextResultSet() bool {
+	return s.sqlRows.NextResultSet()
 }
 
 // Scan 返回一行
