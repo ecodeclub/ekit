@@ -261,3 +261,36 @@ func TestSqlRowsScanner_ScanAll(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 }
+
+func TestSqlRowsScanner_NextResultSet(t *testing.T) {
+	t.Parallel()
+	t.Run("没有更多 ResultSet", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		require.NoError(t, err)
+		defer db.Close()
+		mock.ExpectQuery("SELECT .*").
+			WillReturnRows(sqlmock.NewRows([]string{"id", "name"}))
+		rows, err := db.Query("SELECT id, name FROM users")
+		require.NoError(t, err)
+		scanner, err := NewSQLRowsScanner(rows)
+		require.NoError(t, err)
+		assert.False(t, scanner.NextResultSet())
+	})
+	t.Run("还有 ResultSet", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		require.NoError(t, err)
+		defer db.Close()
+		mock.ExpectQuery("SELECT .*").
+			WillReturnRows(
+				sqlmock.NewRows([]string{"id", "name"}),
+				sqlmock.NewRows([]string{"id", "name"}),
+				sqlmock.NewRows([]string{"id", "name"}))
+		rows, err := db.Query("SELECT id, name FROM users")
+		require.NoError(t, err)
+		scanner, err := NewSQLRowsScanner(rows)
+		require.NoError(t, err)
+		assert.True(t, scanner.NextResultSet())
+		assert.True(t, scanner.NextResultSet())
+		assert.False(t, scanner.NextResultSet())
+	})
+}

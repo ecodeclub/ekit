@@ -16,6 +16,7 @@ package ekit
 
 import (
 	"reflect"
+	"strconv"
 
 	"github.com/ecodeclub/ekit/internal/errs"
 )
@@ -36,6 +37,20 @@ func (av AnyValue) Int() (int, error) {
 		return 0, errs.NewErrInvalidType("int", reflect.TypeOf(av.Val).String())
 	}
 	return val, nil
+}
+
+func (av AnyValue) AsInt() (int, error) {
+	if av.Err != nil {
+		return 0, av.Err
+	}
+	switch v := av.Val.(type) {
+	case int:
+		return v, nil
+	case string:
+		res, err := strconv.ParseInt(v, 10, 64)
+		return int(res), err
+	}
+	return 0, errs.NewErrInvalidType("int", reflect.TypeOf(av.Val).String())
 }
 
 // IntOrDefault 返回 int 数据，或者默认值
