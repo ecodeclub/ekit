@@ -15,6 +15,8 @@
 package ekit
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
 	"strconv"
 
@@ -91,6 +93,142 @@ func (av AnyValue) AsUint() (uint, error) {
 // UintOrDefault 返回 uint 数据，或者默认值
 func (av AnyValue) UintOrDefault(def uint) uint {
 	val, err := av.Uint()
+	if err != nil {
+		return def
+	}
+	return val
+}
+
+func (av AnyValue) Int8() (int8, error) {
+	if av.Err != nil {
+		return 0, av.Err
+	}
+	val, ok := av.Val.(int8)
+	if !ok {
+		return 0, errs.NewErrInvalidType("int", reflect.TypeOf(av.Val).String())
+	}
+	return val, nil
+}
+
+func (av AnyValue) AsInt8() (int8, error) {
+	if av.Err != nil {
+		return 0, av.Err
+	}
+
+	switch v := av.Val.(type) {
+	case int8:
+		return v, nil
+	case string:
+		res, err := strconv.ParseInt(v, 10, 64)
+		return int8(res), err
+	}
+	return 0, errs.NewErrInvalidType("int8", reflect.TypeOf(av.Val).String())
+}
+
+func (av AnyValue) Int8OrDefault(def int8) int8 {
+	val, err := av.Int8()
+	if err != nil {
+		return def
+	}
+	return val
+}
+
+func (av AnyValue) Uint8() (uint8, error) {
+	if av.Err != nil {
+		return 0, av.Err
+	}
+	val, ok := av.Val.(uint8)
+	if !ok {
+		return 0, errs.NewErrInvalidType("uint8", reflect.TypeOf(av.Val).String())
+	}
+	return val, nil
+}
+
+func (av AnyValue) AsUint8() (uint8, error) {
+	if av.Err != nil {
+		return 0, av.Err
+	}
+
+	switch v := av.Val.(type) {
+	case uint8:
+		return v, nil
+	case string:
+		res, err := strconv.ParseUint(v, 10, 8)
+		return uint8(res), err
+	}
+	return 0, errs.NewErrInvalidType("uint8", reflect.TypeOf(av.Val).String())
+}
+
+func (av AnyValue) Uint8OrDefault(def uint8) uint8 {
+	val, err := av.Uint8()
+	if err != nil {
+		return def
+	}
+	return val
+}
+
+func (av AnyValue) Int16() (int16, error) {
+	if av.Err != nil {
+		return 0, av.Err
+	}
+	val, ok := av.Val.(int16)
+	if !ok {
+		return 0, errs.NewErrInvalidType("int16", reflect.TypeOf(av.Val).String())
+	}
+	return val, nil
+}
+
+func (av AnyValue) AsInt16() (int16, error) {
+	if av.Err != nil {
+		return 0, av.Err
+	}
+
+	switch v := av.Val.(type) {
+	case int16:
+		return v, nil
+	case string:
+		res, err := strconv.ParseInt(v, 10, 16)
+		return int16(res), err
+	}
+	return 0, errs.NewErrInvalidType("int16", reflect.TypeOf(av.Val).String())
+}
+
+func (av AnyValue) Int16OrDefault(def int16) int16 {
+	val, err := av.Int16()
+	if err != nil {
+		return def
+	}
+	return val
+}
+
+func (av AnyValue) Uint16() (uint16, error) {
+	if av.Err != nil {
+		return 0, av.Err
+	}
+	val, ok := av.Val.(uint16)
+	if !ok {
+		return 0, errs.NewErrInvalidType("uint16", reflect.TypeOf(av.Val).String())
+	}
+	return val, nil
+}
+
+func (av AnyValue) AsUint16() (uint16, error) {
+	if av.Err != nil {
+		return 0, av.Err
+	}
+
+	switch v := av.Val.(type) {
+	case uint16:
+		return v, nil
+	case string:
+		res, err := strconv.ParseUint(v, 10, 16)
+		return uint16(res), err
+	}
+	return 0, errs.NewErrInvalidType("uint16", reflect.TypeOf(av.Val).String())
+}
+
+func (av AnyValue) Uint16OrDefault(def uint16) uint16 {
+	val, err := av.Uint16()
 	if err != nil {
 		return def
 	}
@@ -313,6 +451,36 @@ func (av AnyValue) String() (string, error) {
 	if !ok {
 		return "", errs.NewErrInvalidType("string", reflect.TypeOf(av.Val).String())
 	}
+	return val, nil
+}
+
+func (av AnyValue) AsString() (string, error) {
+	if av.Err != nil {
+		return "", av.Err
+	}
+
+	var val string
+	valueOf := reflect.ValueOf(av.Val)
+	switch valueOf.Type().Kind() {
+	case reflect.String:
+		val = valueOf.String()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		val = strconv.FormatUint(valueOf.Uint(), 10)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		val = strconv.FormatInt(valueOf.Int(), 10)
+	case reflect.Float32:
+		val = strconv.FormatFloat(valueOf.Float(), 'f', 10, 32)
+	case reflect.Float64:
+		val = strconv.FormatFloat(valueOf.Float(), 'f', 10, 64)
+	case reflect.Slice:
+		if valueOf.Type().Elem().Kind() != reflect.Uint8 {
+			return "", errs.NewErrInvalidType("[]byte", fmt.Sprintf("[]%s", valueOf.Type().Elem().Kind()))
+		}
+		val = string(valueOf.Bytes())
+	default:
+		return "", errors.New("未兼容类型，暂时无法转换")
+	}
+
 	return val, nil
 }
 
