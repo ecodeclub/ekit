@@ -90,19 +90,21 @@ func TestUnsafeToString(t *testing.T) {
 			want: "你好 世界！",
 		},
 		{
-			name: "file io.Reader coversion",
+			// 通过读取 file 文件 模拟 io.Reader 中存在的字节流 并将其转换为 string 检查他的正确性
+			// 当然他必须是可控制的
+			name: "file(io.Reader) read bytes stream coversion string",
 			before: func(t *testing.T) {
-				create, err := os.Create("test_put.txt")
+				create, err := os.Create("/tmp/test_put.txt")
 				require.NoError(t, err)
 				defer create.Close()
 				_, err = create.WriteString("the test file...")
 				require.NoError(t, err)
 			},
 			after: func(t *testing.T) {
-				require.NoError(t, os.Remove("test_put.txt"))
+				require.NoError(t, os.Remove("/tmp/test_put.txt"))
 			},
 			val: func(t *testing.T) []byte {
-				open, err := os.Open("test_put.txt")
+				open, err := os.Open("/tmp/test_put.txt")
 				require.NoError(t, err)
 				defer open.Close()
 				buf := bytes.Buffer{}
@@ -116,11 +118,11 @@ func TestUnsafeToString(t *testing.T) {
 
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
+			defer tt.after(t)
 			tt.before(t)
 			b := tt.val(t)
 			val := UnsafeToString(b)
 			assert.Equal(t, tt.want, val)
-			tt.after(t)
 		})
 	}
 }
