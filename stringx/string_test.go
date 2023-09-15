@@ -126,3 +126,35 @@ func TestUnsafeToString(t *testing.T) {
 		})
 	}
 }
+
+func Benchmark_UnsafeToBytes(b *testing.B) {
+	b.Run("safe to bytes", func(b *testing.B) {
+		s := "hello ekit! hello golang! this is test benchmark"
+		for i := 0; i < b.N; i++ {
+			_ = []byte(s)
+		}
+	})
+
+	b.Run("unsafe to bytes", func(b *testing.B) {
+		s := "hello ekit! hello golang! this is test benchmark"
+		for i := 0; i < b.N; i++ {
+			_ = UnsafeToBytes(s)
+		}
+	})
+}
+
+func Benchmark_UnsafeToString(b *testing.B) {
+	b.Run("safe to string", func(b *testing.B) {
+		s := []byte("hello ekit! hello golang! this is test benchmark")
+		for i := 0; i < b.N; i++ {
+			_ = string(s)
+		}
+	})
+
+	b.Run("unsafe to string", func(b *testing.B) {
+		s := []byte("hello ekit! hello golang! this is test benchmark")
+		for i := 0; i < b.N; i++ {
+			_ = UnsafeToString(s)
+		}
+	})
+}
