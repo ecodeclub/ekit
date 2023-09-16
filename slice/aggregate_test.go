@@ -182,7 +182,6 @@ func TestSum(t *testing.T) {
 	testSumTypes[int64](t)
 	testSumTypes[float32](t)
 	testSumTypes[float64](t)
-	// Sum
 }
 
 // testMaxTypes 只是用来测试一下满足 Max 方法约束的所有类型
