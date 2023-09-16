@@ -146,6 +146,30 @@ func TestSum(t *testing.T) {
 		})
 	}
 
+	testStringCases := []struct {
+		name  string
+		input []string
+		want  string
+	}{
+		{
+			name:  "string value",
+			input: []string{"Hello"},
+			want:  "Hello",
+		},
+		{
+			name:  "string values",
+			input: []string{"Hello", "World"},
+			want:  "HelloWorld",
+		},
+	}
+
+	for _, tc := range testStringCases {
+		t.Run(tc.name, func(t *testing.T) {
+			res := Sum[string](tc.input)
+			assert.Equal(t, tc.want, res)
+		})
+	}
+
 	testSumTypes[uint](t)
 	testSumTypes[uint8](t)
 	testSumTypes[uint16](t)
@@ -158,6 +182,7 @@ func TestSum(t *testing.T) {
 	testSumTypes[int64](t)
 	testSumTypes[float32](t)
 	testSumTypes[float64](t)
+	// Sum
 }
 
 // testMaxTypes 只是用来测试一下满足 Max 方法约束的所有类型

@@ -46,7 +46,7 @@ func Min[T ekit.RealNumber](ts []T) T {
 
 // Sum 求和
 // 在使用 float32 或者 float64 的时候要小心精度问题
-func Sum[T ekit.Number](ts []T) T {
+func Sum[T ekit.Additive](ts []T) T {
 	var res T
 	for _, n := range ts {
 		res += n

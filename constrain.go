@@ -22,6 +22,15 @@ type RealNumber interface {
 		~float32 | ~float64
 }
 
+// ComplexNumber 复数
+type ComplexNumber interface {
+	~complex64 | ~complex128
+}
+
 type Number interface {
-	RealNumber | ~complex64 | ~complex128
+	RealNumber | ComplexNumber
+}
+
+type Additive interface {
+	Number | ~string
 }
