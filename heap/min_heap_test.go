@@ -35,12 +35,12 @@ func TestNewMinHeap(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "不传compare，报错",
+			name:    "compare is nil",
 			compare: nil,
 			wantErr: ErrMinHeapComparatorIsNull,
 		},
 		{
-			name:    "正常new",
+			name:    "compare is ok",
 			compare: compareInt(),
 			wantErr: nil,
 		},
@@ -53,7 +53,7 @@ func TestNewMinHeap(t *testing.T) {
 	}
 }
 
-func TestAdd(t *testing.T) {
+func TestMinHeap_Add(t *testing.T) {
 	testCases := []struct {
 		name      string
 		startHeap func() *MinHeap[int]
@@ -61,7 +61,8 @@ func TestAdd(t *testing.T) {
 		wantHeap  func() *MinHeap[int]
 	}{
 		{
-			name: "堆内元素数量0，新增1",
+			//堆内元素数量0，新增1
+			name: "heap0,add1",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				return mh
@@ -75,7 +76,8 @@ func TestAdd(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量1，根结点左边新增1，不交换",
+			//堆内元素数量1，根结点左边新增1，不交换
+			name: "heap1,add1 to left",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10}
@@ -91,7 +93,8 @@ func TestAdd(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量1，根结点左边新增1，交换",
+			//堆内元素数量1，根结点左边新增1，交换
+			name: "heap1,add1 to left,swap",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{20}
@@ -107,7 +110,8 @@ func TestAdd(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量2，根结点右边新增1，不交换",
+			//堆内元素数量2，根结点右边新增1，不交换
+			name: "heap2,add1 to right",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 20}
@@ -123,7 +127,8 @@ func TestAdd(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量2，根结点右边新增1，交换",
+			//堆内元素数量2，根结点右边新增1，交换
+			name: "heap2,add1 to right,swap",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{20, 30}
@@ -139,7 +144,8 @@ func TestAdd(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量3，新增1，不交换",
+			//堆内元素数量3，新增1，不交换
+			name: "heap3,add1",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 20, 30}
@@ -155,7 +161,8 @@ func TestAdd(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量3，新增1，交换1层",
+			//堆内元素数量3，新增1，交换1层
+			name: "heap3,add1,swap 1layer",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 20, 30}
@@ -171,7 +178,8 @@ func TestAdd(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量3，新增1，交换2层",
+			//堆内元素数量3，新增1，交换2层
+			name: "heap3,add1,swap 2layer",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 20, 30}
@@ -197,7 +205,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 
-func TestGetTop(t *testing.T) {
+func TestMinHeap_GetTop(t *testing.T) {
 	testCases := []struct {
 		name      string
 		startHeap func() *MinHeap[int]
@@ -205,7 +213,8 @@ func TestGetTop(t *testing.T) {
 		wantErr   error
 	}{
 		{
-			name: "堆内元素数量0，报错",
+			//堆内元素数量0，读堆顶报错
+			name: "heap0,get top,err",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				return mh
@@ -214,7 +223,8 @@ func TestGetTop(t *testing.T) {
 			wantErr: ErrMinHeapIsEmpty,
 		},
 		{
-			name: "堆内元素数量1，获取后1",
+			//堆内元素数量1，读堆顶后堆内元素数量1
+			name: "heap1,get top,heap1",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10}
@@ -238,7 +248,7 @@ func TestGetTop(t *testing.T) {
 	}
 }
 
-func TestExtractTop(t *testing.T) {
+func TestMinHeap_ExtractTop(t *testing.T) {
 	testCases := []struct {
 		name      string
 		startHeap func() *MinHeap[int]
@@ -247,7 +257,8 @@ func TestExtractTop(t *testing.T) {
 		wantHeap  func() *MinHeap[int]
 	}{
 		{
-			name: "堆内元素数量0，报错",
+			//堆内元素数量0，取堆顶报错
+			name: "heap0,extract top,err",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				return mh
@@ -260,7 +271,8 @@ func TestExtractTop(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量1，提取后0",
+			//堆内元素数量1，取堆顶后堆内元素数量0
+			name: "heap1,extract top,heap0",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10}
@@ -275,7 +287,8 @@ func TestExtractTop(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量2，提取后1，交换1层",
+			//堆内元素数量2，取堆顶后堆内元素数量1，交换1层
+			name: "heap2,extract top,swap 1layer",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 20}
@@ -292,7 +305,8 @@ func TestExtractTop(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量3，提取后2，交换1层",
+			//堆内元素数量3，取堆顶后堆内元素数量2，交换1层
+			name: "heap3,extract top,swap 1layer",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 20, 30}
@@ -309,7 +323,8 @@ func TestExtractTop(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量4，提取后3，交换1层",
+			//堆内元素数量4，取堆顶后堆内元素数量3，交换1层
+			name: "heap4,extract top,swap 1layer",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 20, 30, 40}
@@ -326,7 +341,8 @@ func TestExtractTop(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量5，提取后4，交换2层",
+			//堆内元素数量5，取堆顶后堆内元素数量4，交换2层
+			name: "heap5,extract top,swap 2layer",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 20, 30, 40, 50}
@@ -358,7 +374,7 @@ func TestExtractTop(t *testing.T) {
 	}
 }
 
-func TestDelete(t *testing.T) {
+func TestMinHeap_Delete(t *testing.T) {
 	testCases := []struct {
 		name      string
 		startHeap func() *MinHeap[int]
@@ -367,7 +383,8 @@ func TestDelete(t *testing.T) {
 		wantHeap  func() *MinHeap[int]
 	}{
 		{
-			name: "堆内元素数量0，报错",
+			//堆内元素数量0，删除1，找不到，报错
+			name: "heap0,delete1,err",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				return mh
@@ -380,7 +397,8 @@ func TestDelete(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量1，找不到，报错",
+			//堆内元素数量1，删除1，找不到，报错
+			name: "heap1,delete1,err",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10}
@@ -397,7 +415,8 @@ func TestDelete(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量1，删除1",
+			//堆内元素数量1，删除1，删除堆顶
+			name: "heap1,delete1,delete top",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10}
@@ -412,7 +431,8 @@ func TestDelete(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量2，删除1，删除堆顶",
+			//堆内元素数量2，删除1，删除堆顶
+			name: "heap2,delete1,delete top",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 20}
@@ -429,7 +449,8 @@ func TestDelete(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量4，删除1，删除堆顶，往左边换",
+			//堆内元素数量4，删除1，删除堆顶，往左边换
+			name: "heap4,delete1,delete top,swap left",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 20, 30, 40}
@@ -446,7 +467,8 @@ func TestDelete(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量4，删除1，删除堆顶，往右边换",
+			//堆内元素数量4，删除1，删除堆顶，往右边换
+			name: "heap4,delete1,delete top,swap right",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 30, 20, 40}
@@ -463,7 +485,8 @@ func TestDelete(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量4，删除1，删除堆顶，换两层",
+			//堆内元素数量4，删除1，删除堆顶，换两层
+			name: "heap4,delete1,delete top,swap 2layer",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 20, 30, 40, 50}
@@ -480,7 +503,8 @@ func TestDelete(t *testing.T) {
 			},
 		},
 		{
-			name: "堆内元素数量4，删除1，删除子堆顶",
+			//堆内元素数量4，删除1，删除子堆顶
+			name: "heap4,delete1,delete sub top",
 			startHeap: func() *MinHeap[int] {
 				mh, _ := NewMinHeap[int](compareInt(), initSize)
 				mh.data = []int{10, 20, 30, 40}
