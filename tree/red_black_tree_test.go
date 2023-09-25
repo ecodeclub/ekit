@@ -20,7 +20,7 @@ func TestNewRBTree(t *testing.T) {
 		{
 			name:    "compare is nil",
 			compare: nil,
-			wantErr: ErrRBTreeComparatorIsNull,
+			wantErr: errRBTreeComparatorIsNull,
 		},
 		{
 			name:    "compare is ok",
