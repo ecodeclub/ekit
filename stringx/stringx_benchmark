@@ -1,0 +1,10 @@
+goos: darwin
+goarch: amd64
+pkg: github.com/ecodeclub/ekit/stringx
+cpu: Intel(R) Core(TM) i7-7920HQ CPU @ 3.10GHz
+Benchmark_UnsafeToBytes/safe_to_bytes-8         	39721614	        29.60 ns/op	      48 B/op	       1 allocs/op
+Benchmark_UnsafeToBytes/unsafe_to_bytes-8       	1000000000	         0.2805 ns/op	       0 B/op	       0 allocs/op
+Benchmark_UnsafeToString/safe_to_string-8       	45207981	        26.77 ns/op	      48 B/op	       1 allocs/op
+Benchmark_UnsafeToString/unsafe_to_string-8     	1000000000	         0.2842 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/ecodeclub/ekit/stringx	4.780s

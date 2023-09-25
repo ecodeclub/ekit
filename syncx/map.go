@@ -41,12 +41,30 @@ func (m *Map[K, V]) Store(key K, value V) {
 }
 
 // LoadOrStore 加载或者存储一个键值对
+// true 代表是加载的，false 代表执行了 store
 func (m *Map[K, V]) LoadOrStore(key K, value V) (actual V, loaded bool) {
 	var anyVal any
 	anyVal, loaded = m.m.LoadOrStore(key, value)
 	if anyVal != nil {
 		actual = anyVal.(V)
 	}
+	return
+}
+
+// LoadOrStoreFunc 是一个优化，也就是使用该方法能够避免无意义的创建实例。
+// 如果你的初始化过程非常消耗资源，那么使用这个方法是有价值的。
+// 它的代价就是 Key 不存在的时候会多一次 Load 调用。
+// 当 fn 返回 error 的时候，LoadOrStoreFunc 也会返回 error。
+func (m *Map[K, V]) LoadOrStoreFunc(key K, fn func() (V, error)) (actual V, loaded bool, err error) {
+	val, ok := m.Load(key)
+	if ok {
+		return val, true, nil
+	}
+	val, err = fn()
+	if err != nil {
+		return
+	}
+	actual, loaded = m.LoadOrStore(key, val)
 	return
 }
 

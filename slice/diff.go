@@ -34,10 +34,11 @@ func DiffSet[T comparable](src, dst []T) []T {
 // DiffSetFunc 差集，已去重
 // 你应该优先使用 DiffSet
 func DiffSetFunc[T any](src, dst []T, equal equalFunc[T]) []T {
-	// TODO 优化容量预估
 	var ret = make([]T, 0, len(src))
 	for _, val := range src {
-		if !ContainsFunc[T](dst, val, equal) {
+		if !ContainsFunc[T](dst, func(src T) bool {
+			return equal(src, val)
+		}) {
 			ret = append(ret, val)
 		}
 	}

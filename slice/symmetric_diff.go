@@ -19,56 +19,45 @@ package slice
 // 返回值的元素顺序是不定的
 func SymmetricDiffSet[T comparable](src, dst []T) []T {
 	srcMap, dstMap := toMap[T](src), toMap[T](dst)
-	for dstKey := range dstMap {
-		if _, exist := srcMap[dstKey]; exist {
-			// 删除共同元素,两者剩余的并集即为对称差
-			delete(dstMap, dstKey)
-			delete(srcMap, dstKey)
+	for k := range dstMap {
+		if _, ok := srcMap[k]; ok {
+			delete(srcMap, k)
+		} else {
+			srcMap[k] = struct{}{}
 		}
 	}
 
-	for k, v := range dstMap {
-		srcMap[k] = v
-	}
-	var ret = make([]T, 0, len(srcMap))
+	res := make([]T, 0, len(srcMap))
 	for k := range srcMap {
-		ret = append(ret, k)
+		res = append(res, k)
 	}
 
-	return ret
+	return res
 }
 
 // SymmetricDiffSetFunc 对称差集
 // 你应该优先使用 SymmetricDiffSet
 // 已去重
 func SymmetricDiffSetFunc[T any](src, dst []T, equal equalFunc[T]) []T {
-	var interSection = make([]T, 0, min(len(src), len(dst)))
-	for _, valSrc := range src {
-		for _, valDst := range dst {
-			if equal(valSrc, valDst) {
-				interSection = append(interSection, valSrc)
-				break
-			}
-		}
-	}
+	res := []T{}
 
-	ret := make([]T, 0, len(src)+len(dst)-len(interSection)*2)
+	//找出在src不在dst的元素
 	for _, v := range src {
-		if !ContainsFunc[T](interSection, v, equal) {
-			ret = append(ret, v)
+		if !ContainsFunc[T](dst, func(t T) bool {
+			return equal(t, v)
+		}) {
+			res = append(res, v)
 		}
 	}
-	for _, v := range dst {
-		if !ContainsFunc[T](interSection, v, equal) {
-			ret = append(ret, v)
-		}
-	}
-	return deduplicateFunc[T](ret, equal)
-}
 
-func min(src, dst int) int {
-	if src > dst {
-		return dst
+	//找出在dst不在src的元素
+	for _, v := range dst {
+		if !ContainsFunc[T](src, func(t T) bool {
+			return equal(t, v)
+		}) {
+			res = append(res, v)
+		}
 	}
-	return src
+
+	return deduplicateFunc[T](res, equal)
 }

@@ -17,12 +17,12 @@ package mapx
 import "github.com/ecodeclub/ekit/syncx"
 
 type node[T Hashable, ValType any] struct {
-	key   Hashable
+	key   T
 	value ValType
 	next  *node[T, ValType]
 }
 
-func (m *HashMap[T, ValType]) newNode(key Hashable, val ValType) *node[T, ValType] {
+func (m *HashMap[T, ValType]) newNode(key T, val ValType) *node[T, ValType] {
 	newNode := m.nodePool.Get()
 	newNode.value = val
 	newNode.key = key
@@ -83,8 +83,8 @@ func (m *HashMap[T, ValType]) Get(key T) (ValType, bool) {
 
 // Keys 返回 Hashmap 里面的所有的 key。
 // 注意：key 的顺序是随机的。
-func (m *HashMap[T, ValType]) Keys() []Hashable {
-	res := make([]Hashable, 0)
+func (m *HashMap[T, ValType]) Keys() []T {
+	res := make([]T, 0)
 	for _, bucketNode := range m.hashmap {
 		curNode := bucketNode
 		for curNode != nil {
@@ -116,11 +116,6 @@ func NewHashMap[T Hashable, ValType any](size int) *HashMap[T, ValType] {
 		}),
 		hashmap: make(map[uint64]*node[T, ValType], size),
 	}
-}
-
-type mapi[T any, ValType any] interface {
-	Put(key T, val ValType) error
-	Get(key T) (ValType, bool)
 }
 
 var _ mapi[Hashable, any] = (*HashMap[Hashable, any])(nil)

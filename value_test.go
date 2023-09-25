@@ -970,3 +970,862 @@ func TestAnyValue_BoolOrDefault(t *testing.T) {
 		})
 	}
 }
+
+func TestAnyValue_Int8OrDefault(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		def  int8
+		want int8
+	}{
+		{
+			name: "normal case:",
+			val: AnyValue{
+				Val: int8(1),
+			},
+			want: 1,
+		},
+		{
+			name: "default case:",
+			val: AnyValue{
+				Val: int8(0),
+				Err: errors.New("error"),
+			},
+			def:  1,
+			want: 1,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: true,
+			},
+			def:  10,
+			want: 10,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			av := AnyValue{
+				Val: tt.val.Val,
+				Err: tt.val.Err,
+			}
+			assert.Equal(t, av.Int8OrDefault(tt.def), tt.want)
+		})
+	}
+}
+
+func TestAnyValue_Int16OrDefault(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		def  int16
+		want int16
+	}{
+		{
+			name: "normal case:",
+			val: AnyValue{
+				Val: int16(1),
+			},
+			want: 1,
+		},
+		{
+			name: "default case:",
+			val: AnyValue{
+				Val: int16(0),
+				Err: errors.New("error"),
+			},
+			def:  1,
+			want: 1,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: true,
+			},
+			def:  10,
+			want: 10,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			av := AnyValue{
+				Val: tt.val.Val,
+				Err: tt.val.Err,
+			}
+			assert.Equal(t, av.Int16OrDefault(tt.def), tt.want)
+		})
+	}
+}
+
+func TestAnyValue_Uint8OrDefault(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		def  uint8
+		want uint8
+	}{
+		{
+			name: "normal case:",
+			val: AnyValue{
+				Val: uint8(1),
+			},
+			want: 1,
+		},
+		{
+			name: "default case:",
+			val: AnyValue{
+				Val: uint8(0),
+				Err: errors.New("error"),
+			},
+			def:  1,
+			want: 1,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: true,
+			},
+			def:  10,
+			want: 10,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			av := AnyValue{
+				Val: tt.val.Val,
+				Err: tt.val.Err,
+			}
+			assert.Equal(t, av.Uint8OrDefault(tt.def), tt.want)
+		})
+	}
+}
+
+func TestAnyValue_Uint16OrDefault(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		def  uint16
+		want uint16
+	}{
+		{
+			name: "normal case:",
+			val: AnyValue{
+				Val: uint16(1),
+			},
+			want: 1,
+		},
+		{
+			name: "default case:",
+			val: AnyValue{
+				Val: uint16(0),
+				Err: errors.New("error"),
+			},
+			def:  1,
+			want: 1,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: true,
+			},
+			def:  10,
+			want: 10,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			av := AnyValue{
+				Val: tt.val.Val,
+				Err: tt.val.Err,
+			}
+			assert.Equal(t, av.Uint16OrDefault(tt.def), tt.want)
+		})
+	}
+}
+
+func TestAnyValue_AsInt(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want int
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "1",
+			},
+			want: 1,
+		},
+		{
+			name: "normal int case:",
+			val: AnyValue{
+				Val: int(2),
+			},
+			want: 2,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			err: errs.NewErrInvalidType("int", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Val: "",
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsInt()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsInt8(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want int8
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "1",
+			},
+			want: 1,
+		},
+		{
+			name: "normal int case:",
+			val: AnyValue{
+				Val: int8(2),
+			},
+			want: 2,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			err: errs.NewErrInvalidType("int8", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Val: "",
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsInt8()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsInt16(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want int16
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "1",
+			},
+			want: 1,
+		},
+		{
+			name: "normal int16 case:",
+			val: AnyValue{
+				Val: int16(2),
+			},
+			want: 2,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			err: errs.NewErrInvalidType("int16", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Val: "",
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsInt16()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsInt32(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want int32
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "1",
+			},
+			want: 1,
+		},
+		{
+			name: "normal int32 case:",
+			val: AnyValue{
+				Val: int32(2),
+			},
+			want: 2,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			err: errs.NewErrInvalidType("int32", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Val: "",
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsInt32()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsInt64(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want int64
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "1",
+			},
+			want: 1,
+		},
+		{
+			name: "normal int64 case:",
+			val: AnyValue{
+				Val: int64(2),
+			},
+			want: 2,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			err: errs.NewErrInvalidType("int64", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Val: "",
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsInt64()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsUint(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want uint
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "1",
+			},
+			want: 1,
+		},
+		{
+			name: "normal uint case:",
+			val: AnyValue{
+				Val: uint(2),
+			},
+			want: 2,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			err: errs.NewErrInvalidType("uint", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Val: "",
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsUint()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsUint8(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want uint8
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "1",
+			},
+			want: 1,
+		},
+		{
+			name: "normal uint8 case:",
+			val: AnyValue{
+				Val: uint8(2),
+			},
+			want: 2,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			err: errs.NewErrInvalidType("uint8", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Val: "",
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsUint8()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsUint16(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want uint16
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "1",
+			},
+			want: 1,
+		},
+		{
+			name: "normal uint16 case:",
+			val: AnyValue{
+				Val: uint16(2),
+			},
+			want: 2,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			err: errs.NewErrInvalidType("uint16", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Val: "",
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsUint16()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsUint32(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want uint32
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "1",
+			},
+			want: 1,
+		},
+		{
+			name: "normal uint32 case:",
+			val: AnyValue{
+				Val: uint32(2),
+			},
+			want: 2,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			err: errs.NewErrInvalidType("uint32", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Val: "",
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsUint32()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsUint64(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want uint64
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "1",
+			},
+			want: 1,
+		},
+		{
+			name: "normal uint64 case:",
+			val: AnyValue{
+				Val: uint64(2),
+			},
+			want: 2,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			err: errs.NewErrInvalidType("uint64", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Val: "",
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsUint64()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsFloat32(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want float32
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "1.01",
+			},
+			want: 1.01,
+		},
+		{
+			name: "normal float32 case:",
+			val: AnyValue{
+				Val: float32(2.44),
+			},
+			want: 2.44,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			err: errs.NewErrInvalidType("float32", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsFloat32()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsFloat64(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want float64
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "100.0000000000",
+			},
+			want: 1e2,
+		},
+		{
+			name: "normal float64 case:",
+			val: AnyValue{
+				Val: float64(2.44),
+			},
+			want: 2.44,
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			err: errs.NewErrInvalidType("float64", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Err: errors.New("error"),
+			},
+			err: errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsFloat64()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsBytes(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want []byte
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "hello",
+			},
+			want: []byte("hello"),
+		},
+		{
+			name: "normal []byte case:",
+			val: AnyValue{
+				Val: []byte{1},
+			},
+			want: []byte{1},
+		},
+		{
+			name: "type error case:",
+			val: AnyValue{
+				Val: []int{1},
+			},
+			want: []byte{},
+			err:  errs.NewErrInvalidType("[]byte", "[]int"),
+		},
+		{
+			name: "value exists error case:",
+			val: AnyValue{
+				Err: errors.New("error"),
+			},
+			want: []byte{},
+			err:  errors.New("error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsBytes()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func TestAnyValue_AsString(t *testing.T) {
+	tests := []struct {
+		name string
+		val  AnyValue
+		want string
+		err  error
+	}{
+		{
+			name: "normal string case:",
+			val: AnyValue{
+				Val: "hello ekit",
+			},
+			want: "hello ekit",
+		},
+		{
+			name: "normal uint case:",
+			val: AnyValue{
+				Val: uint16(1231),
+			},
+			want: "1231",
+		},
+		{
+			name: "normal int case:",
+			val: AnyValue{
+				Val: 1,
+			},
+			want: "1",
+		},
+		{
+			name: "normal float case:",
+			val: AnyValue{
+				Val: 1e2,
+			},
+			want: "100.0000000000",
+		},
+		{
+			name: "normal []byte case:",
+			val: AnyValue{
+				Val: []byte{72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33},
+			},
+			want: "Hello, World!",
+		},
+		{
+			name: "type conversion failed",
+			val: AnyValue{
+				Val: []string{"h", "e", "llo"},
+			},
+			err: errs.NewErrInvalidType("[]byte", "[]string"),
+		},
+		{
+			name: "type conversion failed by int",
+			val: AnyValue{
+				Val: []int{1, 2, 3, 4, 5},
+			},
+			err: errs.NewErrInvalidType("[]byte", "[]int"),
+		},
+		{
+			name: "unsupported type case:",
+			val: AnyValue{
+				Val: map[string]any{
+					"test": 1,
+					"hhh":  "sss",
+				},
+			},
+			err: errors.New("未兼容类型，暂时无法转换"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := tt.val.AsString()
+			assert.Equal(t, tt.want, val)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
