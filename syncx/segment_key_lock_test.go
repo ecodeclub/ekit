@@ -16,6 +16,7 @@ package syncx
 
 import (
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,8 +27,8 @@ func TestSegmentKeysLock(t *testing.T) {
 	key := "test_key"
 	var wg sync.WaitGroup
 	wg.Add(2)
-	writeDone := false
-	readStarted := false
+	var writeDone int32
+	var readStarted int32
 	cond := sync.NewCond(&sync.Mutex{})
 	cond.L.Lock()
 
@@ -35,7 +36,7 @@ func TestSegmentKeysLock(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		s.Lock(key) // 模拟写操作
-		writeDone = true
+		atomic.StoreInt32(&writeDone, 1)
 		cond.Broadcast()
 		s.Unlock(key)
 	}()
@@ -47,23 +48,23 @@ func TestSegmentKeysLock(t *testing.T) {
 		defer cond.L.Unlock()
 
 		// 等待写操作完成
-		for !writeDone {
+		for atomic.LoadInt32(&writeDone) != 1 {
 			cond.Wait()
 		}
 
-		readStarted = true
+		atomic.StoreInt32(&readStarted, 1)
 		cond.Broadcast()
 		s.RLock(key)
 		defer s.RUnlock(key)
 	}()
 
 	// 等待读操作开始
-	for !readStarted {
+	for atomic.LoadInt32(&readStarted) != 1 {
 		cond.Wait()
 	}
 
 	// 检查写操作是否已完成
-	assert.True(t, writeDone, "Write operation did not complete before read operation started")
+	assert.Equal(t, int32(1), atomic.LoadInt32(&writeDone), "Write operation did not complete before read operation started")
 
 	cond.L.Unlock()
 	wg.Wait()
