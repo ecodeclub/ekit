@@ -17,38 +17,54 @@ package syncx
 import (
 	"sync"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSegmentKeysLock(t *testing.T) {
 	s := NewSegmentKeysLock(10)
 	key := "test_key"
-
 	var wg sync.WaitGroup
 	wg.Add(2)
+	writeDone := false
+	readStarted := false
+	cond := sync.NewCond(&sync.Mutex{})
+	cond.L.Lock()
 
 	// 写 goroutine
 	go func() {
 		defer wg.Done()
-		s.Lock(key)
-		defer s.Unlock(key)
-
-		// 模拟写操作
-		time.Sleep(100 * time.Millisecond)
+		s.Lock(key) // 模拟写操作
+		writeDone = true
+		cond.Broadcast()
+		s.Unlock(key)
 	}()
-
-	// 等待一段时间以确保写 goroutine 先获取锁
-	time.Sleep(50 * time.Millisecond)
 
 	// 读 goroutine
 	go func() {
 		defer wg.Done()
+		cond.L.Lock()
+		defer cond.L.Unlock()
+
+		// 等待写操作完成
+		for !writeDone {
+			cond.Wait()
+		}
+
+		readStarted = true
+		cond.Broadcast()
 		s.RLock(key)
 		defer s.RUnlock(key)
-
-		// 如果读写锁工作正常，这个打印语句应该在写 goroutine 完成后才执行
-		t.Log("Read operation executed")
 	}()
 
+	// 等待读操作开始
+	for !readStarted {
+		cond.Wait()
+	}
+
+	// 检查写操作是否已完成
+	assert.True(t, writeDone, "Write operation did not complete before read operation started")
+
+	cond.L.Unlock()
 	wg.Wait()
 }
