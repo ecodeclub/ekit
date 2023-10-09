@@ -21,13 +21,17 @@ import (
 
 // SegmentKeysLock 部分key lock结构定义
 type SegmentKeysLock struct {
-	locks []sync.RWMutex
+	locks []*sync.RWMutex
 }
 
 // NewSegmentKeysLock 创建 SegmentKeysLock 示例
 func NewSegmentKeysLock(size int) *SegmentKeysLock {
+	locks := make([]*sync.RWMutex, size)
+	for i := range locks {
+		locks[i] = &sync.RWMutex{}
+	}
 	return &SegmentKeysLock{
-		locks: make([]sync.RWMutex, size),
+		locks: locks,
 	}
 }
 
@@ -41,27 +45,27 @@ func (s *SegmentKeysLock) hash(key string) uint32 {
 // RLock 读锁加锁
 func (s *SegmentKeysLock) RLock(key string) {
 	hash := s.hash(key)
-	lock := &s.locks[hash%uint32(len(s.locks))]
+	lock := s.locks[hash%uint32(len(s.locks))]
 	lock.RLock()
 }
 
-// RLock 读锁解锁
+// RUnlock 读锁解锁
 func (s *SegmentKeysLock) RUnlock(key string) {
 	hash := s.hash(key)
-	lock := &s.locks[hash%uint32(len(s.locks))]
+	lock := s.locks[hash%uint32(len(s.locks))]
 	lock.RUnlock()
 }
 
 // Lock 写锁加锁
 func (s *SegmentKeysLock) Lock(key string) {
 	hash := s.hash(key)
-	lock := &s.locks[hash%uint32(len(s.locks))]
+	lock := s.locks[hash%uint32(len(s.locks))]
 	lock.Lock()
 }
 
 // Unlock 写锁解锁
 func (s *SegmentKeysLock) Unlock(key string) {
 	hash := s.hash(key)
-	lock := &s.locks[hash%uint32(len(s.locks))]
+	lock := s.locks[hash%uint32(len(s.locks))]
 	lock.Unlock()
 }
