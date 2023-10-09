@@ -16,9 +16,10 @@ package sqlx
 
 import (
 	"database/sql"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewNullBool(t *testing.T) {
