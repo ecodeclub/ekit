@@ -45,3 +45,10 @@ func KeysValues[K comparable, V any](m map[K]V) ([]K, []V) {
 	}
 	return keys, values
 }
+
+func UpdateMap[K comparable, V any](m1, m2 map[K]V) map[K]V {
+	for k, v := range m2 {
+		m1[k] = v
+	}
+	return m1
+}
