@@ -37,7 +37,7 @@ func TestSegmentKeysLock(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		s.Lock(key)
-		val = true       // 加写锁写
+		val = true // 加写锁写
 		s.Unlock(key)
 		writeDone.Store(true)
 		cond.Broadcast()
@@ -57,7 +57,7 @@ func TestSegmentKeysLock(t *testing.T) {
 		readStarted.Store(true)
 		cond.Broadcast()
 		s.RLock(key)
-		assert.Equal(t, true, val, "Read lock err")  // 加读锁读
+		assert.Equal(t, true, val, "Read lock err") // 加读锁读
 		defer s.RUnlock(key)
 	}()
 
