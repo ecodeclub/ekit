@@ -16,7 +16,6 @@ package ekit
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strconv"
 
@@ -36,7 +35,7 @@ func (av AnyValue) Int() (int, error) {
 	}
 	val, ok := av.Val.(int)
 	if !ok {
-		return 0, errs.NewErrInvalidType("int", reflect.TypeOf(av.Val).String())
+		return 0, errs.NewErrInvalidType("int", av.Val)
 	}
 	return val, nil
 }
@@ -52,7 +51,7 @@ func (av AnyValue) AsInt() (int, error) {
 		res, err := strconv.ParseInt(v, 10, 64)
 		return int(res), err
 	}
-	return 0, errs.NewErrInvalidType("int", reflect.TypeOf(av.Val).String())
+	return 0, errs.NewErrInvalidType("int", av.Val)
 }
 
 // IntOrDefault 返回 int 数据，或者默认值
@@ -71,7 +70,7 @@ func (av AnyValue) Uint() (uint, error) {
 	}
 	val, ok := av.Val.(uint)
 	if !ok {
-		return 0, errs.NewErrInvalidType("uint", reflect.TypeOf(av.Val).String())
+		return 0, errs.NewErrInvalidType("uint", av.Val)
 	}
 	return val, nil
 }
@@ -87,7 +86,7 @@ func (av AnyValue) AsUint() (uint, error) {
 		res, err := strconv.ParseUint(v, 10, 64)
 		return uint(res), err
 	}
-	return 0, errs.NewErrInvalidType("uint", reflect.TypeOf(av.Val).String())
+	return 0, errs.NewErrInvalidType("uint", av.Val)
 }
 
 // UintOrDefault 返回 uint 数据，或者默认值
@@ -105,7 +104,7 @@ func (av AnyValue) Int8() (int8, error) {
 	}
 	val, ok := av.Val.(int8)
 	if !ok {
-		return 0, errs.NewErrInvalidType("int", reflect.TypeOf(av.Val).String())
+		return 0, errs.NewErrInvalidType("int", av.Val)
 	}
 	return val, nil
 }
@@ -122,7 +121,7 @@ func (av AnyValue) AsInt8() (int8, error) {
 		res, err := strconv.ParseInt(v, 10, 64)
 		return int8(res), err
 	}
-	return 0, errs.NewErrInvalidType("int8", reflect.TypeOf(av.Val).String())
+	return 0, errs.NewErrInvalidType("int8", av.Val)
 }
 
 func (av AnyValue) Int8OrDefault(def int8) int8 {
@@ -139,7 +138,7 @@ func (av AnyValue) Uint8() (uint8, error) {
 	}
 	val, ok := av.Val.(uint8)
 	if !ok {
-		return 0, errs.NewErrInvalidType("uint8", reflect.TypeOf(av.Val).String())
+		return 0, errs.NewErrInvalidType("uint8", av.Val)
 	}
 	return val, nil
 }
@@ -156,7 +155,7 @@ func (av AnyValue) AsUint8() (uint8, error) {
 		res, err := strconv.ParseUint(v, 10, 8)
 		return uint8(res), err
 	}
-	return 0, errs.NewErrInvalidType("uint8", reflect.TypeOf(av.Val).String())
+	return 0, errs.NewErrInvalidType("uint8", av.Val)
 }
 
 func (av AnyValue) Uint8OrDefault(def uint8) uint8 {
@@ -173,7 +172,7 @@ func (av AnyValue) Int16() (int16, error) {
 	}
 	val, ok := av.Val.(int16)
 	if !ok {
-		return 0, errs.NewErrInvalidType("int16", reflect.TypeOf(av.Val).String())
+		return 0, errs.NewErrInvalidType("int16", av.Val)
 	}
 	return val, nil
 }
@@ -190,7 +189,7 @@ func (av AnyValue) AsInt16() (int16, error) {
 		res, err := strconv.ParseInt(v, 10, 16)
 		return int16(res), err
 	}
-	return 0, errs.NewErrInvalidType("int16", reflect.TypeOf(av.Val).String())
+	return 0, errs.NewErrInvalidType("int16", av.Val)
 }
 
 func (av AnyValue) Int16OrDefault(def int16) int16 {
@@ -207,7 +206,7 @@ func (av AnyValue) Uint16() (uint16, error) {
 	}
 	val, ok := av.Val.(uint16)
 	if !ok {
-		return 0, errs.NewErrInvalidType("uint16", reflect.TypeOf(av.Val).String())
+		return 0, errs.NewErrInvalidType("uint16", av.Val)
 	}
 	return val, nil
 }
@@ -224,7 +223,7 @@ func (av AnyValue) AsUint16() (uint16, error) {
 		res, err := strconv.ParseUint(v, 10, 16)
 		return uint16(res), err
 	}
-	return 0, errs.NewErrInvalidType("uint16", reflect.TypeOf(av.Val).String())
+	return 0, errs.NewErrInvalidType("uint16", av.Val)
 }
 
 func (av AnyValue) Uint16OrDefault(def uint16) uint16 {
@@ -242,7 +241,7 @@ func (av AnyValue) Int32() (int32, error) {
 	}
 	val, ok := av.Val.(int32)
 	if !ok {
-		return 0, errs.NewErrInvalidType("int32", reflect.TypeOf(av.Val).String())
+		return 0, errs.NewErrInvalidType("int32", av.Val)
 	}
 	return val, nil
 }
@@ -258,7 +257,7 @@ func (av AnyValue) AsInt32() (int32, error) {
 		res, err := strconv.ParseInt(v, 10, 32)
 		return int32(res), err
 	}
-	return 0, errs.NewErrInvalidType("int32", reflect.TypeOf(av.Val).String())
+	return 0, errs.NewErrInvalidType("int32", av.Val)
 }
 
 // Int32OrDefault 返回 int32 数据，或者默认值
@@ -277,7 +276,7 @@ func (av AnyValue) Uint32() (uint32, error) {
 	}
 	val, ok := av.Val.(uint32)
 	if !ok {
-		return 0, errs.NewErrInvalidType("uint32", reflect.TypeOf(av.Val).String())
+		return 0, errs.NewErrInvalidType("uint32", av.Val)
 	}
 	return val, nil
 }
@@ -293,7 +292,7 @@ func (av AnyValue) AsUint32() (uint32, error) {
 		res, err := strconv.ParseUint(v, 10, 32)
 		return uint32(res), err
 	}
-	return 0, errs.NewErrInvalidType("uint32", reflect.TypeOf(av.Val).String())
+	return 0, errs.NewErrInvalidType("uint32", av.Val)
 }
 
 // Uint32OrDefault 返回 uint32 数据，或者默认值
@@ -312,7 +311,7 @@ func (av AnyValue) Int64() (int64, error) {
 	}
 	val, ok := av.Val.(int64)
 	if !ok {
-		return 0, errs.NewErrInvalidType("int64", reflect.TypeOf(av.Val).String())
+		return 0, errs.NewErrInvalidType("int64", av.Val)
 	}
 	return val, nil
 }
@@ -327,7 +326,7 @@ func (av AnyValue) AsInt64() (int64, error) {
 	case string:
 		return strconv.ParseInt(v, 10, 64)
 	}
-	return 0, errs.NewErrInvalidType("int64", reflect.TypeOf(av.Val).String())
+	return 0, errs.NewErrInvalidType("int64", av.Val)
 }
 
 // Int64OrDefault 返回 int64 数据，或者默认值
@@ -346,7 +345,7 @@ func (av AnyValue) Uint64() (uint64, error) {
 	}
 	val, ok := av.Val.(uint64)
 	if !ok {
-		return 0, errs.NewErrInvalidType("uint64", reflect.TypeOf(av.Val).String())
+		return 0, errs.NewErrInvalidType("uint64", av.Val)
 	}
 	return val, nil
 }
@@ -361,7 +360,7 @@ func (av AnyValue) AsUint64() (uint64, error) {
 	case string:
 		return strconv.ParseUint(v, 10, 64)
 	}
-	return 0, errs.NewErrInvalidType("uint64", reflect.TypeOf(av.Val).String())
+	return 0, errs.NewErrInvalidType("uint64", av.Val)
 }
 
 // Uint64OrDefault 返回 uint64 数据，或者默认值
@@ -380,7 +379,7 @@ func (av AnyValue) Float32() (float32, error) {
 	}
 	val, ok := av.Val.(float32)
 	if !ok {
-		return 0, errs.NewErrInvalidType("float32", reflect.TypeOf(av.Val).String())
+		return 0, errs.NewErrInvalidType("float32", av.Val)
 	}
 	return val, nil
 }
@@ -396,7 +395,7 @@ func (av AnyValue) AsFloat32() (float32, error) {
 		res, err := strconv.ParseFloat(v, 32)
 		return float32(res), err
 	}
-	return 0, errs.NewErrInvalidType("float32", reflect.TypeOf(av.Val).String())
+	return 0, errs.NewErrInvalidType("float32", av.Val)
 }
 
 // Float32OrDefault 返回 float32 数据，或者默认值
@@ -415,7 +414,7 @@ func (av AnyValue) Float64() (float64, error) {
 	}
 	val, ok := av.Val.(float64)
 	if !ok {
-		return 0, errs.NewErrInvalidType("float64", reflect.TypeOf(av.Val).String())
+		return 0, errs.NewErrInvalidType("float64", av.Val)
 	}
 	return val, nil
 }
@@ -430,7 +429,7 @@ func (av AnyValue) AsFloat64() (float64, error) {
 	case string:
 		return strconv.ParseFloat(v, 64)
 	}
-	return 0, errs.NewErrInvalidType("float64", reflect.TypeOf(av.Val).String())
+	return 0, errs.NewErrInvalidType("float64", av.Val)
 }
 
 // Float64OrDefault 返回 float64 数据，或者默认值
@@ -449,7 +448,7 @@ func (av AnyValue) String() (string, error) {
 	}
 	val, ok := av.Val.(string)
 	if !ok {
-		return "", errs.NewErrInvalidType("string", reflect.TypeOf(av.Val).String())
+		return "", errs.NewErrInvalidType("string", av.Val)
 	}
 	return val, nil
 }
@@ -474,7 +473,7 @@ func (av AnyValue) AsString() (string, error) {
 		val = strconv.FormatFloat(valueOf.Float(), 'f', 10, 64)
 	case reflect.Slice:
 		if valueOf.Type().Elem().Kind() != reflect.Uint8 {
-			return "", errs.NewErrInvalidType("[]byte", fmt.Sprintf("[]%s", valueOf.Type().Elem().Kind()))
+			return "", errs.NewErrInvalidType("[]byte", av.Val)
 		}
 		val = string(valueOf.Bytes())
 	default:
@@ -500,7 +499,7 @@ func (av AnyValue) Bytes() ([]byte, error) {
 	}
 	val, ok := av.Val.([]byte)
 	if !ok {
-		return nil, errs.NewErrInvalidType("[]byte", reflect.TypeOf(av.Val).String())
+		return nil, errs.NewErrInvalidType("[]byte", av.Val)
 	}
 	return val, nil
 }
@@ -516,7 +515,7 @@ func (av AnyValue) AsBytes() ([]byte, error) {
 		return []byte(v), nil
 	}
 
-	return []byte{}, errs.NewErrInvalidType("[]byte", reflect.TypeOf(av.Val).String())
+	return []byte{}, errs.NewErrInvalidType("[]byte", av.Val)
 }
 
 // BytesOrDefault 返回 []byte 数据，或者默认值
@@ -535,7 +534,7 @@ func (av AnyValue) Bool() (bool, error) {
 	}
 	val, ok := av.Val.(bool)
 	if !ok {
-		return false, errs.NewErrInvalidType("bool", reflect.TypeOf(av.Val).String())
+		return false, errs.NewErrInvalidType("bool", av.Val)
 	}
 	return val, nil
 }
