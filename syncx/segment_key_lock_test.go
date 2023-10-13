@@ -15,60 +15,53 @@
 package syncx
 
 import (
-	"sync"
-	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSegmentKeysLock(t *testing.T) {
-	s := NewSegmentKeysLock(10)
-	key := "test_key"
-	var wg sync.WaitGroup
-	wg.Add(2)
-	var writeDone atomic.Bool
-	var readStarted atomic.Bool
-	val := false
-	cond := sync.NewCond(&sync.Mutex{})
-	cond.L.Lock()
+// 通过 TryLock 和 TryRLock 来判定加锁问题
+// 也就是只判定我们拿到了正确的锁，但是没有判定并发与互斥
 
-	// 写 goroutine
-	go func() {
-		defer wg.Done()
-		s.Lock(key)
-		val = true // 加写锁写
-		s.Unlock(key)
-		writeDone.Store(true)
-		cond.Broadcast()
-	}()
+// TestNewSegmentKeysLock_Lock 测试 Lock, UnLock 和 TryLock
+func TestNewSegmentKeysLock_Lock(t *testing.T) {
+	l := NewSegmentKeysLock(8)
+	key1 := "key1"
+	l.Lock(key1)
+	// 必然加锁失败
+	assert.False(t, l.TryLock(key1))
+	// 读锁也失败
+	assert.False(t, l.TryRLock(key1))
+	key2 := "key2"
+	// 加锁成功
+	assert.True(t, l.TryLock(key2))
+	// 解锁不会触发 panic
+	defer l.Unlock(key2)
 
-	// 读 goroutine
-	go func() {
-		defer wg.Done()
-		cond.L.Lock()
-		defer cond.L.Unlock()
+	// 释放锁
+	l.Unlock(key1)
+	// 此时应该预期自己可以再次加锁
+	assert.True(t, l.TryLock(key1))
+}
 
-		// 等待写操作完成
-		for !writeDone.Load() {
-			cond.Wait()
-		}
+func TestNewSegmentKeysLock_RLock(t *testing.T) {
+	l := NewSegmentKeysLock(8)
+	key1, key2 := "key1", "key2"
+	l.RLock(key1)
+	// 必然加锁失败
+	assert.False(t, l.TryLock(key1))
+	// 读锁可以成功
+	assert.True(t, l.TryRLock(key1))
+	// 加锁成功
+	assert.True(t, l.TryRLock(key2))
+	// 解锁不会触发 panic
+	defer l.RUnlock(key2)
 
-		readStarted.Store(true)
-		cond.Broadcast()
-		s.RLock(key)
-		assert.Equal(t, true, val, "Read lock err") // 加读锁读
-		defer s.RUnlock(key)
-	}()
-
-	// 等待读操作开始
-	for !readStarted.Load() {
-		cond.Wait()
-	}
-
-	// 检查写操作是否已完成，防止意外情况导致读优先写发生
-	assert.Equal(t, true, writeDone.Load(), "Write operation did not complete before read operation started")
-
-	cond.L.Unlock()
-	wg.Wait()
+	// 释放读锁
+	l.RUnlock(key1)
+	// 此时还有一个读锁没有释放
+	assert.False(t, l.TryLock(key1))
+	// 再次释放读锁
+	l.RUnlock(key1)
+	assert.True(t, l.TryLock(key1))
 }
