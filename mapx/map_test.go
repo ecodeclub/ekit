@@ -147,37 +147,3 @@ func TestKeysValues(t *testing.T) {
 		})
 	}
 }
-
-func TestUpdateMap(t *testing.T) {
-	testCases := []struct {
-		name    string
-		m1      map[int]int
-		m2      map[int]int
-		wantRes map[int]int
-	}{
-		{
-			name:    "update map",
-			m1:      map[int]int{1: 1, 2: 2},
-			m2:      map[int]int{1: 0, 2: 2, 3: 3},
-			wantRes: map[int]int{1: 0, 2: 2, 3: 3},
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			res := UpdateMap[int, int](tc.m1, tc.m2)
-			if len(res) != len(tc.wantRes) {
-				t.Fatal("Fail, length mismatch")
-			}
-			for k, v := range res {
-				v1, ok := tc.wantRes[k]
-				if !ok {
-					t.Fatal("Fail, keys not equal")
-				}
-				if v != v1 {
-					t.Fatal("Fail, values not equal")
-				}
-			}
-
-		})
-	}
-}
