@@ -19,13 +19,12 @@ import (
 	"github.com/ecodeclub/ekit"
 	"github.com/ecodeclub/ekit/internal/errs"
 	"golang.org/x/exp/rand"
-	"time"
 )
 
 // 跳表 skip list
 
 const (
-	FactorP  = 0.25 // level i 上的结点 有FactorP的比例出现在level i + 1上
+	FactorP  = float32(0.25) // level i 上的结点 有FactorP的比例出现在level i + 1上
 	MaxLevel = 32
 )
 
@@ -78,8 +77,8 @@ func NewSkipList[T any](compare ekit.Comparator[T]) *SkipList[T] {
 // levels的生成和跳表中元素个数无关
 func (sl *SkipList[T]) randomLevel() int {
 	level := 1
-	rnd := rand.New(rand.NewSource(uint64(time.Now().UnixNano())))
-	for rnd.Float64() < FactorP {
+	p := FactorP
+	for (rand.Int31() & 0xFFFF) < int32(p*0xFFFF) {
 		level++
 	}
 	if level < MaxLevel {
@@ -90,26 +89,25 @@ func (sl *SkipList[T]) randomLevel() int {
 }
 
 func (sl *SkipList[T]) Search(target T) bool {
-	curr := sl.header
-	for i := sl.level - 1; i >= 0; i-- {
-		for curr.Forward[i] != nil && sl.compare(curr.Forward[i].Val, target) < 0 {
-			curr = curr.Forward[i]
-		}
-	}
+	curr, _ := sl.traverse(target, sl.level)
 	curr = curr.Forward[0] // 第1层 包含所有元素
 	return curr != nil && sl.compare(curr.Val, target) == 0
 }
 
-func (sl *SkipList[T]) Insert(Val T) {
+func (sl *SkipList[T]) traverse(Val T, level int) (*skipListNode[T], []*skipListNode[T]) {
 	update := make([]*skipListNode[T], MaxLevel) // update[i] 包含位于level i 的插入/删除位置左侧的指针
 	curr := sl.header
-	for i := sl.level - 1; i >= 0; i-- {
+	for i := level - 1; i >= 0; i-- {
 		for curr.Forward[i] != nil && sl.compare(curr.Forward[i].Val, Val) < 0 {
 			curr = curr.Forward[i]
 		}
 		update[i] = curr
 	}
+	return curr, update
+}
 
+func (sl *SkipList[T]) Insert(Val T) {
+	_, update := sl.traverse(Val, sl.level)
 	level := sl.randomLevel()
 	if level > sl.level {
 		for i := sl.level; i < level; i++ {
@@ -134,14 +132,7 @@ func (sl *SkipList[T]) Len() int {
 }
 
 func (sl *SkipList[T]) DeleteElement(target T) bool {
-	update := make([]*skipListNode[T], MaxLevel)
-	curr := sl.header
-	for i := sl.level - 1; i >= 0; i-- {
-		for curr.Forward[i] != nil && sl.compare(curr.Forward[i].Val, target) < 0 {
-			curr = curr.Forward[i]
-		}
-		update[i] = curr
-	}
+	curr, update := sl.traverse(target, sl.level)
 	node := curr.Forward[0]
 	if node == nil || sl.compare(node.Val, target) != 0 {
 		return false
