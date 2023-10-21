@@ -135,7 +135,7 @@ func (sl *SkipList[T]) DeleteElement(target T) bool {
 	curr, update := sl.traverse(target, sl.level)
 	node := curr.Forward[0]
 	if node == nil || sl.compare(node.Val, target) != 0 {
-		return false
+		return true
 	}
 	// 删除target结点
 	for i := 0; i < sl.level && update[i].Forward[i] == node; i++ {
