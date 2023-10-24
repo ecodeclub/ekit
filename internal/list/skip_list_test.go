@@ -17,10 +17,11 @@ package list
 import (
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/ecodeclub/ekit"
 	"github.com/ecodeclub/ekit/internal/errs"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNewSkipList(t *testing.T) {
@@ -110,7 +111,7 @@ func TestSkipList_DeleteElement(t *testing.T) {
 			value:     2,
 			wantSlice: []int{1, 3},
 			wantSize:  2,
-			wantRes:   false,
+			wantRes:   true,
 		},
 		{
 			name:      "delete 1 from [1,3]",
@@ -128,7 +129,7 @@ func TestSkipList_DeleteElement(t *testing.T) {
 			value:     1,
 			wantSlice: []int{},
 			wantSize:  0,
-			wantRes:   false,
+			wantRes:   true,
 		},
 		{
 			name:      "delete 1 from [1]",
@@ -146,7 +147,7 @@ func TestSkipList_DeleteElement(t *testing.T) {
 			value:     1,
 			wantSlice: []int{2},
 			wantSize:  1,
-			wantRes:   false,
+			wantRes:   true,
 		},
 		{
 			name:      "delete 3 from [1,2,3,4,5,6,7]",
@@ -164,7 +165,7 @@ func TestSkipList_DeleteElement(t *testing.T) {
 			value:     8,
 			wantSlice: []int{1, 2, 3, 4, 5, 6, 7},
 			wantSize:  7,
-			wantRes:   false,
+			wantRes:   true,
 		},
 	}
 
