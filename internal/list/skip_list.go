@@ -16,6 +16,7 @@ package list
 
 import (
 	"errors"
+
 	"github.com/ecodeclub/ekit"
 	"github.com/ecodeclub/ekit/internal/errs"
 	"golang.org/x/exp/rand"
