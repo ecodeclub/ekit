@@ -21,13 +21,18 @@ func TestLimitPool(t *testing.T) {
 
 	var wg sync.WaitGroup
 	bufChan := make(chan []byte, expectedMaxAttempts)
+
+	// 从Pool中并发获取缓冲区
 	for i := 0; i < expectedMaxAttempts; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
 			buf := pool.Get()
+
 			assert.NotZero(t, buf)
 			assert.Equal(t, string(expectedVal), string(buf))
+
 			bufChan <- buf
 		}()
 	}
@@ -43,4 +48,7 @@ func TestLimitPool(t *testing.T) {
 
 	// 再次申请仍可以拿到非零值缓冲区
 	assert.NotZero(t, string(expectedVal), string(pool.Get()))
+
+	// 超过最大申请次数返回零值
+	assert.Zero(t, pool.Get())
 }
