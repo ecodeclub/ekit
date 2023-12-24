@@ -43,3 +43,16 @@ type List[T any] interface {
 	// AsSlice 每次调用都必须返回一个全新的切片
 	AsSlice() []T
 }
+
+// IterableList List仅在没有Iter时可被编辑，一个Iter只能有一个Iter
+type IterableList[T any] interface {
+	List[T]
+	GetIter() (Iter[T], bool)
+	releaseIter(func(list List[T]))
+}
+
+type Iter[T any] interface {
+	Next() (T, bool)
+	Delete()
+	Release()
+}
