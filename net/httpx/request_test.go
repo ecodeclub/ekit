@@ -36,10 +36,10 @@ func TestRequest_Client(t *testing.T) {
 
 func TestRequest_JSONBody(t *testing.T) {
 	req := NewRequest(context.Background(), http.MethodPost, "/abc")
-	assert.Nil(t, req.Body)
+	assert.Nil(t, req.req.Body)
 	req = req.JSONBody(User{})
-	assert.NotNil(t, req.Body)
-	assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
+	assert.NotNil(t, req.req.Body)
+	assert.Equal(t, "application/json", req.req.Header.Get("Content-Type"))
 }
 
 func TestRequest_Do(t *testing.T) {
@@ -48,12 +48,12 @@ func TestRequest_Do(t *testing.T) {
 	server := http.Server{}
 	go func() {
 		http.HandleFunc("/hello", func(writer http.ResponseWriter, request *http.Request) {
-			writer.Write([]byte("OK"))
+			_, _ = writer.Write([]byte("OK"))
 		})
-		server.Serve(l)
+		_ = server.Serve(l)
 	}()
 	defer func() {
-		l.Close()
+		_ = l.Close()
 	}()
 	testCases := []struct {
 		name    string
@@ -95,6 +95,14 @@ func TestRequest_Do(t *testing.T) {
 			assert.Equal(t, tc.wantErr, resp.err)
 		})
 	}
+}
+
+func TestRequest_AddParam(t *testing.T) {
+	req := NewRequest(context.Background(),
+		http.MethodGet, "http://localhost").
+		AddParam("key1", "value1").
+		AddParam("key2", "value2")
+	assert.Equal(t, "http://localhost?key1=value1&key2=value2", req.req.URL.String())
 }
 
 type User struct {

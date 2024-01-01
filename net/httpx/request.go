@@ -23,7 +23,7 @@ import (
 )
 
 type Request struct {
-	*http.Request
+	req    *http.Request
 	err    error
 	client *http.Client
 }
@@ -31,21 +31,30 @@ type Request struct {
 func NewRequest(ctx context.Context, method, url string) *Request {
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	return &Request{
-		Request: req,
-		err:     err,
-		client:  http.DefaultClient,
+		req:    req,
+		err:    err,
+		client: http.DefaultClient,
 	}
 }
 
 // JSONBody 使用 JSON body
 func (req *Request) JSONBody(val any) *Request {
-	req.Body = io.NopCloser(iox.NewJSONReader(val))
-	req.Header.Set("Content-Type", "application/json")
+	req.req.Body = io.NopCloser(iox.NewJSONReader(val))
+	req.req.Header.Set("Content-Type", "application/json")
 	return req
 }
 
 func (req *Request) Client(cli *http.Client) *Request {
 	req.client = cli
+	return req
+}
+
+// AddParam 添加查询参数
+// 这个方法性能不好，但是好用
+func (req *Request) AddParam(key string, value string) *Request {
+	q := req.req.URL.Query()
+	q.Add(key, value)
+	req.req.URL.RawQuery = q.Encode()
 	return req
 }
 
@@ -55,7 +64,7 @@ func (req *Request) Do() *Response {
 			err: req.err,
 		}
 	}
-	resp, err := req.client.Do(req.Request)
+	resp, err := req.client.Do(req.req)
 	return &Response{
 		Response: resp,
 		err:      err,
