@@ -15,102 +15,118 @@
 package pair
 
 import (
-	"encoding/json"
 	"fmt"
-	"reflect"
-
-	"github.com/ecodeclub/ekit/reflectx"
 )
 
-type Pair[FirstType any, SecondType any] struct {
-	first  FirstType
-	second SecondType
+type Pair[K any, V any] struct {
+	Key   K
+	Value V
 }
 
-type pairJson[FirstType any, SecondType any] struct {
-	First  FirstType  `json:"first"`
-	Second SecondType `json:"second"`
+func (pair *Pair[K, V]) String() string {
+	return fmt.Sprintf("<%#v, %#v>", pair.Key, pair.Value)
 }
 
-func (pair *Pair[FirstType, SecondType]) First() FirstType {
-	return pair.first
+// Split 方法将Key, Value作为返回参数传出。
+func (pair *Pair[K, V]) Split() (K, V) {
+	return pair.Key, pair.Value
 }
 
-func (pair *Pair[FirstType, SecondType]) SetFirst(v FirstType) {
-	pair.first = v
-}
-
-func (pair *Pair[FirstType, SecondType]) Second() SecondType {
-	return pair.second
-}
-
-func (pair *Pair[FirstType, SecondType]) SetSecond(v SecondType) {
-	pair.second = v
-}
-
-func (pair *Pair[FirstType, SecondType]) ToString() string {
-	return fmt.Sprintf("<%#v, %#v>", pair.first, pair.second)
-}
-
-func (pair *Pair[FirstType, SecondType]) ToArray() []any {
-	return []any{pair.first, pair.second}
-}
-
-func (pair *Pair[FirstType, SecondType]) ToJson() ([]byte, error) {
-	return json.Marshal(pairJson[FirstType, SecondType]{
-		First:  pair.first,
-		Second: pair.second,
-	})
-}
-
-func (pair *Pair[FirstType, SecondType]) FromJson(jsonByte []byte) (err error) {
-	pairJsonObj := pairJson[FirstType, SecondType]{}
-	if err = json.Unmarshal(jsonByte, &pairJsonObj); err != nil {
-		return err
+func NewPair[K any, V any](
+	key K,
+	value V,
+) Pair[K, V] {
+	return Pair[K, V]{
+		Key:   key,
+		Value: value,
 	}
-	pair.first = pairJsonObj.First
-	pair.second = pairJsonObj.Second
+}
+
+// NewPairs 需要传入两个长度相同并且均不为nil的数组 keys 和 values，
+// 设keys长度为n，返回一个长度为n的pair数组。
+// 保证：
+//
+//	返回的pair数组满足条件（设pair数组为p）:
+//		对于所有的 0 <= i < n
+//		p[i].Key == keys[i] 并且 p[i].Value == values[i]
+//
+//	如果传入的keys或者values为nil，会返回error
+//
+//	如果传入的keys长度与values长度不同，会返回error
+func NewPairs[K any, V any](
+	keys []K,
+	values []V,
+) ([]Pair[K, V], error) {
+	if keys == nil || values == nil {
+		return nil, fmt.Errorf("keys and values should not be nil")
+	}
+	n := len(keys)
+	if n != len(values) {
+		return nil, fmt.Errorf("length is different between keys and values, len(keys)=%d, len(values)=%d", n, len(values))
+	}
+	pairs := make([]Pair[K, V], n)
+	for i := 0; i < n; i++ {
+		pairs[i] = NewPair(keys[i], values[i])
+	}
+	return pairs, nil
+}
+
+// SplitPairs 需要传入一个[]Pair[K, V]，数组可以为nil。
+// 设pairs数组的长度为n，返回两个长度均为n的数组keys, values。
+// 如果pairs数组是nil, 则返回的keys与values也均为nil。
+func SplitPairs[K any, V any](pairs []Pair[K, V]) (keys []K, values []V) {
+	if pairs == nil {
+		return nil, nil
+	}
+	n := len(pairs)
+	keys = make([]K, n)
+	values = make([]V, n)
+	for i, pair := range pairs {
+		keys[i], values[i] = pair.Split()
+	}
 	return
 }
 
-// 使用other的内容覆盖原先的pair, ignoreNil == true会忽略other中为nil的值，否则的话会直接覆盖。
-func (pair *Pair[FirstType, SecondType]) MergeFrom(
-	other Pair[FirstType, SecondType],
-	ignoreNil bool,
-) {
-	if ignoreNil {
-		if !reflectx.IsNilValue(reflect.ValueOf(other.first)) {
-			pair.first = other.first
-		}
-		if !reflectx.IsNilValue(reflect.ValueOf(other.second)) {
-			pair.second = other.second
-		}
-	} else {
-		pair.first = other.first
-		pair.second = other.second
+// FlattenPairs 需要传入一个[]Pair[K, V]，数组可以为nil
+// 如果pairs数组为nil，则返回的flatPairs数组也为nil
+//
+//	设pairs数组长度为n，保证返回的flatPairs数组长度为2 * n且满足:
+//		对于所有的 0 <= i < n
+//		flatPairs[i * 2] == pairs[i].Key
+//		flatPairs[i * 2 + 1] == pairs[i].Value
+func FlattenPairs[K any, V any](pairs []Pair[K, V]) (flatPairs []any) {
+	if pairs == nil {
+		return nil
 	}
-}
-
-// 复制出一个与原来完全一样的Pair
-func (pair *Pair[FirstType, SecondType]) Copy() Pair[FirstType, SecondType] {
-	return NewPair(pair.values())
-}
-
-// 内部函数
-func (pair Pair[FirstType, SecondType]) values() (FirstType, SecondType) {
-	return pair.first, pair.second
-}
-
-func NewPair[FirstType any, SecondType any](
-	first FirstType,
-	second SecondType,
-) Pair[FirstType, SecondType] {
-	return Pair[FirstType, SecondType]{
-		first:  first,
-		second: second,
+	n := len(pairs)
+	flatPairs = make([]any, 0, n*2)
+	for _, pair := range pairs {
+		flatPairs = append(flatPairs, pair.Key, pair.Value)
 	}
+	return
 }
 
-func NewEmptyPair[FirstType any, SecondType any]() Pair[FirstType, SecondType] {
-	return Pair[FirstType, SecondType]{}
+// PackPairs 需要传入一个长度为2 * n的数组flatPairs，数组可以为nil。
+//
+//	函数将会返回一个长度为n的pairs数组，pairs满足
+//		对于所有的 0 <= i < n
+//		pairs[i].Key == flatPairs[i * 2]
+//		pairs[i].Value == flatPairs[i * 2 + 1]
+//	如果flatPairs为nil,则返回的pairs也为nil
+//
+//	入参flatPairs需要满足以下条件：
+//		对于所有的 0 <= i < n
+//		flatPairs[i * 2] 的类型为 K
+//		flatPairs[i * 2 + 1] 的类型为 V
+//	否则会panic
+func PackPairs[K any, V any](flatPairs []any) (pairs []Pair[K, V]) {
+	if flatPairs == nil {
+		return nil
+	}
+	n := len(flatPairs) / 2
+	pairs = make([]Pair[K, V], n)
+	for i := 0; i < n; i++ {
+		pairs[i] = NewPair(flatPairs[i*2].(K), flatPairs[i*2+1].(V))
+	}
+	return
 }

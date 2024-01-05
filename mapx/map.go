@@ -14,6 +14,8 @@
 
 package mapx
 
+import "fmt"
+
 // Keys 返回 map 里面的所有的 key。
 // 需要注意：这些 key 的顺序是随机。
 func Keys[K comparable, V any](m map[K]V) []K {
@@ -44,4 +46,29 @@ func KeysValues[K comparable, V any](m map[K]V) ([]K, []V) {
 		values = append(values, m[k])
 	}
 	return keys, values
+}
+
+// ToMap 将会返回一个map[K]V
+// 请保证传入的 keys 与 values 长度相同，长度均为n
+// 长度不相同或者 keys 或者 values 为nil则会抛出异常
+// 返回的 m map[K]V 保证对于所有的 0 <= i < n
+// m[keys[i]] = values[i]
+//
+//	注意：
+//	如果传入的数组中存在 0 <= i < j < n使得 keys[i] == keys[j]
+//	则在返回的 m 中 m[keys[i]] = values[j]
+//	如果keys和values的长度为0，则会返回一个空map
+func ToMap[K comparable, V any](keys []K, values []V) (m map[K]V, err error) {
+	if keys == nil || values == nil {
+		return nil, fmt.Errorf("keys与values中有至少一个nil")
+	}
+	n := len(keys)
+	if n != len(values) {
+		return nil, fmt.Errorf("keys与values长度不相同")
+	}
+	m = make(map[K]V)
+	for i := 0; i < n; i++ {
+		m[keys[i]] = values[i]
+	}
+	return
 }

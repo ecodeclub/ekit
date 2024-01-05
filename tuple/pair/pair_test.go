@@ -15,28 +15,20 @@
 package pair_test
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/ecodeclub/ekit/mapx"
 	"github.com/ecodeclub/ekit/tuple/pair"
 	"github.com/stretchr/testify/suite"
 )
 
 type testPairSuite struct{ suite.Suite }
 
-func (s *testPairSuite) TestGetterAndSetter() {
-	p := pair.NewPair(100, "23333")
-	s.Assert().Equal(100, p.First())
-	s.Assert().Equal("23333", p.Second())
-	p.SetSecond("10000")
-	s.Assert().Equal("10000", p.Second())
-	p.SetFirst(-1000)
-	s.Assert().Equal(-1000, p.First())
-}
-
-func (s *testPairSuite) TestToString() {
+func (s *testPairSuite) TestString() {
 	{
 		p := pair.NewPair(100, "23333")
-		s.Assert().Equal("<100, \"23333\">", p.ToString())
+		s.Assert().Equal("<100, \"23333\">", p.String())
 	}
 	{
 		p := pair.NewPair("testStruct", map[int]int{
@@ -44,97 +36,194 @@ func (s *testPairSuite) TestToString() {
 			22: 2,
 			33: 3,
 		})
-		s.Assert().Equal("<\"testStruct\", map[int]int{11:1, 22:2, 33:3}>", p.ToString())
+		s.Assert().Equal("<\"testStruct\", map[int]int{11:1, 22:2, 33:3}>", p.String())
 	}
 }
 
-func (s *testPairSuite) TestToArray() {
-	p := pair.NewPair(100, "23333")
-	arr := p.ToArray()
-	s.Assert().Len(arr, 2)
-	s.Assert().Equal(100, arr[0])
-	s.Assert().Equal("23333", arr[1])
+func (s *testPairSuite) TestNewPairs() {
+	type caseType struct {
+		// input
+		keys   []int
+		values []string
+		// expected
+		pairs []pair.Pair[int, string]
+		err   error
+	}
+	for _, c := range []caseType{
+		{
+			keys:   []int{1, 2, 3, 4, 5},
+			values: []string{"1", "2", "3", "4", "5"},
+			pairs: []pair.Pair[int, string]{
+				pair.NewPair(1, "1"),
+				pair.NewPair(2, "2"),
+				pair.NewPair(3, "3"),
+				pair.NewPair(4, "4"),
+				pair.NewPair(5, "5"),
+			},
+			err: nil,
+		},
+		{
+			keys:   nil,
+			values: []string{"1"},
+			pairs:  nil,
+			err:    fmt.Errorf("keys and values should not be nil"),
+		},
+		{
+			keys:   []int{1},
+			values: nil,
+			pairs:  nil,
+			err:    fmt.Errorf("keys and values should not be nil"),
+		},
+		{
+			keys:   nil,
+			values: nil,
+			pairs:  nil,
+			err:    fmt.Errorf("keys and values should not be nil"),
+		},
+		{
+			keys:   []int{1, 2},
+			values: []string{"1"},
+			pairs:  nil,
+			err:    fmt.Errorf("length is different between keys and values, len(keys)=2, len(values)=1"),
+		},
+	} {
+		pairs, err := pair.NewPairs(c.keys, c.values)
+		s.Assert().Equal(c.err, err)
+		s.Assert().EqualValues(c.pairs, pairs)
+	}
 }
 
-func (s *testPairSuite) TestCopy() {
-	p := pair.NewPair(100, "23333")
-	pcopy := p.Copy()
-	s.Assert().Equal(p.First(), pcopy.First())
-	s.Assert().Equal(p.Second(), pcopy.Second())
-	pcopy.SetFirst(200)
-	s.Assert().NotEqual(p.First(), pcopy.First())
+func (s *testPairSuite) TestSplitPairs() {
+	type caseType struct {
+		// input
+		pairs []pair.Pair[int, string]
+		// expected
+		keys   []int
+		values []string
+	}
+	for _, c := range []caseType{
+		{
+			pairs: []pair.Pair[int, string]{
+				pair.NewPair(1, "1"),
+				pair.NewPair(2, "2"),
+				pair.NewPair(3, "3"),
+				pair.NewPair(4, "4"),
+				pair.NewPair(5, "5"),
+			},
+			keys:   []int{1, 2, 3, 4, 5},
+			values: []string{"1", "2", "3", "4", "5"},
+		},
+		{
+			pairs: nil,
+
+			keys:   nil,
+			values: nil,
+		},
+		{
+			pairs:  []pair.Pair[int, string]{},
+			keys:   []int{},
+			values: []string{},
+		},
+	} {
+		keys, values := pair.SplitPairs(c.pairs)
+		if c.pairs == nil {
+			s.Assert().Nil(keys)
+			s.Assert().Nil(values)
+		} else {
+			s.Assert().Len(keys, len(c.pairs))
+			s.Assert().Len(values, len(c.pairs))
+			for i, pair := range c.pairs {
+				s.Assert().Equal(pair.Key, keys[i])
+				s.Assert().Equal(pair.Value, values[i])
+			}
+		}
+	}
 }
 
-func (s *testPairSuite) TestJson() {
-	{
-		// parse success.
-		p := pair.NewPair(100, "23333")
-		jsonByte, err := p.ToJson()
-		s.Assert().Nil(err)
-		pFromJson := pair.NewEmptyPair[int, string]()
-		s.Assert().Nil(pFromJson.FromJson(jsonByte))
-		s.Assert().Equal(p.First(), pFromJson.First())
-		s.Assert().Equal(p.Second(), pFromJson.Second())
+func (s *testPairSuite) TestFlattenPairs() {
+	type caseType struct {
+		pairs      []pair.Pair[int, string]
+		flattPairs []any
 	}
-	{
-		// parse failed.
-		p := pair.NewPair(100, "23333")
-		s.Assert().NotNil(p.FromJson([]byte("errro string")))
-		// FromJson失败不会影响原来的值
-		s.Assert().Equal(100, p.First())
-		s.Assert().Equal("23333", p.Second())
+
+	for _, c := range []caseType{
+		{
+			pairs: []pair.Pair[int, string]{
+				pair.NewPair(1, "1"),
+				pair.NewPair(2, "2"),
+				pair.NewPair(3, "3"),
+				pair.NewPair(4, "4"),
+				pair.NewPair(5, "5"),
+			},
+			flattPairs: []any{1, "1", 2, "2", 3, "3", 4, "4", 5, "5"},
+		},
+		{
+			pairs:      nil,
+			flattPairs: nil,
+		},
+		{
+			pairs:      []pair.Pair[int, string]{},
+			flattPairs: []any{},
+		},
+	} {
+		flatPairs := pair.FlattenPairs(c.pairs)
+		s.Assert().EqualValues(c.flattPairs, flatPairs)
 	}
 }
 
-func (s *testPairSuite) TestMergeFrom() {
-	{
-		p := pair.NewPair(map[int]int{
-			11: 1,
-			22: 2,
-			33: 3,
-		}, "23333")
-		p.MergeFrom(pair.NewPair[map[int]int, string](nil, "23333"), false)
-		s.Assert().Nil(p.First())
-		s.Assert().Equal("23333", p.Second())
+func (s *testPairSuite) TestPackPairs() {
+	type caseType struct {
+		flattPairs []any
+		pairs      []pair.Pair[int, string]
 	}
-	{
-		p := pair.NewPair(map[int]int{
-			11: 1,
-			22: 2,
-			33: 3,
-		}, "23333")
-		p.MergeFrom(pair.NewPair[map[int]int, string](nil, "23333"), true)
-		s.Assert().Equal(map[int]int{
-			11: 1,
-			22: 2,
-			33: 3,
-		}, p.First())
-		s.Assert().Equal("23333", p.Second())
+
+	for _, c := range []caseType{
+		{
+			flattPairs: []any{1, "1", 2, "2", 3, "3", 4, "4", 5, "5"},
+			pairs: []pair.Pair[int, string]{
+				pair.NewPair(1, "1"),
+				pair.NewPair(2, "2"),
+				pair.NewPair(3, "3"),
+				pair.NewPair(4, "4"),
+				pair.NewPair(5, "5"),
+			},
+		},
+		{
+			flattPairs: nil,
+			pairs:      nil,
+		},
+		{
+			flattPairs: []any{},
+			pairs:      []pair.Pair[int, string]{},
+		},
+	} {
+		pairs := pair.PackPairs[int, string](c.flattPairs)
+		s.Assert().EqualValues(c.pairs, pairs)
 	}
-	{
-		p := pair.NewPair("23333", map[int]int{
-			11: 1,
-			22: 2,
-			33: 3,
-		})
-		p.MergeFrom(pair.NewPair[string, map[int]int]("23333", nil), false)
-		s.Assert().Equal("23333", p.First())
-		s.Assert().Nil(p.Second())
+}
+
+func (s *testPairSuite) TestMapPairMapping() {
+	// map to pairs
+	expectedMap := map[int]string{
+		1: "1",
+		2: "2",
+		3: "3",
 	}
-	{
-		p := pair.NewPair("23333", map[int]int{
-			11: 1,
-			22: 2,
-			33: 3,
-		})
-		p.MergeFrom(pair.NewPair[string, map[int]int]("23333", nil), true)
-		s.Assert().Equal("23333", p.First())
-		s.Assert().Equal(map[int]int{
-			11: 1,
-			22: 2,
-			33: 3,
-		}, p.Second())
+	expectedPairs := []pair.Pair[int, string]{
+		pair.NewPair(1, "1"),
+		pair.NewPair(2, "2"),
+		pair.NewPair(3, "3"),
 	}
+
+	// 可以用这种方式实现map到[]Pair的映射
+	pairs, err := pair.NewPairs(mapx.KeysValues(expectedMap))
+	s.Assert().Nil(err)
+	s.Assert().EqualValues(expectedPairs, pairs)
+
+	// 可以用这种方式实现[]Pair到map的映射
+	mp, err := mapx.ToMap(pair.SplitPairs(expectedPairs))
+	s.Assert().Nil(err)
+	s.Assert().EqualValues(expectedMap, mp)
 }
 
 func TestPair(t *testing.T) {
