@@ -60,13 +60,13 @@ func KeysValues[K comparable, V any](m map[K]V) ([]K, []V) {
 //	如果keys和values的长度为0，则会返回一个空map
 func ToMap[K comparable, V any](keys []K, values []V) (m map[K]V, err error) {
 	if keys == nil || values == nil {
-		return nil, fmt.Errorf("keys与values中有至少一个nil")
+		return nil, fmt.Errorf("keys与values均不可为nil")
 	}
 	n := len(keys)
 	if n != len(values) {
-		return nil, fmt.Errorf("keys与values长度不相同")
+		return nil, fmt.Errorf("keys与values的长度不同, len(keys)=%d, len(values)=%d", n, len(values))
 	}
-	m = make(map[K]V)
+	m = make(map[K]V, n)
 	for i := 0; i < n; i++ {
 		m[keys[i]] = values[i]
 	}

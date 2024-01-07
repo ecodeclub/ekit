@@ -66,25 +66,25 @@ func (s *testPairSuite) TestNewPairs() {
 			keys:   nil,
 			values: []string{"1"},
 			pairs:  nil,
-			err:    fmt.Errorf("keys and values should not be nil"),
+			err:    fmt.Errorf("keys与values均不可为nil"),
 		},
 		{
 			keys:   []int{1},
 			values: nil,
 			pairs:  nil,
-			err:    fmt.Errorf("keys and values should not be nil"),
+			err:    fmt.Errorf("keys与values均不可为nil"),
 		},
 		{
 			keys:   nil,
 			values: nil,
 			pairs:  nil,
-			err:    fmt.Errorf("keys and values should not be nil"),
+			err:    fmt.Errorf("keys与values均不可为nil"),
 		},
 		{
 			keys:   []int{1, 2},
 			values: []string{"1"},
 			pairs:  nil,
-			err:    fmt.Errorf("length is different between keys and values, len(keys)=2, len(values)=1"),
+			err:    fmt.Errorf("keys与values的长度不同, len(keys)=2, len(values)=1"),
 		},
 	} {
 		pairs, err := pair.NewPairs(c.keys, c.values)

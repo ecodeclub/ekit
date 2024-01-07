@@ -58,11 +58,11 @@ func NewPairs[K any, V any](
 	values []V,
 ) ([]Pair[K, V], error) {
 	if keys == nil || values == nil {
-		return nil, fmt.Errorf("keys and values should not be nil")
+		return nil, fmt.Errorf("keys与values均不可为nil")
 	}
 	n := len(keys)
 	if n != len(values) {
-		return nil, fmt.Errorf("length is different between keys and values, len(keys)=%d, len(values)=%d", n, len(values))
+		return nil, fmt.Errorf("keys与values的长度不同, len(keys)=%d, len(values)=%d", n, len(values))
 	}
 	pairs := make([]Pair[K, V], n)
 	for i := 0; i < n; i++ {
