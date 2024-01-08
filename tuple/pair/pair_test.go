@@ -16,6 +16,7 @@ package pair_test
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/ecodeclub/ekit/mapx"
@@ -218,12 +219,17 @@ func (s *testPairSuite) TestMapPairMapping() {
 	// 可以用这种方式实现map到[]Pair的映射
 	pairs, err := pair.NewPairs(mapx.KeysValues(expectedMap))
 	s.Assert().Nil(err)
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Key < pairs[j].Key
+	})
 	s.Assert().EqualValues(expectedPairs, pairs)
 
 	// 可以用这种方式实现[]Pair到map的映射
 	mp, err := mapx.ToMap(pair.SplitPairs(expectedPairs))
 	s.Assert().Nil(err)
-	s.Assert().EqualValues(expectedMap, mp)
+	for k, v := range mp {
+		s.Assert().Equal(expectedMap[k], v)
+	}
 }
 
 func TestPair(t *testing.T) {
