@@ -594,3 +594,81 @@ func TestMultiMap_PutMany(t *testing.T) {
 		})
 	}
 }
+
+func TestMultiMap_Len(t *testing.T) {
+	testCases := []struct {
+		name         string
+		multiTreeMap *MultiMap[int, int]
+		multiHashMap *MultiMap[testData, int]
+		wantLen      int64
+	}{
+		{
+			name:         "empty",
+			multiTreeMap: getMultiTreeMap(),
+			multiHashMap: getMultiHashMap(),
+
+			wantLen: 0,
+		},
+		{
+			name: "single",
+			multiTreeMap: func() *MultiMap[int, int] {
+				multiTreeMap := getMultiTreeMap()
+				_ = multiTreeMap.Put(1, 1)
+				return multiTreeMap
+			}(),
+			multiHashMap: func() *MultiMap[testData, int] {
+				multiHashMap := getMultiHashMap()
+				_ = multiHashMap.Put(testData{id: 1}, 1)
+				return multiHashMap
+			}(),
+
+			wantLen: 1,
+		},
+		{
+			name: "multiple",
+			multiTreeMap: func() *MultiMap[int, int] {
+				multiTreeMap := getMultiTreeMap()
+				_ = multiTreeMap.Put(1, 1)
+				_ = multiTreeMap.Put(2, 2)
+				_ = multiTreeMap.Put(3, 3)
+				return multiTreeMap
+			}(),
+			multiHashMap: func() *MultiMap[testData, int] {
+				multiHashMap := getMultiHashMap()
+				_ = multiHashMap.Put(testData{id: 1}, 1)
+				_ = multiHashMap.Put(testData{id: 2}, 2)
+				_ = multiHashMap.Put(testData{id: 3}, 3)
+				return multiHashMap
+			}(),
+
+			wantLen: 3,
+		},
+		{
+			name: "multiple with same key",
+			multiTreeMap: func() *MultiMap[int, int] {
+				multiTreeMap := getMultiTreeMap()
+				_ = multiTreeMap.Put(1, 1)
+				_ = multiTreeMap.Put(1, 2)
+				_ = multiTreeMap.Put(1, 3)
+				return multiTreeMap
+			}(),
+			multiHashMap: func() *MultiMap[testData, int] {
+				multiHashMap := getMultiHashMap()
+				_ = multiHashMap.Put(testData{id: 1}, 1)
+				_ = multiHashMap.Put(testData{id: 1}, 2)
+				_ = multiHashMap.Put(testData{id: 1}, 3)
+				return multiHashMap
+			}(),
+			wantLen: 1,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run("MultiTreeMap", func(t *testing.T) {
+			assert.Equal(t, tt.wantLen, tt.multiTreeMap.Len())
+		})
+
+		t.Run("MultiHashMap", func(t *testing.T) {
+			assert.Equal(t, tt.wantLen, tt.multiHashMap.Len())
+		})
+	}
+}

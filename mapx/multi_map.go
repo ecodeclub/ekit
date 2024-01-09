@@ -93,3 +93,8 @@ func (m *MultiMap[K, V]) Values() [][]V {
 	}
 	return copyValues
 }
+
+// Len 返回 MultiMap 键值对的数量
+func (m *MultiMap[K, V]) Len() int64 {
+	return m.m.Len()
+}
