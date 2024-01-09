@@ -158,3 +158,7 @@ func (n *node[T, ValType]) formatting() {
 	n.value = val
 	n.next = nil
 }
+
+func (m *HashMap[T, ValType]) Len() int64 {
+	return int64(len(m.hashmap))
+}

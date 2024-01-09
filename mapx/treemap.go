@@ -96,4 +96,9 @@ func (treeMap *TreeMap[T, V]) Values() []V {
 	return vals
 }
 
+// Len 返回了键值对的数量
+func (treeMap *TreeMap[T, V]) Len() int64 {
+	return int64(treeMap.tree.Size())
+}
+
 var _ mapi[any, any] = (*TreeMap[any, any])(nil)

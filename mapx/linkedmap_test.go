@@ -467,3 +467,39 @@ func TestLinkedMap_PutAndDelete(t *testing.T) {
 		})
 	}
 }
+
+func TestLinkedMap_Len(t *testing.T) {
+	testCases := []struct {
+		name      string
+		linkedMap func(t *testing.T) *LinkedMap[int, int]
+
+		wantLen int64
+	}{
+		{
+			name: "empty linked map",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				return linkedTreeMap
+			},
+
+			wantLen: 0,
+		},
+		{
+			name: "not empty linked map",
+			linkedMap: func(t *testing.T) *LinkedMap[int, int] {
+				linkedTreeMap, _ := NewLinkedTreeMap[int, int](ekit.ComparatorRealNumber[int])
+				assert.NoError(t, linkedTreeMap.Put(1, 1))
+				assert.NoError(t, linkedTreeMap.Put(2, 2))
+				assert.NoError(t, linkedTreeMap.Put(3, 3))
+				return linkedTreeMap
+			},
+
+			wantLen: 3,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantLen, tt.linkedMap(t).Len())
+		})
+	}
+}

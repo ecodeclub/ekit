@@ -469,6 +469,77 @@ func TestHashMap_Keys_Values(t *testing.T) {
 	}
 }
 
+func TestHashMap_Len(t *testing.T) {
+	testCases := []struct {
+		name       string
+		genHashMap func() *HashMap[testData, int]
+		wantLen    int64
+	}{
+		{
+			name: "empty",
+			genHashMap: func() *HashMap[testData, int] {
+				return NewHashMap[testData, int](10)
+			},
+			wantLen: 0,
+		},
+		{
+			name: "single key",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				err := testHashMap.Put(newTestData(1), 1)
+				require.NoError(t, err)
+				return testHashMap
+			},
+			wantLen: 1,
+		},
+		{
+			name: "multiple keys",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				for _, val := range []int{1, 2} {
+					err := testHashMap.Put(newTestData(val), val)
+					require.NoError(t, err)
+				}
+				return testHashMap
+			},
+			wantLen: 2,
+		},
+		{
+			name: "same key",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				err := testHashMap.Put(newTestData(1), 1)
+				require.NoError(t, err)
+				// 验证id相同，覆盖的场景
+				err = testHashMap.Put(newTestData(1), 11)
+				require.NoError(t, err)
+				return testHashMap
+			},
+			wantLen: 1,
+		},
+		{
+			name: "multi with same key",
+			genHashMap: func() *HashMap[testData, int] {
+				testHashMap := NewHashMap[testData, int](10)
+				for _, val := range []int{1, 2} {
+					// val为1、2
+					err := testHashMap.Put(newTestData(val), val*10)
+					require.NoError(t, err)
+				}
+				err := testHashMap.Put(newTestData(1), 11)
+				require.NoError(t, err)
+				return testHashMap
+			},
+			wantLen: 2,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.wantLen, tc.genHashMap().Len())
+		})
+	}
+}
+
 type testData struct {
 	id int
 }

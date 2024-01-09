@@ -29,4 +29,6 @@ type mapi[K any, V any] interface {
 	// 注意，当你调用多次拿到的结果不一定相等
 	// 取决于具体实现
 	Values() []V
+	// 返回键值对数量
+	Len() int64
 }

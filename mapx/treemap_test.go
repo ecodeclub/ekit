@@ -409,6 +409,42 @@ func TestTreeMap_Delete(t *testing.T) {
 	}
 }
 
+func TestTreeMap_Len(t *testing.T) {
+	var tests = []struct {
+		name string
+		m    map[int]int
+		len  int64
+	}{
+		{
+			name: "empty-TreeMap",
+			m:    map[int]int{},
+			len:  0,
+		},
+		{
+			name: "find",
+			m: map[int]int{
+				1: 1,
+				2: 2,
+				0: 0,
+				3: 3,
+				5: 5,
+				4: 4,
+			},
+			len: 6,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			treeMap, _ := NewTreeMap[int, int](compare())
+			for k, v := range tt.m {
+				err := treeMap.Put(k, v)
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tt.len, treeMap.Len())
+		})
+	}
+}
+
 func compare() ekit.Comparator[int] {
 	return ekit.ComparatorRealNumber[int]
 }
