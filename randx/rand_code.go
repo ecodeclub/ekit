@@ -19,34 +19,57 @@ import (
 	"math/rand"
 )
 
-var ERRTYPENOTSUPPORTTED = errors.New("ekit:不支持的类型")
+var (
+	ErrTypeNotSupported = errors.New("ekit:不支持的类型")
+	// deprecated
+	ERRTYPENOTSUPPORTTED = ErrTypeNotSupported
+)
 
 type TYPE int
 
 const (
-	TYPE_DEFAULT TYPE = 0 //默认类型
-	TYPE_DIGIT   TYPE = 1 //数字//
-	TYPE_LETTER  TYPE = 2 //小写字母
-	TYPE_CAPITAL TYPE = 3 //大写字母
-	TYPE_MIXED   TYPE = 4 //数字+字母混合
+	// 数字
+	TYPE_DIGIT TYPE = 1
+	// 小写字母
+	TYPE_LOWER  TYPE = 1 << 1
+	TYPE_LETTER TYPE = TYPE_LOWER
+	// 大写字母
+	TYPE_UPPER   TYPE = 1 << 2
+	TYPE_CAPITAL TYPE = TYPE_UPPER
+	// 混合类型
+	TYPE_MIXED = (TYPE_DIGIT | TYPE_UPPER | TYPE_LOWER)
+
+	// 数字字符组
+	CHARSET_DIGIT = "0123456789"
+	// 小写字母字符组
+	CHARSET_LOWER  = "abcdefghijklmnopqrstuvwxyz"
+	CHARSET_LETTER = CHARSET_LOWER
+	// 大写字母字符组
+	CHARSET_UPPER   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	CHARSET_CAPITAL = CHARSET_UPPER
 )
 
 // RandCode 根据传入的长度和类型生成随机字符串,这个方法目前可以生成数字、字母、数字+字母的随机字符串
 func RandCode(length int, typ TYPE) (string, error) {
-	switch typ {
-	case TYPE_DEFAULT:
-		fallthrough
-	case TYPE_DIGIT:
-		return generate("0123456789", length, 4), nil
-	case TYPE_LETTER:
-		return generate("abcdefghijklmnopqrstuvwxyz", length, 5), nil
-	case TYPE_CAPITAL:
-		return generate("ABCDEFGHIJKLMNOPQRSTUVWXYZ", length, 5), nil
-	case TYPE_MIXED:
-		return generate("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", length, 7), nil
-	default:
-		return "", ERRTYPENOTSUPPORTTED
+	charset := ""
+	appendIfHas := func(typBase TYPE, baseCharset string) {
+		if (typ & typBase) == typBase {
+			charset += baseCharset
+		}
 	}
+	appendIfHas(TYPE_DIGIT, CHARSET_DIGIT)
+	appendIfHas(TYPE_UPPER, CHARSET_UPPER)
+	appendIfHas(TYPE_LOWER, CHARSET_LOWER)
+
+	charsetSize := len(charset)
+	if charsetSize == 0 {
+		return "", ErrTypeNotSupported
+	}
+	bits := 1
+	for charsetSize > ((1 << bits) - 1) {
+		bits++
+	}
+	return generate(charset, length, bits), nil
 }
 
 // generate 根据传入的随机源和长度生成随机字符串,一次随机，多次使用

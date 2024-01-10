@@ -12,65 +12,60 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package randx
+package randx_test
 
 import (
 	"errors"
 	"regexp"
 	"testing"
+
+	"github.com/ecodeclub/ekit/randx"
 )
 
 func TestRandCode(t *testing.T) {
 	testCases := []struct {
 		name      string
 		length    int
-		typ       TYPE
+		typ       randx.TYPE
 		wantMatch string
 		wantErr   error
 	}{
 		{
-			name:      "默认类型",
-			length:    8,
-			typ:       TYPE_DEFAULT,
-			wantMatch: "^[0-9]+$",
-			wantErr:   nil,
-		},
-		{
 			name:      "数字验证码",
 			length:    8,
-			typ:       TYPE_DIGIT,
+			typ:       randx.TYPE_DIGIT,
 			wantMatch: "^[0-9]+$",
 			wantErr:   nil,
 		}, {
 			name:      "小写字母验证码",
 			length:    8,
-			typ:       TYPE_LETTER,
+			typ:       randx.TYPE_LETTER,
 			wantMatch: "^[a-z]+$",
 			wantErr:   nil,
 		}, {
 			name:      "大写字母验证码",
 			length:    8,
-			typ:       TYPE_CAPITAL,
+			typ:       randx.TYPE_CAPITAL,
 			wantMatch: "^[A-Z]+$",
 			wantErr:   nil,
 		}, {
 			name:      "混合验证码",
 			length:    8,
-			typ:       TYPE_MIXED,
+			typ:       randx.TYPE_MIXED,
 			wantMatch: "^[0-9a-zA-Z]+$",
 			wantErr:   nil,
 		}, {
 			name:      "未定义类型",
 			length:    8,
-			typ:       9,
+			typ:       0,
 			wantMatch: "",
-			wantErr:   ERRTYPENOTSUPPORTTED,
+			wantErr:   randx.ErrTypeNotSupported,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			code, err := RandCode(tc.length, tc.typ)
+			code, err := randx.RandCode(tc.length, tc.typ)
 			if err != nil {
 				if !errors.Is(err, tc.wantErr) {
 					t.Errorf("unexpected error: %v", err)
