@@ -50,3 +50,7 @@ func newBuiltinMap[K comparable, V any](capacity int) *builtinMap[K, V] {
 		data: make(map[K]V, capacity),
 	}
 }
+
+func (b *builtinMap[K, V]) Len() int64 {
+	return int64(len(b.data))
+}

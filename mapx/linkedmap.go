@@ -110,3 +110,7 @@ func (l *LinkedMap[K, V]) Values() []V {
 	}
 	return values
 }
+
+func (l *LinkedMap[K, V]) Len() int64 {
+	return int64(l.length)
+}
