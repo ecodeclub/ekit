@@ -17,10 +17,13 @@ package randx
 import (
 	"errors"
 	"math/rand"
+
+	"github.com/ecodeclub/ekit/tuple/pair"
 )
 
 var (
-	ErrTypeNotSupported = errors.New("ekit:不支持的类型")
+	ErrTypeNotSupported   = errors.New("ekit:不支持的类型")
+	ErrLengthLessThanZero = errors.New("ekit:长度必须大于0")
 	// deprecated
 	ERRTYPENOTSUPPORTTED = ErrTypeNotSupported
 )
@@ -36,8 +39,10 @@ const (
 	// 大写字母
 	TYPE_UPPER   TYPE = 1 << 2
 	TYPE_CAPITAL TYPE = TYPE_UPPER
+	// 特殊符号
+	TYPE_SPECIAL TYPE = 1 << 3
 	// 混合类型
-	TYPE_MIXED = (TYPE_DIGIT | TYPE_UPPER | TYPE_LOWER)
+	TYPE_MIXED = (TYPE_DIGIT | TYPE_UPPER | TYPE_LOWER | TYPE_SPECIAL)
 
 	// 数字字符组
 	CHARSET_DIGIT = "0123456789"
@@ -47,29 +52,52 @@ const (
 	// 大写字母字符组
 	CHARSET_UPPER   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	CHARSET_CAPITAL = CHARSET_UPPER
+	// 特殊字符数组
+	CHARSET_SPECIAL = " ~!@#$%^&*()_+-=[]{};'\\:\"|,./<>?"
 )
 
-// RandCode 根据传入的长度和类型生成随机字符串,这个方法目前可以生成数字、字母、数字+字母的随机字符串
+var (
+	// 只限于randx包内部使用
+	typeCharSetPair = []pair.Pair[TYPE, string]{
+		pair.NewPair(TYPE_DIGIT, CHARSET_DIGIT),
+		pair.NewPair(TYPE_LOWER, CHARSET_LOWER),
+		pair.NewPair(TYPE_UPPER, CHARSET_UPPER),
+		pair.NewPair(TYPE_SPECIAL, CHARSET_SPECIAL),
+	}
+)
+
+// RandCode 根据传入的长度和类型生成随机字符串
 func RandCode(length int, typ TYPE) (string, error) {
+	if typ > TYPE_MIXED {
+		return "", ErrTypeNotSupported
+	}
 	charset := ""
-	appendIfHas := func(typBase TYPE, baseCharset string) {
-		if (typ & typBase) == typBase {
-			charset += baseCharset
+	for _, p := range typeCharSetPair {
+		if (typ & p.Key) == p.Key {
+			charset += p.Value
 		}
 	}
-	appendIfHas(TYPE_DIGIT, CHARSET_DIGIT)
-	appendIfHas(TYPE_UPPER, CHARSET_UPPER)
-	appendIfHas(TYPE_LOWER, CHARSET_LOWER)
+	return RandStrByCharset(length, charset)
+}
 
+// 根据传入的长度和字符集生成随机字符串
+func RandStrByCharset(length int, charset string) (string, error) {
+	if length < 0 {
+		return "", ErrLengthLessThanZero
+	}
 	charsetSize := len(charset)
 	if charsetSize == 0 {
 		return "", ErrTypeNotSupported
 	}
-	bits := 1
+	return generate(charset, length, getFirstMask(charsetSize)), nil
+}
+
+func getFirstMask(charsetSize int) int {
+	bits := 0
 	for charsetSize > ((1 << bits) - 1) {
 		bits++
 	}
-	return generate(charset, length, bits), nil
+	return bits
 }
 
 // generate 根据传入的随机源和长度生成随机字符串,一次随机，多次使用
