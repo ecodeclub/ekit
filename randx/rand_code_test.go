@@ -15,12 +15,18 @@
 package randx_test
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/ecodeclub/ekit/randx"
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	errTypeNotSupported   = errors.New("ekit:不支持的类型")
+	errLengthLessThanZero = errors.New("ekit:长度必须大于等于0")
 )
 
 func TestRandCode(t *testing.T) {
@@ -120,21 +126,21 @@ func TestRandCode(t *testing.T) {
 			length:    100,
 			typ:       randx.TYPE_MIXED + 1,
 			wantMatch: "",
-			wantErr:   randx.ErrTypeNotSupported,
+			wantErr:   errTypeNotSupported,
 		},
 		{
 			name:      "未定义类型(0)",
 			length:    100,
 			typ:       0,
 			wantMatch: "",
-			wantErr:   randx.ErrTypeNotSupported,
+			wantErr:   errTypeNotSupported,
 		},
 		{
 			name:      "长度小于0",
 			length:    -1,
 			typ:       0,
 			wantMatch: "",
-			wantErr:   randx.ErrLengthLessThanZero,
+			wantErr:   errLengthLessThanZero,
 		},
 		{
 			name:      "长度等于0",
@@ -182,7 +188,7 @@ func TestRandStrByCharset(t *testing.T) {
 			name:    "长度小于0",
 			length:  -1,
 			charset: "123",
-			wantErr: randx.ErrLengthLessThanZero,
+			wantErr: errLengthLessThanZero,
 		},
 		{
 			name:    "长度等于0",

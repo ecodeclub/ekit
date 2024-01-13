@@ -22,10 +22,8 @@ import (
 )
 
 var (
-	ErrTypeNotSupported   = errors.New("ekit:不支持的类型")
-	ErrLengthLessThanZero = errors.New("ekit:长度必须大于等于0")
-	// deprecated
-	ERRTYPENOTSUPPORTTED = ErrTypeNotSupported
+	errTypeNotSupported   = errors.New("ekit:不支持的类型")
+	errLengthLessThanZero = errors.New("ekit:长度必须大于等于0")
 )
 
 type TYPE int
@@ -67,17 +65,17 @@ var (
 )
 
 // RandCode 根据传入的长度和类型生成随机字符串
-// 请保证输入的 length >= 0，否则会返回 ErrLengthLessThanZero
-// 请保证输入的 typ 的取值范围在 (0, type.MIXED] 内，否则会返回 ErrTypeNotSupported
+// 请保证输入的 length >= 0，否则会返回 errLengthLessThanZero
+// 请保证输入的 typ 的取值范围在 (0, type.MIXED] 内，否则会返回 errTypeNotSupported
 func RandCode(length int, typ TYPE) (string, error) {
 	if length < 0 {
-		return "", ErrLengthLessThanZero
+		return "", errLengthLessThanZero
 	}
 	if length == 0 {
 		return "", nil
 	}
 	if typ > TYPE_MIXED {
-		return "", ErrTypeNotSupported
+		return "", errTypeNotSupported
 	}
 	charset := ""
 	for _, p := range typeCharsetPairs {
@@ -89,19 +87,19 @@ func RandCode(length int, typ TYPE) (string, error) {
 }
 
 // 根据传入的长度和字符集生成随机字符串
-// 请保证输入的 length >= 0，否则会返回 ErrLengthLessThanZero
-// 请保证输入的字符集不为空字符串，否则会返回 ErrTypeNotSupported
+// 请保证输入的 length >= 0，否则会返回 errLengthLessThanZero
+// 请保证输入的字符集不为空字符串，否则会返回 errTypeNotSupported
 // 字符集内部字符可以无序或重复
 func RandStrByCharset(length int, charset string) (string, error) {
 	if length < 0 {
-		return "", ErrLengthLessThanZero
+		return "", errLengthLessThanZero
 	}
 	if length == 0 {
 		return "", nil
 	}
 	charsetSize := len(charset)
 	if charsetSize == 0 {
-		return "", ErrTypeNotSupported
+		return "", errTypeNotSupported
 	}
 	return generate(charset, length, getFirstMask(charsetSize)), nil
 }
