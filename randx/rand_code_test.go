@@ -48,14 +48,14 @@ func TestRandCode(t *testing.T) {
 		{
 			name:      "数字+小写字母验证码",
 			length:    100,
-			typ:       randx.TYPE_DIGIT | randx.TYPE_LOWER,
+			typ:       randx.TYPE_DIGIT | randx.TYPE_LOWERCASE,
 			wantMatch: "^[a-z0-9]+$",
 			wantErr:   nil,
 		},
 		{
 			name:      "数字+大写字母验证码",
 			length:    100,
-			typ:       randx.TYPE_DIGIT | randx.TYPE_UPPER,
+			typ:       randx.TYPE_DIGIT | randx.TYPE_UPPERCASE,
 			wantMatch: "^[A-Z0-9]+$",
 			wantErr:   nil,
 		},
@@ -67,16 +67,37 @@ func TestRandCode(t *testing.T) {
 			wantErr:   nil,
 		},
 		{
+			name:      "大写字母验证码(兼容旧版本)",
+			length:    100,
+			typ:       randx.TYPE_CAPITAL,
+			wantMatch: "^[A-Z]+$",
+			wantErr:   nil,
+		},
+		{
 			name:      "大小写字母验证码",
 			length:    100,
-			typ:       randx.TYPE_UPPER | randx.TYPE_LOWER,
+			typ:       randx.TYPE_UPPERCASE | randx.TYPE_LOWERCASE,
+			wantMatch: "^[a-zA-Z]+$",
+			wantErr:   nil,
+		},
+		{
+			name:      "大小写字母验证码(兼容旧版本)",
+			length:    100,
+			typ:       randx.TYPE_CAPITAL | randx.TYPE_LETTER,
 			wantMatch: "^[a-zA-Z]+$",
 			wantErr:   nil,
 		},
 		{
 			name:      "数字+大小写字母验证码",
 			length:    100,
-			typ:       randx.TYPE_DIGIT | randx.TYPE_UPPER | randx.TYPE_LOWER,
+			typ:       randx.TYPE_DIGIT | randx.TYPE_UPPERCASE | randx.TYPE_LOWERCASE,
+			wantMatch: "^[0-9a-zA-Z]+$",
+			wantErr:   nil,
+		},
+		{
+			name:      "数字+大小写字母验证码(兼容旧版本)",
+			length:    100,
+			typ:       randx.TYPE_DIGIT | randx.TYPE_LETTER | randx.TYPE_CAPITAL,
 			wantMatch: "^[0-9a-zA-Z]+$",
 			wantErr:   nil,
 		},
@@ -84,7 +105,14 @@ func TestRandCode(t *testing.T) {
 			name:      "所有类型验证",
 			length:    100,
 			typ:       randx.TYPE_MIXED,
-			wantMatch: "^[\\S\\s]*$",
+			wantMatch: "^[\\S\\s]+$",
+			wantErr:   nil,
+		},
+		{
+			name:      "特殊字符类型验证",
+			length:    100,
+			typ:       randx.TYPE_SPECIAL,
+			wantMatch: "^[^0-9a-zA-Z]+$",
 			wantErr:   nil,
 		},
 		{
@@ -108,25 +136,29 @@ func TestRandCode(t *testing.T) {
 			wantMatch: "",
 			wantErr:   randx.ErrLengthLessThanZero,
 		},
+		{
+			name:      "长度等于0",
+			length:    0,
+			typ:       randx.TYPE_MIXED,
+			wantMatch: "",
+			wantErr:   nil,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			code, err := randx.RandCode(tc.length, tc.typ)
-			if err != nil {
+			if tc.wantErr != nil {
 				assert.Equal(t, tc.wantErr, err)
-			} else {
-				assert.Lenf(
-					t,
-					code,
-					tc.length,
-					"expected length: %d but got length:%d",
-					tc.length, len(code))
-
+				return
+			}
+			assert.Len(t, code, tc.length)
+			if tc.length > 0 {
 				matched, err := regexp.MatchString(tc.wantMatch, code)
 				assert.Nil(t, err)
 				assert.Truef(t, matched, "expected %s but got %s", tc.wantMatch, code)
 			}
+
 		})
 	}
 }
@@ -153,6 +185,12 @@ func TestRandStrByCharset(t *testing.T) {
 			wantErr: randx.ErrLengthLessThanZero,
 		},
 		{
+			name:    "长度等于0",
+			length:  0,
+			charset: "123",
+			wantErr: nil,
+		},
+		{
 			name:    "随机字符串测试",
 			length:  100,
 			charset: "2rg248ry227t@@",
@@ -169,17 +207,16 @@ func TestRandStrByCharset(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			code, err := randx.RandStrByCharset(tc.length, tc.charset)
-			if err != nil {
+			if tc.wantErr != nil {
 				assert.Equal(t, tc.wantErr, err)
-			} else {
-				assert.Lenf(
-					t,
-					code,
-					tc.length,
-					"expected length: %d but got length:%d",
-					tc.length, len(code))
+				return
+			}
+
+			assert.Len(t, code, tc.length)
+			if tc.length > 0 {
 				assert.True(t, matchFunc(code, tc.charset))
 			}
+
 		})
 	}
 }
