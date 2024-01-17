@@ -56,13 +56,10 @@ func (a *ArrayList[T]) Append(ts ...T) error {
 
 // Add 在ArrayList下标为index的位置插入一个元素
 // 当index等于ArrayList长度等同于append
-func (a *ArrayList[T]) Add(index int, t T) error {
-	if index < 0 || index > len(a.vals) {
-		return errs.NewErrIndexOutOfRange(len(a.vals), index)
+func (a *ArrayList[T]) Add(index int, t T) (err error) {
+	if a.vals, err = slice.Add(a.vals, t, index); err != nil {
+		return
 	}
-	a.vals = append(a.vals, t)
-	copy(a.vals[index+1:], a.vals[index:])
-	a.vals[index] = t
 	return nil
 }
 

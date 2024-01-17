@@ -63,6 +63,20 @@ func TestAdd(t *testing.T) {
 			index:     5,
 			wantSlice: []int{123, 100, 101, 102, 102, 233, 102},
 		},
+		{
+			name:      "append on last",
+			slice:     []int{123, 100, 101, 102, 102, 102},
+			addVal:    233,
+			index:     6,
+			wantSlice: []int{123, 100, 101, 102, 102, 102, 233},
+		},
+		{
+			name:    "index out of range",
+			slice:   []int{123, 100, 101, 102, 102, 102},
+			addVal:  233,
+			index:   7,
+			wantErr: errs.NewErrIndexOutOfRange(6, 7),
+		},
 	}
 
 	for _, tc := range testCases {
