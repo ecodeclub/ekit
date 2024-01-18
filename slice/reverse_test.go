@@ -47,6 +47,7 @@ func TestReverseInt(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			res := Reverse[int](tt.src)
 			assert.ElementsMatch(t, tt.want, res)
+			assert.NotSame(t, tt.src, res)
 		})
 	}
 }
@@ -81,6 +82,7 @@ func TestReverseStruct(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			res := Reverse[testStruct](tt.src)
 			assert.ElementsMatch(t, tt.want, res)
+			assert.NotSame(t, tt.src, res)
 		})
 	}
 }
