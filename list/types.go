@@ -23,7 +23,9 @@ type List[T any] interface {
 	// Append 在末尾追加元素
 	Append(ts ...T) error
 	// Add 在特定下标处增加一个新元素
-	// 如果下标超出范围，应该返回错误
+	// 如果下标不在[0, Len()]范围之内
+	// 应该返回错误
+	// 如果index == Len()则表示往List末端增加一个值
 	Add(index int, t T) error
 	// Set 重置 index 位置的值
 	// 如果下标超出范围，应该返回错误
