@@ -57,10 +57,8 @@ func (a *ArrayList[T]) Append(ts ...T) error {
 // Add 在ArrayList下标为index的位置插入一个元素
 // 当index等于ArrayList长度等同于append
 func (a *ArrayList[T]) Add(index int, t T) (err error) {
-	if a.vals, err = slice.Add(a.vals, t, index); err != nil {
-		return
-	}
-	return nil
+	a.vals, err = slice.Add(a.vals, t, index)
+	return
 }
 
 // Set 设置ArrayList里index位置的值为t
