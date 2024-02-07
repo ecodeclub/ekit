@@ -26,55 +26,51 @@ var (
 	errLengthLessThanZero = errors.New("ekit:长度必须大于等于0")
 )
 
-type TYPE int
+type Type int
 
 const (
-	// 数字
-	TYPE_DIGIT TYPE = 1
-	// 小写字母
-	TYPE_LOWERCASE TYPE = 1 << 1
-	TYPE_LETTER    TYPE = TYPE_LOWERCASE
-	// 大写字母
-	TYPE_UPPERCASE TYPE = 1 << 2
-	TYPE_CAPITAL   TYPE = TYPE_UPPERCASE
-	// 特殊符号
-	TYPE_SPECIAL TYPE = 1 << 3
-	// 混合类型
-	TYPE_MIXED = (TYPE_DIGIT | TYPE_UPPERCASE | TYPE_LOWERCASE | TYPE_SPECIAL)
+	// TypeDigit 数字
+	TypeDigit Type = 1
+	// TypeLowerCase 小写字母
+	TypeLowerCase Type = 1 << 1
+	// TypeUpperCase 大写字母
+	TypeUpperCase Type = 1 << 2
+	// TypeSpecial 特殊符号
+	TypeSpecial Type = 1 << 3
+	// TypeMixed 混合类型
+	TypeMixed = (TypeDigit | TypeUpperCase | TypeLowerCase | TypeSpecial)
 
-	// 数字字符组
-	CHARSET_DIGIT = "0123456789"
-	// 小写字母字符组
-	CHARSET_LOWERCASE = "abcdefghijklmnopqrstuvwxyz"
-	CHARSET_LETTER    = CHARSET_LOWERCASE
-	// 大写字母字符组
-	CHARSET_UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	CHARSET_CAPITAL   = CHARSET_UPPERCASE
-	// 特殊字符数组
-	CHARSET_SPECIAL = " ~!@#$%^&*()_+-=[]{};'\\:\"|,./<>?"
+	// CharsetDigit 数字字符组
+	CharsetDigit = "0123456789"
+	// CharsetLowerCase 小写字母字符组
+	CharsetLowerCase = "abcdefghijklmnopqrstuvwxyz"
+	// CharsetUpperCase 大写字母字符组
+	CharsetUpperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	// CharsetSpecial 特殊字符数组
+	CharsetSpecial = " ~!@#$%^&*()_+-=[]{};'\\:\"|,./<>?"
 )
 
 var (
 	// 只限于randx包内部使用
-	typeCharsetPairs = []pair.Pair[TYPE, string]{
-		pair.NewPair(TYPE_DIGIT, CHARSET_DIGIT),
-		pair.NewPair(TYPE_LOWERCASE, CHARSET_LOWERCASE),
-		pair.NewPair(TYPE_UPPERCASE, CHARSET_UPPERCASE),
-		pair.NewPair(TYPE_SPECIAL, CHARSET_SPECIAL),
+	typeCharsetPairs = []pair.Pair[Type, string]{
+		pair.NewPair(TypeDigit, CharsetDigit),
+		pair.NewPair(TypeLowerCase, CharsetLowerCase),
+		pair.NewPair(TypeUpperCase, CharsetUpperCase),
+		pair.NewPair(TypeSpecial, CharsetSpecial),
 	}
 )
 
 // RandCode 根据传入的长度和类型生成随机字符串
 // 请保证输入的 length >= 0，否则会返回 errLengthLessThanZero
 // 请保证输入的 typ 的取值范围在 (0, type.MIXED] 内，否则会返回 errTypeNotSupported
-func RandCode(length int, typ TYPE) (string, error) {
+func RandCode(length int, typ Type) (string, error) {
 	if length < 0 {
 		return "", errLengthLessThanZero
 	}
 	if length == 0 {
 		return "", nil
 	}
-	if typ > TYPE_MIXED {
+	if typ > TypeMixed {
 		return "", errTypeNotSupported
 	}
 	charset := ""
@@ -86,7 +82,7 @@ func RandCode(length int, typ TYPE) (string, error) {
 	return RandStrByCharset(length, charset)
 }
 
-// 根据传入的长度和字符集生成随机字符串
+// RandStrByCharset 根据传入的长度和字符集生成随机字符串
 // 请保证输入的 length >= 0，否则会返回 errLengthLessThanZero
 // 请保证输入的字符集不为空字符串，否则会返回 errTypeNotSupported
 // 字符集内部字符可以无序或重复
