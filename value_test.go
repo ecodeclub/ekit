@@ -1828,3 +1828,45 @@ func TestAnyValue_AsString(t *testing.T) {
 		})
 	}
 }
+
+func TestAnyValue_JSONScan(t *testing.T) {
+	testCases := []struct {
+		name string
+
+		av AnyValue
+
+		wantUser User
+		wantErr  error
+	}{
+		{
+			name: "OK",
+			av: AnyValue{
+				Val: `{"name": "Tom"}`,
+			},
+			wantUser: User{
+				Name: "Tom",
+			},
+		},
+
+		{
+			name: "error",
+			av: AnyValue{
+				Err: errors.New("mock error"),
+			},
+			wantErr: errors.New("mock error"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var u User
+			err := tc.av.JSONScan(&u)
+			assert.Equal(t, tc.wantErr, err)
+			assert.Equal(t, tc.wantUser, u)
+		})
+	}
+}
+
+type User struct {
+	Name string `json:"name"`
+}

@@ -15,6 +15,7 @@
 package ekit
 
 import (
+	"encoding/json"
 	"errors"
 	"reflect"
 	"strconv"
@@ -546,4 +547,13 @@ func (av AnyValue) BoolOrDefault(def bool) bool {
 		return def
 	}
 	return val
+}
+
+// JSONScan 将 val 转化为一个对象
+func (av AnyValue) JSONScan(val any) error {
+	data, err := av.AsBytes()
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, val)
 }
