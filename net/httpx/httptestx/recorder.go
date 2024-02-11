@@ -1,0 +1,44 @@
+// Copyright 2021 ecodeclub
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package httptestx
+
+import (
+	"encoding/json"
+	"net/http/httptest"
+)
+
+type JSONResponseRecorder[T any] struct {
+	*httptest.ResponseRecorder
+}
+
+func NewJSONResponseRecorder[T any]() *JSONResponseRecorder[T] {
+	return &JSONResponseRecorder[T]{
+		ResponseRecorder: httptest.NewRecorder(),
+	}
+}
+
+func (r JSONResponseRecorder[T]) Scan() (T, error) {
+	var t T
+	err := json.NewDecoder(r.Body).Decode(&t)
+	return t, err
+}
+
+func (r JSONResponseRecorder[T]) MustScan() T {
+	t, err := r.Scan()
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
