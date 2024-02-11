@@ -47,7 +47,7 @@ func TestRandCode(t *testing.T) {
 		{
 			name:      "小写字母验证码",
 			length:    100,
-			typ:       randx.TypeLetter,
+			typ:       randx.TypeLowerCase,
 			wantMatch: "^[a-z]+$",
 			wantErr:   nil,
 		},
@@ -68,14 +68,7 @@ func TestRandCode(t *testing.T) {
 		{
 			name:      "大写字母验证码",
 			length:    100,
-			typ:       randx.TypeCapital,
-			wantMatch: "^[A-Z]+$",
-			wantErr:   nil,
-		},
-		{
-			name:      "大写字母验证码(兼容旧版本)",
-			length:    100,
-			typ:       randx.TypeCapital,
+			typ:       randx.TypeUpperCase,
 			wantMatch: "^[A-Z]+$",
 			wantErr:   nil,
 		},
@@ -87,23 +80,9 @@ func TestRandCode(t *testing.T) {
 			wantErr:   nil,
 		},
 		{
-			name:      "大小写字母验证码(兼容旧版本)",
-			length:    100,
-			typ:       randx.TypeCapital | randx.TypeLetter,
-			wantMatch: "^[a-zA-Z]+$",
-			wantErr:   nil,
-		},
-		{
 			name:      "数字+大小写字母验证码",
 			length:    100,
 			typ:       randx.TypeDigit | randx.TypeUpperCase | randx.TypeLowerCase,
-			wantMatch: "^[0-9a-zA-Z]+$",
-			wantErr:   nil,
-		},
-		{
-			name:      "数字+大小写字母验证码(兼容旧版本)",
-			length:    100,
-			typ:       randx.TypeDigit | randx.TypeLetter | randx.TypeCapital,
 			wantMatch: "^[0-9a-zA-Z]+$",
 			wantErr:   nil,
 		},
