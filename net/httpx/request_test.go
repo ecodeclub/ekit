@@ -105,6 +105,14 @@ func TestRequest_AddParam(t *testing.T) {
 	assert.Equal(t, "http://localhost?key1=value1&key2=value2", req.req.URL.String())
 }
 
+func TestRequestAddHeader(t *testing.T) {
+	req := NewRequest(context.Background(),
+		http.MethodGet, "http://localhost").
+		AddHeader("head1", "val1").AddHeader("head1", "val2")
+	vals := req.req.Header.Values("head1")
+	assert.Equal(t, []string{"val1", "val2"}, vals)
+}
+
 type User struct {
 	Name string
 }
