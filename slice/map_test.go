@@ -101,3 +101,206 @@ func ExampleFilterMap() {
 	fmt.Println(dst)
 	// Output: [1 3]
 }
+
+func TestMapWithE2KVFunc(t *testing.T) {
+	t.Run("integer-string to map[int]int", func(t *testing.T) {
+		elements := []string{"1", "2", "3", "4", "5"}
+		resMap := MapWithE2KVFunc(elements, func(str string) (int, int) {
+			num, _ := strconv.Atoi(str)
+			return num, num
+		})
+		epectedMap := map[int]int{
+			1: 1,
+			2: 2,
+			3: 3,
+			4: 4,
+			5: 5,
+		}
+		assert.Equal(t, epectedMap, resMap)
+	})
+	t.Run("struct<string, string, int> to map[string]struct<string, string, int>", func(t *testing.T) {
+		type eleType struct {
+			A string
+			B string
+			C int
+		}
+		elements := []eleType{
+			{
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			{
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		resMap := MapWithE2KVFunc(elements, func(ele eleType) (string, eleType) {
+			return ele.A, ele
+		})
+		epectedMap := map[string]eleType{
+			"a": {
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			"c": {
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		assert.Equal(t, epectedMap, resMap)
+	})
+
+	t.Run("struct<string, string, int> to map[string]struct<string, string, int>, 重复的key", func(t *testing.T) {
+		type eleType struct {
+			A string
+			B string
+			C int
+		}
+		elements := []eleType{
+			{
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			{
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+			{
+				A: "a",
+				B: "d",
+				C: 3,
+			},
+		}
+		resMap := MapWithE2KVFunc(elements, func(ele eleType) (string, eleType) {
+			return ele.A, ele
+		})
+		epectedMap := map[string]eleType{
+			"a": {
+				A: "a",
+				B: "d",
+				C: 3,
+			},
+			"c": {
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		assert.Equal(t, epectedMap, resMap)
+	})
+
+	t.Run("传入nil slice,返回空map", func(t *testing.T) {
+		var elements []string = nil
+		resMap := MapWithE2KVFunc(elements, func(str string) (int, int) {
+			num, _ := strconv.Atoi(str)
+			return num, num
+		})
+		epectedMap := make(map[int]int)
+		assert.Equal(t, epectedMap, resMap)
+	})
+}
+
+func TestMapWithE2KFunc(t *testing.T) {
+	t.Run("integer-string to map[int]string", func(t *testing.T) {
+		elements := []string{"1", "2", "3", "4", "5"}
+		resMap := MapWithE2KFunc(elements, func(str string) int {
+			num, _ := strconv.Atoi(str)
+			return num
+		})
+		epectedMap := map[int]string{
+			1: "1",
+			2: "2",
+			3: "3",
+			4: "4",
+			5: "5",
+		}
+		assert.Equal(t, epectedMap, resMap)
+	})
+	t.Run("struct<string, string, int> to map[string]struct<string, string, int>", func(t *testing.T) {
+		type eleType struct {
+			A string
+			B string
+			C int
+		}
+		elements := []eleType{
+			{
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			{
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		resMap := MapWithE2KFunc(elements, func(ele eleType) string {
+			return ele.A
+		})
+		epectedMap := map[string]eleType{
+			"a": {
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			"c": {
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		assert.Equal(t, epectedMap, resMap)
+	})
+
+	t.Run("struct<string, string, int> to map[string]struct<string, string, int>, 重复的key", func(t *testing.T) {
+		type eleType struct {
+			A string
+			B string
+			C int
+		}
+		elements := []eleType{
+			{
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			{
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		resMap := MapWithE2KFunc(elements, func(ele eleType) string {
+			return ele.A
+		})
+		epectedMap := map[string]eleType{
+			"a": {
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			"c": {
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		assert.Equal(t, epectedMap, resMap)
+	})
+
+	t.Run("传入nil slice,返回空map", func(t *testing.T) {
+		var elements []string = nil
+		resMap := MapWithE2KFunc(elements, func(str string) int {
+			num, _ := strconv.Atoi(str)
+			return num
+		})
+		epectedMap := make(map[int]string)
+		assert.Equal(t, epectedMap, resMap)
+	})
+}
