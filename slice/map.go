@@ -79,10 +79,7 @@ func ToMapV[Ele any, Key comparable, Val any](
 	elements []Ele,
 	fn func(element Ele) (Key, Val),
 ) (resultMap map[Key]Val) {
-	resultMap = make(map[Key]Val)
-	if elements == nil {
-		return
-	}
+	resultMap = make(map[Key]Val, len(elements))
 	for _, element := range elements {
 		k, v := fn(element)
 		resultMap[k] = v
