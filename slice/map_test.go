@@ -101,3 +101,248 @@ func ExampleFilterMap() {
 	fmt.Println(dst)
 	// Output: [1 3]
 }
+
+func TestToMapV(t *testing.T) {
+	t.Run("integer-string to map[int]int", func(t *testing.T) {
+		elements := []string{"1", "2", "3", "4", "5"}
+		resMap := ToMapV(elements, func(str string) (int, int) {
+			num, _ := strconv.Atoi(str)
+			return num, num
+		})
+		epectedMap := map[int]int{
+			1: 1,
+			2: 2,
+			3: 3,
+			4: 4,
+			5: 5,
+		}
+		assert.Equal(t, epectedMap, resMap)
+	})
+	t.Run("struct<string, string, int> to map[string]struct<string, string, int>", func(t *testing.T) {
+		type eleType struct {
+			A string
+			B string
+			C int
+		}
+		elements := []eleType{
+			{
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			{
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		resMap := ToMapV(elements, func(ele eleType) (string, eleType) {
+			return ele.A, ele
+		})
+		epectedMap := map[string]eleType{
+			"a": {
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			"c": {
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		assert.Equal(t, epectedMap, resMap)
+	})
+
+	t.Run("struct<string, string, int> to map[string]struct<string, string, int>, 重复的key", func(t *testing.T) {
+		type eleType struct {
+			A string
+			B string
+			C int
+		}
+		elements := []eleType{
+			{
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			{
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+			{
+				A: "a",
+				B: "d",
+				C: 3,
+			},
+		}
+		resMap := ToMapV(elements, func(ele eleType) (string, eleType) {
+			return ele.A, ele
+		})
+		epectedMap := map[string]eleType{
+			"a": {
+				A: "a",
+				B: "d",
+				C: 3,
+			},
+			"c": {
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		assert.Equal(t, epectedMap, resMap)
+	})
+
+	t.Run("传入nil slice,返回空map", func(t *testing.T) {
+		var elements []string = nil
+		resMap := ToMapV(elements, func(str string) (int, int) {
+			num, _ := strconv.Atoi(str)
+			return num, num
+		})
+		epectedMap := make(map[int]int)
+		assert.Equal(t, epectedMap, resMap)
+	})
+}
+
+func TestToMap(t *testing.T) {
+	t.Run("integer-string to map[int]string", func(t *testing.T) {
+		elements := []string{"1", "2", "3", "4", "5"}
+		resMap := ToMap(elements, func(str string) int {
+			num, _ := strconv.Atoi(str)
+			return num
+		})
+		epectedMap := map[int]string{
+			1: "1",
+			2: "2",
+			3: "3",
+			4: "4",
+			5: "5",
+		}
+		assert.Equal(t, epectedMap, resMap)
+	})
+	t.Run("struct<string, string, int> to map[string]struct<string, string, int>", func(t *testing.T) {
+		type eleType struct {
+			A string
+			B string
+			C int
+		}
+		elements := []eleType{
+			{
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			{
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		resMap := ToMap(elements, func(ele eleType) string {
+			return ele.A
+		})
+		epectedMap := map[string]eleType{
+			"a": {
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			"c": {
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		assert.Equal(t, epectedMap, resMap)
+	})
+
+	t.Run("struct<string, string, int> to map[string]struct<string, string, int>, 重复的key", func(t *testing.T) {
+		type eleType struct {
+			A string
+			B string
+			C int
+		}
+		elements := []eleType{
+			{
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			{
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		resMap := ToMap(elements, func(ele eleType) string {
+			return ele.A
+		})
+		epectedMap := map[string]eleType{
+			"a": {
+				A: "a",
+				B: "b",
+				C: 1,
+			},
+			"c": {
+				A: "c",
+				B: "d",
+				C: 2,
+			},
+		}
+		assert.Equal(t, epectedMap, resMap)
+	})
+
+	t.Run("传入nil slice,返回空map", func(t *testing.T) {
+		var elements []string = nil
+		resMap := ToMap(elements, func(str string) int {
+			num, _ := strconv.Atoi(str)
+			return num
+		})
+		epectedMap := make(map[int]string)
+		assert.Equal(t, epectedMap, resMap)
+	})
+}
+
+func ExampleToMap() {
+	elements := []string{"1", "2", "3", "4", "5"}
+	resMap := ToMap(elements, func(str string) int {
+		num, _ := strconv.Atoi(str)
+		return num
+	})
+	fmt.Println(resMap)
+	// Output: map[1:1 2:2 3:3 4:4 5:5]
+}
+
+func ExampleToMapV() {
+	type eleType struct {
+		A string
+		B string
+		C int
+	}
+	type eleTypeOut struct {
+		A string
+		B string
+	}
+	elements := []eleType{
+		{
+			A: "a",
+			B: "b",
+			C: 1,
+		},
+		{
+			A: "c",
+			B: "d",
+			C: 2,
+		},
+	}
+	resMap := ToMapV(elements, func(ele eleType) (string, eleTypeOut) {
+		return ele.A, eleTypeOut{
+			A: ele.A,
+			B: ele.B,
+		}
+	})
+	fmt.Println(resMap)
+	// Output: map[a:{a b} c:{c d}]
+}
