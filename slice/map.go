@@ -37,54 +37,54 @@ func Map[Src any, Dst any](src []Src, m func(idx int, src Src) Dst) []Dst {
 }
 
 // 将[]Ele映射到map[Key]Ele
-// 从Ele中提取Key的函数E2KFunc由使用者提供
+// 从Ele中提取Key的函数fn由使用者提供
 //
 // 注意:
 // 如果出现 i < j
 // 设：
 //
-//	key_i := E2KFunc(elements[i])
-//	key_j := E2KFunc(elements[j])
+//	key_i := fn(elements[i])
+//	key_j := fn(elements[j])
 //
 // 满足key_i == key_j 的情况，则在返回结果的resultMap中
 // resultMap[key_i] = val_j
 //
 // 即使传入的字符串为nil，也保证返回的map是一个空map而不是nil
-func MapWithE2KFunc[Ele any, Key comparable](
+func ToMap[Ele any, Key comparable](
 	elements []Ele,
-	E2KFunc func(element Ele) Key,
+	fn func(element Ele) Key,
 ) map[Key]Ele {
-	return MapWithE2KVFunc(
+	return ToMapV(
 		elements,
 		func(element Ele) (Key, Ele) {
-			return E2KFunc(element), element
+			return fn(element), element
 		})
 }
 
 // 将[]Ele映射到map[Key]Val
-// 从Ele中提取Key和Val的函数E2KVFunc由使用者提供
+// 从Ele中提取Key和Val的函数fn由使用者提供
 //
 // 注意:
 // 如果出现 i < j
 // 设：
 //
-//	key_i, val_i := E2KVFunc(elements[i])
-//	key_j, val_j := E2KVFunc(elements[j])
+//	key_i, val_i := fn(elements[i])
+//	key_j, val_j := fn(elements[j])
 //
 // 满足key_i == key_j 的情况，则在返回结果的resultMap中
 // resultMap[key_i] = val_j
 //
 // 即使传入的字符串为nil，也保证返回的map是一个空map而不是nil
-func MapWithE2KVFunc[Ele any, Key comparable, Val any](
+func ToMapV[Ele any, Key comparable, Val any](
 	elements []Ele,
-	E2KVFunc func(element Ele) (Key, Val),
+	fn func(element Ele) (Key, Val),
 ) (resultMap map[Key]Val) {
 	resultMap = make(map[Key]Val)
 	if elements == nil {
 		return
 	}
 	for _, element := range elements {
-		k, v := E2KVFunc(element)
+		k, v := fn(element)
 		resultMap[k] = v
 	}
 	return

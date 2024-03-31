@@ -102,10 +102,10 @@ func ExampleFilterMap() {
 	// Output: [1 3]
 }
 
-func TestMapWithE2KVFunc(t *testing.T) {
+func TestToMapV(t *testing.T) {
 	t.Run("integer-string to map[int]int", func(t *testing.T) {
 		elements := []string{"1", "2", "3", "4", "5"}
-		resMap := MapWithE2KVFunc(elements, func(str string) (int, int) {
+		resMap := ToMapV(elements, func(str string) (int, int) {
 			num, _ := strconv.Atoi(str)
 			return num, num
 		})
@@ -136,7 +136,7 @@ func TestMapWithE2KVFunc(t *testing.T) {
 				C: 2,
 			},
 		}
-		resMap := MapWithE2KVFunc(elements, func(ele eleType) (string, eleType) {
+		resMap := ToMapV(elements, func(ele eleType) (string, eleType) {
 			return ele.A, ele
 		})
 		epectedMap := map[string]eleType{
@@ -177,7 +177,7 @@ func TestMapWithE2KVFunc(t *testing.T) {
 				C: 3,
 			},
 		}
-		resMap := MapWithE2KVFunc(elements, func(ele eleType) (string, eleType) {
+		resMap := ToMapV(elements, func(ele eleType) (string, eleType) {
 			return ele.A, ele
 		})
 		epectedMap := map[string]eleType{
@@ -197,7 +197,7 @@ func TestMapWithE2KVFunc(t *testing.T) {
 
 	t.Run("传入nil slice,返回空map", func(t *testing.T) {
 		var elements []string = nil
-		resMap := MapWithE2KVFunc(elements, func(str string) (int, int) {
+		resMap := ToMapV(elements, func(str string) (int, int) {
 			num, _ := strconv.Atoi(str)
 			return num, num
 		})
@@ -206,10 +206,10 @@ func TestMapWithE2KVFunc(t *testing.T) {
 	})
 }
 
-func TestMapWithE2KFunc(t *testing.T) {
+func TestToMap(t *testing.T) {
 	t.Run("integer-string to map[int]string", func(t *testing.T) {
 		elements := []string{"1", "2", "3", "4", "5"}
-		resMap := MapWithE2KFunc(elements, func(str string) int {
+		resMap := ToMap(elements, func(str string) int {
 			num, _ := strconv.Atoi(str)
 			return num
 		})
@@ -240,7 +240,7 @@ func TestMapWithE2KFunc(t *testing.T) {
 				C: 2,
 			},
 		}
-		resMap := MapWithE2KFunc(elements, func(ele eleType) string {
+		resMap := ToMap(elements, func(ele eleType) string {
 			return ele.A
 		})
 		epectedMap := map[string]eleType{
@@ -276,7 +276,7 @@ func TestMapWithE2KFunc(t *testing.T) {
 				C: 2,
 			},
 		}
-		resMap := MapWithE2KFunc(elements, func(ele eleType) string {
+		resMap := ToMap(elements, func(ele eleType) string {
 			return ele.A
 		})
 		epectedMap := map[string]eleType{
@@ -296,11 +296,53 @@ func TestMapWithE2KFunc(t *testing.T) {
 
 	t.Run("传入nil slice,返回空map", func(t *testing.T) {
 		var elements []string = nil
-		resMap := MapWithE2KFunc(elements, func(str string) int {
+		resMap := ToMap(elements, func(str string) int {
 			num, _ := strconv.Atoi(str)
 			return num
 		})
 		epectedMap := make(map[int]string)
 		assert.Equal(t, epectedMap, resMap)
 	})
+}
+
+func ExampleToMap() {
+	elements := []string{"1", "2", "3", "4", "5"}
+	resMap := ToMap(elements, func(str string) int {
+		num, _ := strconv.Atoi(str)
+		return num
+	})
+	fmt.Println(resMap)
+	// Output: map[1:1 2:2 3:3 4:4 5:5]
+}
+
+func ExampleToMapV() {
+	type eleType struct {
+		A string
+		B string
+		C int
+	}
+	type eleTypeOut struct {
+		A string
+		B string
+	}
+	elements := []eleType{
+		{
+			A: "a",
+			B: "b",
+			C: 1,
+		},
+		{
+			A: "c",
+			B: "d",
+			C: 2,
+		},
+	}
+	resMap := ToMapV(elements, func(ele eleType) (string, eleTypeOut) {
+		return ele.A, eleTypeOut{
+			A: ele.A,
+			B: ele.B,
+		}
+	})
+	fmt.Println(resMap)
+	// Output: map[a:{a b} c:{c d}]
 }
