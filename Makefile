@@ -8,11 +8,11 @@ ut:
 
 .PHONY:	setup
 setup:
-	@sh ./script/setup.sh
+	@sh ./.script/setup.sh
 
 .PHONY:	fmt
 fmt:
-	@sh ./script/goimports.sh
+	@sh ./.script/goimports.sh
 
 .PHONY:	lint
 lint:

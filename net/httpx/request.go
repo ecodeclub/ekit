@@ -49,6 +49,11 @@ func (req *Request) Client(cli *http.Client) *Request {
 	return req
 }
 
+func (req *Request) AddHeader(key string, value string) *Request {
+	req.req.Header.Add(key, value)
+	return req
+}
+
 // AddParam 添加查询参数
 // 这个方法性能不好，但是好用
 func (req *Request) AddParam(key string, value string) *Request {

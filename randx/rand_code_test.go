@@ -33,98 +33,77 @@ func TestRandCode(t *testing.T) {
 	testCases := []struct {
 		name      string
 		length    int
-		typ       randx.TYPE
+		typ       randx.Type
 		wantMatch string
 		wantErr   error
 	}{
 		{
 			name:      "数字验证码",
 			length:    100,
-			typ:       randx.TYPE_DIGIT,
+			typ:       randx.TypeDigit,
 			wantMatch: "^[0-9]+$",
 			wantErr:   nil,
 		},
 		{
 			name:      "小写字母验证码",
 			length:    100,
-			typ:       randx.TYPE_LETTER,
+			typ:       randx.TypeLowerCase,
 			wantMatch: "^[a-z]+$",
 			wantErr:   nil,
 		},
 		{
 			name:      "数字+小写字母验证码",
 			length:    100,
-			typ:       randx.TYPE_DIGIT | randx.TYPE_LOWERCASE,
+			typ:       randx.TypeDigit | randx.TypeLowerCase,
 			wantMatch: "^[a-z0-9]+$",
 			wantErr:   nil,
 		},
 		{
 			name:      "数字+大写字母验证码",
 			length:    100,
-			typ:       randx.TYPE_DIGIT | randx.TYPE_UPPERCASE,
+			typ:       randx.TypeDigit | randx.TypeUpperCase,
 			wantMatch: "^[A-Z0-9]+$",
 			wantErr:   nil,
 		},
 		{
 			name:      "大写字母验证码",
 			length:    100,
-			typ:       randx.TYPE_CAPITAL,
-			wantMatch: "^[A-Z]+$",
-			wantErr:   nil,
-		},
-		{
-			name:      "大写字母验证码(兼容旧版本)",
-			length:    100,
-			typ:       randx.TYPE_CAPITAL,
+			typ:       randx.TypeUpperCase,
 			wantMatch: "^[A-Z]+$",
 			wantErr:   nil,
 		},
 		{
 			name:      "大小写字母验证码",
 			length:    100,
-			typ:       randx.TYPE_UPPERCASE | randx.TYPE_LOWERCASE,
-			wantMatch: "^[a-zA-Z]+$",
-			wantErr:   nil,
-		},
-		{
-			name:      "大小写字母验证码(兼容旧版本)",
-			length:    100,
-			typ:       randx.TYPE_CAPITAL | randx.TYPE_LETTER,
+			typ:       randx.TypeUpperCase | randx.TypeLowerCase,
 			wantMatch: "^[a-zA-Z]+$",
 			wantErr:   nil,
 		},
 		{
 			name:      "数字+大小写字母验证码",
 			length:    100,
-			typ:       randx.TYPE_DIGIT | randx.TYPE_UPPERCASE | randx.TYPE_LOWERCASE,
-			wantMatch: "^[0-9a-zA-Z]+$",
-			wantErr:   nil,
-		},
-		{
-			name:      "数字+大小写字母验证码(兼容旧版本)",
-			length:    100,
-			typ:       randx.TYPE_DIGIT | randx.TYPE_LETTER | randx.TYPE_CAPITAL,
+			typ:       randx.TypeDigit | randx.TypeUpperCase | randx.TypeLowerCase,
 			wantMatch: "^[0-9a-zA-Z]+$",
 			wantErr:   nil,
 		},
 		{
 			name:      "所有类型验证",
 			length:    100,
-			typ:       randx.TYPE_MIXED,
+			typ:       randx.TypeMixed,
 			wantMatch: "^[\\S\\s]+$",
 			wantErr:   nil,
 		},
 		{
 			name:      "特殊字符类型验证",
 			length:    100,
-			typ:       randx.TYPE_SPECIAL,
+			typ:       randx.TypeSpecial,
 			wantMatch: "^[^0-9a-zA-Z]+$",
 			wantErr:   nil,
 		},
 		{
 			name:      "未定义类型(超过范围)",
 			length:    100,
-			typ:       randx.TYPE_MIXED + 1,
+			typ:       randx.TypeMixed + 1,
 			wantMatch: "",
 			wantErr:   errTypeNotSupported,
 		},
@@ -145,7 +124,7 @@ func TestRandCode(t *testing.T) {
 		{
 			name:      "长度等于0",
 			length:    0,
-			typ:       randx.TYPE_MIXED,
+			typ:       randx.TypeMixed,
 			wantMatch: "",
 			wantErr:   nil,
 		},
@@ -236,7 +215,7 @@ func BenchmarkRandCode_MIXED(b *testing.B) {
 	b.Run("length=1000000", func(b *testing.B) {
 		n := 1000000
 		b.StartTimer()
-		res, err := randx.RandCode(n, randx.TYPE_MIXED)
+		res, err := randx.RandCode(n, randx.TypeMixed)
 		b.StopTimer()
 		assert.Nil(b, err)
 		assert.Len(b, res, n)
