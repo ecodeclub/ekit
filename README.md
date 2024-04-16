@@ -1,7 +1,7 @@
 # ekit
 泛型工具库。
 
-- [文档](https://ekit.gocn.vip/ekit/develop/guide/)
+- [文档](https://doc.meoying.com/)
 
 ## 交流
 

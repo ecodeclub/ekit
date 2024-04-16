@@ -36,6 +36,57 @@ func Map[Src any, Dst any](src []Src, m func(idx int, src Src) Dst) []Dst {
 	return dst
 }
 
+// 将[]Ele映射到map[Key]Ele
+// 从Ele中提取Key的函数fn由使用者提供
+//
+// 注意:
+// 如果出现 i < j
+// 设：
+//
+//	key_i := fn(elements[i])
+//	key_j := fn(elements[j])
+//
+// 满足key_i == key_j 的情况，则在返回结果的resultMap中
+// resultMap[key_i] = val_j
+//
+// 即使传入的字符串为nil，也保证返回的map是一个空map而不是nil
+func ToMap[Ele any, Key comparable](
+	elements []Ele,
+	fn func(element Ele) Key,
+) map[Key]Ele {
+	return ToMapV(
+		elements,
+		func(element Ele) (Key, Ele) {
+			return fn(element), element
+		})
+}
+
+// 将[]Ele映射到map[Key]Val
+// 从Ele中提取Key和Val的函数fn由使用者提供
+//
+// 注意:
+// 如果出现 i < j
+// 设：
+//
+//	key_i, val_i := fn(elements[i])
+//	key_j, val_j := fn(elements[j])
+//
+// 满足key_i == key_j 的情况，则在返回结果的resultMap中
+// resultMap[key_i] = val_j
+//
+// 即使传入的字符串为nil，也保证返回的map是一个空map而不是nil
+func ToMapV[Ele any, Key comparable, Val any](
+	elements []Ele,
+	fn func(element Ele) (Key, Val),
+) (resultMap map[Key]Val) {
+	resultMap = make(map[Key]Val, len(elements))
+	for _, element := range elements {
+		k, v := fn(element)
+		resultMap[k] = v
+	}
+	return
+}
+
 // 构造map
 func toMap[T comparable](src []T) map[T]struct{} {
 	var dataMap = make(map[T]struct{}, len(src))

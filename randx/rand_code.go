@@ -17,36 +17,95 @@ package randx
 import (
 	"errors"
 	"math/rand"
+
+	"github.com/ecodeclub/ekit/tuple/pair"
 )
 
-var ERRTYPENOTSUPPORTTED = errors.New("ekit:不支持的类型")
+var (
+	errTypeNotSupported   = errors.New("ekit:不支持的类型")
+	errLengthLessThanZero = errors.New("ekit:长度必须大于等于0")
+)
 
-type TYPE int
+type Type int
 
 const (
-	TYPE_DEFAULT TYPE = 0 //默认类型
-	TYPE_DIGIT   TYPE = 1 //数字//
-	TYPE_LETTER  TYPE = 2 //小写字母
-	TYPE_CAPITAL TYPE = 3 //大写字母
-	TYPE_MIXED   TYPE = 4 //数字+字母混合
+	// TypeDigit 数字
+	TypeDigit Type = 1
+	// TypeLowerCase 小写字母
+	TypeLowerCase Type = 1 << 1
+	// TypeUpperCase 大写字母
+	TypeUpperCase Type = 1 << 2
+	// TypeSpecial 特殊符号
+	TypeSpecial Type = 1 << 3
+	// TypeMixed 混合类型
+	TypeMixed = (TypeDigit | TypeUpperCase | TypeLowerCase | TypeSpecial)
+
+	// CharsetDigit 数字字符组
+	CharsetDigit = "0123456789"
+	// CharsetLowerCase 小写字母字符组
+	CharsetLowerCase = "abcdefghijklmnopqrstuvwxyz"
+	// CharsetUpperCase 大写字母字符组
+	CharsetUpperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	// CharsetSpecial 特殊字符数组
+	CharsetSpecial = " ~!@#$%^&*()_+-=[]{};'\\:\"|,./<>?"
 )
 
-// RandCode 根据传入的长度和类型生成随机字符串,这个方法目前可以生成数字、字母、数字+字母的随机字符串
-func RandCode(length int, typ TYPE) (string, error) {
-	switch typ {
-	case TYPE_DEFAULT:
-		fallthrough
-	case TYPE_DIGIT:
-		return generate("0123456789", length, 4), nil
-	case TYPE_LETTER:
-		return generate("abcdefghijklmnopqrstuvwxyz", length, 5), nil
-	case TYPE_CAPITAL:
-		return generate("ABCDEFGHIJKLMNOPQRSTUVWXYZ", length, 5), nil
-	case TYPE_MIXED:
-		return generate("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", length, 7), nil
-	default:
-		return "", ERRTYPENOTSUPPORTTED
+var (
+	// 只限于randx包内部使用
+	typeCharsetPairs = []pair.Pair[Type, string]{
+		pair.NewPair(TypeDigit, CharsetDigit),
+		pair.NewPair(TypeLowerCase, CharsetLowerCase),
+		pair.NewPair(TypeUpperCase, CharsetUpperCase),
+		pair.NewPair(TypeSpecial, CharsetSpecial),
 	}
+)
+
+// RandCode 根据传入的长度和类型生成随机字符串
+// 请保证输入的 length >= 0，否则会返回 errLengthLessThanZero
+// 请保证输入的 typ 的取值范围在 (0, type.MIXED] 内，否则会返回 errTypeNotSupported
+func RandCode(length int, typ Type) (string, error) {
+	if length < 0 {
+		return "", errLengthLessThanZero
+	}
+	if length == 0 {
+		return "", nil
+	}
+	if typ > TypeMixed {
+		return "", errTypeNotSupported
+	}
+	charset := ""
+	for _, p := range typeCharsetPairs {
+		if (typ & p.Key) == p.Key {
+			charset += p.Value
+		}
+	}
+	return RandStrByCharset(length, charset)
+}
+
+// RandStrByCharset 根据传入的长度和字符集生成随机字符串
+// 请保证输入的 length >= 0，否则会返回 errLengthLessThanZero
+// 请保证输入的字符集不为空字符串，否则会返回 errTypeNotSupported
+// 字符集内部字符可以无序或重复
+func RandStrByCharset(length int, charset string) (string, error) {
+	if length < 0 {
+		return "", errLengthLessThanZero
+	}
+	if length == 0 {
+		return "", nil
+	}
+	charsetSize := len(charset)
+	if charsetSize == 0 {
+		return "", errTypeNotSupported
+	}
+	return generate(charset, length, getFirstMask(charsetSize)), nil
+}
+
+func getFirstMask(charsetSize int) int {
+	bits := 0
+	for charsetSize > ((1 << bits) - 1) {
+		bits++
+	}
+	return bits
 }
 
 // generate 根据传入的随机源和长度生成随机字符串,一次随机，多次使用

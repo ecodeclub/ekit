@@ -15,6 +15,8 @@
 package sqlx
 
 import (
+	"bytes"
+	"database/sql"
 	"errors"
 	"fmt"
 	"reflect"
@@ -54,6 +56,7 @@ func NewSQLRowsScanner(r Rows) (Scanner, error) {
 	for i, columnType := range columnTypes {
 		typ := columnType.ScanType()
 		for typ.Kind() == reflect.Pointer {
+			// 兼容 sqlite，理论上来说其他 driver 不应该命中这个分支
 			typ = typ.Elem()
 		}
 		columnValuePointers[i] = reflect.New(typ).Interface()
@@ -84,7 +87,12 @@ func (s *sqlRowsScanner) Scan() ([]any, error) {
 func (s *sqlRowsScanner) columnValues() []any {
 	values := make([]any, len(s.columnValuePointers))
 	for i := 0; i < len(s.columnValuePointers); i++ {
-		values[i] = reflect.ValueOf(s.columnValuePointers[i]).Elem().Interface()
+		val := reflect.ValueOf(s.columnValuePointers[i]).Elem().Interface()
+		// sql.RawBytes 存在内存共享的问题，所以需要执行复制
+		if rawBytes, ok := val.(sql.RawBytes); ok {
+			val = sql.RawBytes(bytes.Clone(rawBytes))
+		}
+		values[i] = val
 	}
 	return values
 }

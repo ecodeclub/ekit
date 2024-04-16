@@ -210,6 +210,42 @@ func TestBuiltinMap_Values(t *testing.T) {
 	}
 }
 
+func TestBuiltinMap_Len(t *testing.T) {
+	testCases := []struct {
+		name string
+		data map[string]string
+
+		wantLen int64
+	}{
+		{
+			name: "got len",
+			data: map[string]string{
+				"key1": "val1",
+				"key2": "val2",
+				"key3": "val3",
+				"key4": "val4",
+			},
+			wantLen: 4,
+		},
+		{
+			name:    "empty map",
+			data:    map[string]string{},
+			wantLen: 0,
+		},
+		{
+			name:    "nil map",
+			wantLen: 0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := builtinMapOf[string, string](tc.data)
+			assert.Equal(t, tc.wantLen, m.Len())
+		})
+	}
+}
+
 func builtinMapOf[K comparable, V any](data map[K]V) *builtinMap[K, V] {
 	return &builtinMap[K, V]{data: data}
 }

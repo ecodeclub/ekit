@@ -16,7 +16,6 @@ package ekit
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/ecodeclub/ekit/internal/errs"
@@ -50,7 +49,7 @@ func TestAnyValue_Int(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("int", reflect.TypeOf("").String()),
+			err: errs.NewErrInvalidType("int", ""),
 		},
 	}
 	for _, tt := range tests {
@@ -136,7 +135,7 @@ func TestAnyValue_Uint(t *testing.T) {
 			val: AnyValue{
 				Val: []string{"111"},
 			},
-			err: errs.NewErrInvalidType("uint", reflect.TypeOf([]string{"111"}).String()),
+			err: errs.NewErrInvalidType("uint", []string{"111"}),
 		},
 	}
 	for _, tt := range tests {
@@ -222,7 +221,7 @@ func TestAnyValue_Int32(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("int32", reflect.TypeOf("").String()),
+			err: errs.NewErrInvalidType("int32", ""),
 		},
 	}
 	for _, tt := range tests {
@@ -308,7 +307,7 @@ func TestAnyValue_Uint32(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("uint32", reflect.TypeOf("").String()),
+			err: errs.NewErrInvalidType("uint32", ""),
 		},
 	}
 	for _, tt := range tests {
@@ -395,7 +394,7 @@ func TestAnyValue_Int64(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("int64", reflect.TypeOf("").String()),
+			err: errs.NewErrInvalidType("int64", ""),
 		},
 	}
 	for _, tt := range tests {
@@ -481,7 +480,7 @@ func TestAnyValue_Uint64(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("uint64", reflect.TypeOf("").String()),
+			err: errs.NewErrInvalidType("uint64", ""),
 		},
 	}
 	for _, tt := range tests {
@@ -567,7 +566,7 @@ func TestAnyValue_Float32(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("float32", reflect.TypeOf("").String()),
+			err: errs.NewErrInvalidType("float32", ""),
 		},
 	}
 	for _, tt := range tests {
@@ -654,7 +653,7 @@ func TestAnyValue_Float64(t *testing.T) {
 			val: AnyValue{
 				Val: "",
 			},
-			err: errs.NewErrInvalidType("float64", reflect.TypeOf("").String()),
+			err: errs.NewErrInvalidType("float64", ""),
 		},
 	}
 	for _, tt := range tests {
@@ -740,7 +739,7 @@ func TestAnyValue_String(t *testing.T) {
 			val: AnyValue{
 				Val: 1,
 			},
-			err: errs.NewErrInvalidType("string", reflect.TypeOf(111).String()),
+			err: errs.NewErrInvalidType("string", 1),
 		},
 	}
 	for _, tt := range tests {
@@ -826,7 +825,7 @@ func TestAnyValue_Bytes(t *testing.T) {
 			val: AnyValue{
 				Val: 1,
 			},
-			err: errs.NewErrInvalidType("[]byte", reflect.TypeOf(111).String()),
+			err: errs.NewErrInvalidType("[]byte", 1),
 		},
 	}
 	for _, tt := range tests {
@@ -912,7 +911,7 @@ func TestAnyValue_Bool(t *testing.T) {
 			val: AnyValue{
 				Val: 1,
 			},
-			err: errs.NewErrInvalidType("bool", reflect.TypeOf(1).String()),
+			err: errs.NewErrInvalidType("bool", 1),
 		},
 	}
 	for _, tt := range tests {
@@ -1169,7 +1168,7 @@ func TestAnyValue_AsInt(t *testing.T) {
 			val: AnyValue{
 				Val: []int{1},
 			},
-			err: errs.NewErrInvalidType("int", "[]int"),
+			err: errs.NewErrInvalidType("int", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1216,7 +1215,7 @@ func TestAnyValue_AsInt8(t *testing.T) {
 			val: AnyValue{
 				Val: []int{1},
 			},
-			err: errs.NewErrInvalidType("int8", "[]int"),
+			err: errs.NewErrInvalidType("int8", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1263,7 +1262,7 @@ func TestAnyValue_AsInt16(t *testing.T) {
 			val: AnyValue{
 				Val: []int{1},
 			},
-			err: errs.NewErrInvalidType("int16", "[]int"),
+			err: errs.NewErrInvalidType("int16", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1310,7 +1309,7 @@ func TestAnyValue_AsInt32(t *testing.T) {
 			val: AnyValue{
 				Val: []int{1},
 			},
-			err: errs.NewErrInvalidType("int32", "[]int"),
+			err: errs.NewErrInvalidType("int32", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1357,7 +1356,7 @@ func TestAnyValue_AsInt64(t *testing.T) {
 			val: AnyValue{
 				Val: []int{1},
 			},
-			err: errs.NewErrInvalidType("int64", "[]int"),
+			err: errs.NewErrInvalidType("int64", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1404,7 +1403,7 @@ func TestAnyValue_AsUint(t *testing.T) {
 			val: AnyValue{
 				Val: []int{1},
 			},
-			err: errs.NewErrInvalidType("uint", "[]int"),
+			err: errs.NewErrInvalidType("uint", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1451,7 +1450,7 @@ func TestAnyValue_AsUint8(t *testing.T) {
 			val: AnyValue{
 				Val: []int{1},
 			},
-			err: errs.NewErrInvalidType("uint8", "[]int"),
+			err: errs.NewErrInvalidType("uint8", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1498,7 +1497,7 @@ func TestAnyValue_AsUint16(t *testing.T) {
 			val: AnyValue{
 				Val: []int{1},
 			},
-			err: errs.NewErrInvalidType("uint16", "[]int"),
+			err: errs.NewErrInvalidType("uint16", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1545,7 +1544,7 @@ func TestAnyValue_AsUint32(t *testing.T) {
 			val: AnyValue{
 				Val: []int{1},
 			},
-			err: errs.NewErrInvalidType("uint32", "[]int"),
+			err: errs.NewErrInvalidType("uint32", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1592,7 +1591,7 @@ func TestAnyValue_AsUint64(t *testing.T) {
 			val: AnyValue{
 				Val: []int{1},
 			},
-			err: errs.NewErrInvalidType("uint64", "[]int"),
+			err: errs.NewErrInvalidType("uint64", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1639,7 +1638,7 @@ func TestAnyValue_AsFloat32(t *testing.T) {
 			val: AnyValue{
 				Val: []int{1},
 			},
-			err: errs.NewErrInvalidType("float32", "[]int"),
+			err: errs.NewErrInvalidType("float32", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1685,7 +1684,7 @@ func TestAnyValue_AsFloat64(t *testing.T) {
 			val: AnyValue{
 				Val: []int{1},
 			},
-			err: errs.NewErrInvalidType("float64", "[]int"),
+			err: errs.NewErrInvalidType("float64", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1732,7 +1731,7 @@ func TestAnyValue_AsBytes(t *testing.T) {
 				Val: []int{1},
 			},
 			want: []byte{},
-			err:  errs.NewErrInvalidType("[]byte", "[]int"),
+			err:  errs.NewErrInvalidType("[]byte", []int{1}),
 		},
 		{
 			name: "value exists error case:",
@@ -1800,14 +1799,14 @@ func TestAnyValue_AsString(t *testing.T) {
 			val: AnyValue{
 				Val: []string{"h", "e", "llo"},
 			},
-			err: errs.NewErrInvalidType("[]byte", "[]string"),
+			err: errs.NewErrInvalidType("[]byte", []string{"h", "e", "llo"}),
 		},
 		{
 			name: "type conversion failed by int",
 			val: AnyValue{
 				Val: []int{1, 2, 3, 4, 5},
 			},
-			err: errs.NewErrInvalidType("[]byte", "[]int"),
+			err: errs.NewErrInvalidType("[]byte", []int{1, 2, 3, 4, 5}),
 		},
 		{
 			name: "unsupported type case:",
@@ -1828,4 +1827,46 @@ func TestAnyValue_AsString(t *testing.T) {
 			assert.Equal(t, tt.err, err)
 		})
 	}
+}
+
+func TestAnyValue_JSONScan(t *testing.T) {
+	testCases := []struct {
+		name string
+
+		av AnyValue
+
+		wantUser User
+		wantErr  error
+	}{
+		{
+			name: "OK",
+			av: AnyValue{
+				Val: `{"name": "Tom"}`,
+			},
+			wantUser: User{
+				Name: "Tom",
+			},
+		},
+
+		{
+			name: "error",
+			av: AnyValue{
+				Err: errors.New("mock error"),
+			},
+			wantErr: errors.New("mock error"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var u User
+			err := tc.av.JSONScan(&u)
+			assert.Equal(t, tc.wantErr, err)
+			assert.Equal(t, tc.wantUser, u)
+		})
+	}
+}
+
+type User struct {
+	Name string `json:"name"`
 }
