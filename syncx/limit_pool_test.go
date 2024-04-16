@@ -42,8 +42,8 @@ func TestLimitPool(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			buf := pool.Get()
-
+			buf, ok := pool.Get()
+			assert.True(t, ok)
 			assert.NotZero(t, buf)
 			assert.Equal(t, string(expectedVal), string(buf))
 
@@ -55,14 +55,20 @@ func TestLimitPool(t *testing.T) {
 	close(bufChan)
 
 	// 超过最大申请次数返回零值
-	assert.Zero(t, pool.Get())
+	val, ok := pool.Get()
+	assert.False(t, ok)
+	assert.Zero(t, val)
 
 	// 归还一个
 	pool.Put(<-bufChan)
 
 	// 再次申请仍可以拿到非零值缓冲区
-	assert.NotZero(t, string(expectedVal), string(pool.Get()))
+	val, ok = pool.Get()
+	assert.True(t, ok)
+	assert.NotZero(t, string(expectedVal), string(val))
 
 	// 超过最大申请次数返回零值
-	assert.Zero(t, pool.Get())
+	val, ok = pool.Get()
+	assert.False(t, ok)
+	assert.Zero(t, val)
 }

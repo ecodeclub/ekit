@@ -37,13 +37,15 @@ func NewLimitPool[T any](maxTokens int, factory func() T) *LimitPool[T] {
 }
 
 // Get 取出一个元素
-func (l *LimitPool[T]) Get() T {
+// 如果返回值是 true，则代表确实从 Pool 里面取出来了一个
+// 否则是新建了一个
+func (l *LimitPool[T]) Get() (T, bool) {
 	if l.tokens.Add(-1) < 0 {
 		l.tokens.Add(1)
 		var zero T
-		return zero
+		return zero, false
 	}
-	return l.pool.Get()
+	return l.pool.Get(), true
 }
 
 // Put 放回去一个元素
