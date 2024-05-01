@@ -18,6 +18,8 @@ import (
 	"errors"
 
 	"github.com/ecodeclub/ekit"
+	"github.com/ecodeclub/ekit/internal/iterator"
+	"github.com/ecodeclub/ekit/tuple/pair"
 )
 
 type color bool
@@ -31,6 +33,9 @@ var (
 	ErrRBTreeSameRBNode = errors.New("ekit: RBTree不能添加重复节点Key")
 	ErrRBTreeNotRBNode  = errors.New("ekit: RBTree不存在节点Key")
 	// errRBTreeCantRepaceNil = errors.New("ekit: RBTree不能将节点替换为nil")
+	ErrRBTreeIteratorNoNext  = errors.New("ekit: RBTree Iterator没有后继节点")
+	ErrRBTreeIteratorNodeNil = errors.New("ekit: RBTree Iterator指向的节点为nil")
+	ErrRBTreeIteratorInvalid = errors.New("ekit: RBTree Iterator不合法")
 )
 
 type RBTree[K any, V any] struct {
@@ -51,6 +56,26 @@ type rbNode[K any, V any] struct {
 	key                 K
 	value               V
 	left, right, parent *rbNode[K, V]
+}
+
+func (node *rbNode[K, V]) getNext() *rbNode[K, V] {
+	if node == nil {
+		return nil
+	} else if node.right != nil {
+		p := node.right
+		for p.left != nil {
+			p = p.left
+		}
+		return p
+	} else {
+		p := node.parent
+		ch := node
+		for p != nil && ch == p.right {
+			ch = p
+			p = p.parent
+		}
+		return p
+	}
 }
 
 func (node *rbNode[K, V]) setNode(v V) {
@@ -79,6 +104,15 @@ func newRBNode[K any, V any](key K, value V) *rbNode[K, V] {
 	}
 }
 
+// 获取起始点的迭代器
+func (rb *RBTree[K, V]) Begin() iterator.Iterator[pair.Pair[K, V]] {
+	curr := rb.root
+	for curr.left != nil {
+		curr = curr.left
+	}
+	return newRBTreeIterator(curr)
+}
+
 // Add 增加节点
 func (rb *RBTree[K, V]) Add(key K, value V) error {
 	return rb.addNode(newRBNode(key, value))
@@ -95,6 +129,17 @@ func (rb *RBTree[K, V]) Delete(key K) (V, bool) {
 	return v, false
 }
 
+// 删除节点，但是是使用iterator来删除
+func (rb *RBTree[K, V]) DeleteIt(it iterator.Iterator[pair.Pair[K, V]]) (err error) {
+	iter := it.(*rbTreeIterator[K, V])
+	if iter.node != nil {
+		rb.deleteNode(iter.node)
+		return
+	} else {
+		return ErrRBTreeIteratorInvalid
+	}
+}
+
 // Find 查找节点
 func (rb *RBTree[K, V]) Find(key K) (V, error) {
 	var v V
@@ -103,6 +148,16 @@ func (rb *RBTree[K, V]) Find(key K) (V, error) {
 	}
 	return v, ErrRBTreeNotRBNode
 }
+
+// 查找结点 （但是返回iterator）
+func (rb *RBTree[K, V]) FindIt(key K) (iterator.Iterator[pair.Pair[K, V]], error) {
+	if node := rb.findNode(key); node != nil {
+		return newRBTreeIterator(node), nil
+	}
+	return nil, ErrRBTreeNotRBNode
+}
+
+// 给对应的Key 设置 Value
 func (rb *RBTree[K, V]) Set(key K, value V) error {
 	if node := rb.findNode(key); node != nil {
 		node.setNode(value)
@@ -243,24 +298,7 @@ func (rb *RBTree[K, V]) deleteNode(tgt *rbNode[K, V]) {
 // case1: node节点存在右子节点,则右子树的最小节点是node的后继节点
 // case2: node节点不存在右子节点,则其第一个为左节点的祖先的父节点为node的后继节点
 func (rb *RBTree[K, V]) findSuccessor(node *rbNode[K, V]) *rbNode[K, V] {
-	if node == nil {
-		return nil
-	} else if node.right != nil {
-		p := node.right
-		for p.left != nil {
-			p = p.left
-		}
-		return p
-	} else {
-		p := node.parent
-		ch := node
-		for p != nil && ch == p.right {
-			ch = p
-			p = p.parent
-		}
-		return p
-	}
-
+	return node.getNext()
 }
 
 func (rb *RBTree[K, V]) findNode(key K) *rbNode[K, V] {
@@ -543,4 +581,35 @@ func (node *rbNode[K, V]) getBrother() *rbNode[K, V] {
 		return node.getParent().getRight()
 	}
 	return node.getParent().getLeft()
+}
+
+type rbTreeIterator[K any, V any] struct {
+	node *rbNode[K, V]
+}
+
+func (iter *rbTreeIterator[K, V]) Next() {
+	iter.node = iter.node.getNext()
+}
+
+func (iter *rbTreeIterator[K, V]) HasNext() bool {
+	return iter.node.getNext() != nil
+}
+
+func (iter *rbTreeIterator[K, V]) Get() (kvPair pair.Pair[K, V], err error) {
+	if iter.node == nil {
+		err = ErrRBTreeIteratorInvalid
+		return
+	}
+	kvPair = pair.NewPair(iter.node.key, iter.node.value)
+	return
+}
+
+func (iter *rbTreeIterator[K, V]) Valid() bool {
+	return iter.node != nil
+}
+
+func newRBTreeIterator[K any, V any](node *rbNode[K, V]) iterator.Iterator[pair.Pair[K, V]] {
+	return &rbTreeIterator[K, V]{
+		node: node,
+	}
 }
