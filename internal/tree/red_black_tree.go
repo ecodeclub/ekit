@@ -585,23 +585,35 @@ func (node *rbNode[K, V]) getBrother() *rbNode[K, V] {
 
 type rbTreeIterator[K any, V any] struct {
 	node *rbNode[K, V]
+	err  error
 }
 
-func (iter *rbTreeIterator[K, V]) Next() {
+func (iter *rbTreeIterator[K, V]) Next() bool {
+	iter.err = nil
 	iter.node = iter.node.getNext()
+	if iter.node != nil {
+		return true
+	}
+	iter.err = ErrRBTreeIteratorNoNext
+	return false
 }
 
 func (iter *rbTreeIterator[K, V]) HasNext() bool {
 	return iter.node.getNext() != nil
 }
 
-func (iter *rbTreeIterator[K, V]) Get() (kvPair pair.Pair[K, V], err error) {
+func (iter *rbTreeIterator[K, V]) Get() (kvPair pair.Pair[K, V]) {
+	iter.err = nil
 	if iter.node == nil {
-		err = ErrRBTreeIteratorInvalid
+		iter.err = ErrRBTreeIteratorInvalid
 		return
 	}
 	kvPair = pair.NewPair(iter.node.key, iter.node.value)
 	return
+}
+
+func (iter *rbTreeIterator[K, V]) Err() error {
+	return iter.err
 }
 
 func (iter *rbTreeIterator[K, V]) Valid() bool {
