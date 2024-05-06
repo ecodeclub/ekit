@@ -90,7 +90,7 @@ func TestIteratorFind(t *testing.T) {
 		it, err := rbt.FindIt(2)
 		assert.Equal(t, ErrRBTreeNotRBNode, err)
 		assert.Nil(t, it)
-		rbt.Add(2, 104)
+		assert.Nil(t, rbt.Add(2, 104))
 		it, err = rbt.FindIt(2)
 		assert.Nil(t, err)
 		assert.Equal(t, 104, it.Get().Value)
