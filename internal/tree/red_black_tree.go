@@ -131,8 +131,11 @@ func (rb *RBTree[K, V]) Delete(key K) (V, bool) {
 
 // 删除节点，但是是使用iterator来删除
 func (rb *RBTree[K, V]) DeleteIt(it iterator.Iterator[pair.Pair[K, V]]) (err error) {
+	if it == nil {
+		return ErrRBTreeIteratorInvalid
+	}
 	iter := it.(*rbTreeIterator[K, V])
-	if iter.node != nil {
+	if iter.node != nil && iter.node.isValidNode() {
 		rb.deleteNode(iter.node)
 		return
 	} else {
@@ -581,6 +584,32 @@ func (node *rbNode[K, V]) getBrother() *rbNode[K, V] {
 		return node.getParent().getRight()
 	}
 	return node.getParent().getLeft()
+}
+
+func (node *rbNode[K, V]) isValidNode() bool {
+	if node == nil {
+		return false
+	}
+	vis := 0
+	if node.getLeft() != nil {
+		if node.getLeft().getParent() != node {
+			return false
+		}
+		vis++
+	}
+	if node.getRight() != nil {
+		if node.getRight().getParent() != node {
+			return false
+		}
+		vis++
+	}
+	if node.getParent() != nil {
+		if node.getParent().getLeft() != node && node.getParent().getRight() != node {
+			return false
+		}
+		vis++
+	}
+	return vis > 0
 }
 
 type rbTreeIterator[K any, V any] struct {
