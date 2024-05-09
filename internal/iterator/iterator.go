@@ -32,4 +32,7 @@ type Iterator[T any] interface {
 
 	// 判断当前节点是否合法
 	Valid() bool
+
+	// 删除当前节点
+	Delete()
 }

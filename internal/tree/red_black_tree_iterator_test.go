@@ -75,7 +75,8 @@ func TestIteratorFind(t *testing.T) {
 		it, err := rbt.FindIt(-100)
 		assert.Nil(t, err)
 		assert.Equal(t, 102, it.Get().Value)
-		assert.Nil(t, rbt.DeleteIt(it))
+		it.Delete()
+		assert.Nil(t, it.Err())
 		it, err = rbt.FindIt(-100)
 		assert.Equal(t, ErrRBTreeNotRBNode, err)
 		assert.Nil(t, it)
@@ -98,14 +99,6 @@ func TestIteratorFind(t *testing.T) {
 }
 
 func TestIteratorDelete(t *testing.T) {
-	t.Run("删除不存在的节点", func(t *testing.T) {
-		t.Parallel()
-		rbt := NewRBTree[int, int](ekit.ComparatorRealNumber[int])
-		assert.Nil(t, rbt.Add(1, 101))
-		assert.Nil(t, rbt.Add(-100, 102))
-		assert.Nil(t, rbt.Add(100, 103))
-		assert.Equal(t, ErrRBTreeIteratorInvalid, rbt.DeleteIt(nil))
-	})
 	t.Run("重复删除某个节点", func(t *testing.T) {
 		t.Parallel()
 		rbt := NewRBTree[int, int](ekit.ComparatorRealNumber[int])
@@ -114,8 +107,31 @@ func TestIteratorDelete(t *testing.T) {
 		assert.Nil(t, rbt.Add(100, 103))
 		it, err := rbt.FindIt(-100)
 		assert.Nil(t, err)
-		assert.Equal(t, nil, rbt.DeleteIt(it))
-		assert.Equal(t, ErrRBTreeIteratorInvalid, rbt.DeleteIt(it))
+		it.Delete()
+		assert.Equal(t, nil, it.Err())
+		it.Delete()
+		assert.Equal(t, ErrRBTreeIteratorInvalid, it.Err())
+	})
+	t.Run("删除节点后正常遍历", func(t *testing.T) {
+		t.Parallel()
+		rbt := NewRBTree[int, int](ekit.ComparatorRealNumber[int])
+		assert.Nil(t, rbt.Add(1, 101))
+		assert.Nil(t, rbt.Add(-100, 102))
+		assert.Nil(t, rbt.Add(100, 103))
+		assert.Nil(t, rbt.Add(101, 104))
+		assert.Nil(t, rbt.Add(102, 105))
+
+		result := make([]int, 0)
+		for it := rbt.Begin(); it.Valid(); it.Next() {
+			key := it.Get().Key
+			if key == 100 {
+				it.Delete()
+				assert.Nil(t, it.Err())
+				continue
+			}
+			result = append(result, key)
+		}
+		assert.EqualValues(t, []int{-100, 1, 101, 102}, result)
 	})
 }
 

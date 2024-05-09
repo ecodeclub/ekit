@@ -16,6 +16,7 @@ package tree
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/ecodeclub/ekit"
 	"github.com/ecodeclub/ekit/internal/iterator"
@@ -105,12 +106,16 @@ func newRBNode[K any, V any](key K, value V) *rbNode[K, V] {
 }
 
 // 获取起始点的迭代器
-func (rb *RBTree[K, V]) Begin() iterator.Iterator[pair.Pair[K, V]] {
+func (rb *RBTree[K, V]) beginNode() *rbNode[K, V] {
 	curr := rb.root
 	for curr.left != nil {
 		curr = curr.left
 	}
-	return newRBTreeIterator(curr)
+	return curr
+}
+
+func (rb *RBTree[K, V]) Begin() iterator.Iterator[pair.Pair[K, V]] {
+	return newRBTreeIterator(rb, rb.beginNode())
 }
 
 // Add 增加节点
@@ -129,18 +134,12 @@ func (rb *RBTree[K, V]) Delete(key K) (V, bool) {
 	return v, false
 }
 
-// 删除节点，但是是使用iterator来删除
-func (rb *RBTree[K, V]) DeleteIt(it iterator.Iterator[pair.Pair[K, V]]) (err error) {
-	if it == nil {
-		return ErrRBTreeIteratorInvalid
+// 查找结点 （但是返回iterator）
+func (rb *RBTree[K, V]) FindIt(key K) (iterator.Iterator[pair.Pair[K, V]], error) {
+	if node := rb.findNode(key); node != nil {
+		return newRBTreeIterator(rb, node), nil
 	}
-	iter := it.(*rbTreeIterator[K, V])
-	if iter.node != nil && iter.node.isValidNode() {
-		rb.deleteNode(iter.node)
-		return
-	} else {
-		return ErrRBTreeIteratorInvalid
-	}
+	return nil, ErrRBTreeNotRBNode
 }
 
 // Find 查找节点
@@ -150,14 +149,6 @@ func (rb *RBTree[K, V]) Find(key K) (V, error) {
 		return node.value, nil
 	}
 	return v, ErrRBTreeNotRBNode
-}
-
-// 查找结点 （但是返回iterator）
-func (rb *RBTree[K, V]) FindIt(key K) (iterator.Iterator[pair.Pair[K, V]], error) {
-	if node := rb.findNode(key); node != nil {
-		return newRBTreeIterator(node), nil
-	}
-	return nil, ErrRBTreeNotRBNode
 }
 
 // 给对应的Key 设置 Value
@@ -613,14 +604,18 @@ func (node *rbNode[K, V]) isValidNode() bool {
 }
 
 type rbTreeIterator[K any, V any] struct {
-	node *rbNode[K, V]
-	err  error
+	rbTree   *RBTree[K, V]
+	currNode *rbNode[K, V]
+	nxtNode  *rbNode[K, V]
+	err      error
 }
 
 func (iter *rbTreeIterator[K, V]) Next() bool {
+	fmt.Println(iter.currNode.key, iter.currNode.value)
 	iter.err = nil
-	iter.node = iter.node.getNext()
-	if iter.node != nil {
+	iter.currNode = iter.nxtNode
+	if iter.currNode != nil {
+		iter.nxtNode = iter.currNode.getNext()
 		return true
 	}
 	iter.err = ErrRBTreeIteratorNoNext
@@ -628,16 +623,16 @@ func (iter *rbTreeIterator[K, V]) Next() bool {
 }
 
 func (iter *rbTreeIterator[K, V]) HasNext() bool {
-	return iter.node.getNext() != nil
+	return iter.nxtNode != nil
 }
 
 func (iter *rbTreeIterator[K, V]) Get() (kvPair pair.Pair[K, V]) {
 	iter.err = nil
-	if iter.node == nil {
+	if iter.currNode == nil {
 		iter.err = ErrRBTreeIteratorInvalid
 		return
 	}
-	kvPair = pair.NewPair(iter.node.key, iter.node.value)
+	kvPair = pair.NewPair(iter.currNode.key, iter.currNode.value)
 	return
 }
 
@@ -646,11 +641,23 @@ func (iter *rbTreeIterator[K, V]) Err() error {
 }
 
 func (iter *rbTreeIterator[K, V]) Valid() bool {
-	return iter.node != nil
+	return iter.currNode != nil
 }
 
-func newRBTreeIterator[K any, V any](node *rbNode[K, V]) iterator.Iterator[pair.Pair[K, V]] {
-	return &rbTreeIterator[K, V]{
-		node: node,
+func (iter *rbTreeIterator[K, V]) Delete() {
+	iter.err = nil
+	if !iter.currNode.isValidNode() {
+		iter.err = ErrRBTreeIteratorInvalid
+		return
 	}
+	iter.rbTree.deleteNode(iter.currNode)
+}
+
+func newRBTreeIterator[K any, V any](rbTree *RBTree[K, V], rbNode *rbNode[K, V]) iterator.Iterator[pair.Pair[K, V]] {
+	iter := &rbTreeIterator[K, V]{
+		rbTree:   rbTree,
+		currNode: rbNode,
+	}
+	iter.nxtNode = iter.currNode.getNext()
+	return iter
 }
