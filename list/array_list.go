@@ -16,6 +16,7 @@ package list
 
 import (
 	"github.com/ecodeclub/ekit/internal/errs"
+	"github.com/ecodeclub/ekit/internal/iterator"
 	"github.com/ecodeclub/ekit/internal/slice"
 )
 
@@ -25,7 +26,8 @@ var (
 
 // ArrayList 基于切片的简单封装
 type ArrayList[T any] struct {
-	vals []T
+	vals     []T
+	modCount int
 }
 
 // NewArrayList 初始化一个len为0，cap为cap的ArrayList
@@ -50,6 +52,7 @@ func (a *ArrayList[T]) Get(index int) (t T, e error) {
 
 // Append 往ArrayList里追加数据
 func (a *ArrayList[T]) Append(ts ...T) error {
+	a.Increment()
 	a.vals = append(a.vals, ts...)
 	return nil
 }
@@ -57,12 +60,14 @@ func (a *ArrayList[T]) Append(ts ...T) error {
 // Add 在ArrayList下标为index的位置插入一个元素
 // 当index等于ArrayList长度等同于append
 func (a *ArrayList[T]) Add(index int, t T) (err error) {
+	a.Increment()
 	a.vals, err = slice.Add(a.vals, t, index)
 	return
 }
 
 // Set 设置ArrayList里index位置的值为t
 func (a *ArrayList[T]) Set(index int, t T) error {
+	a.Increment()
 	length := len(a.vals)
 	if index >= length || index < 0 {
 		return errs.NewErrIndexOutOfRange(length, index)
@@ -76,6 +81,7 @@ func (a *ArrayList[T]) Set(index int, t T) error {
 // - 如果容量 (64, 2048]，如果长度是容量的 1/4，那么就会缩容为原本的一半
 // - 如果此时容量 <= 64，那么我们将不会执行缩容。在容量很小的情况下，浪费的内存很少，所以没必要消耗 CPU去执行缩容
 func (a *ArrayList[T]) Delete(index int) (T, error) {
+	a.Increment()
 	res, t, err := slice.Delete(a.vals, index)
 	if err != nil {
 		return t, err
@@ -87,6 +93,7 @@ func (a *ArrayList[T]) Delete(index int) (T, error) {
 
 // shrink 数组缩容
 func (a *ArrayList[T]) shrink() {
+	a.Increment()
 	a.vals = slice.Shrink(a.vals)
 }
 
@@ -112,4 +119,97 @@ func (a *ArrayList[T]) AsSlice() []T {
 	res := make([]T, len(a.vals))
 	copy(res, a.vals)
 	return res
+}
+
+func (p *ArrayList[T]) GetModCount() int {
+	return p.modCount
+}
+
+// Increment 这里更倾向对于修改为内部方法
+func (p *ArrayList[T]) Increment() {
+	if p.modCount == 10000000 {
+		p.modCount = 0
+	}
+	p.modCount++
+}
+
+func (a *ArrayList[T]) Iterator() iterator.Iterator[T] {
+	return &iter[T]{
+		cur:         0,
+		prev:        -1,
+		source:      a,
+		curModCount: a.GetModCount(),
+	}
+}
+
+type iter[T any] struct {
+	source      *ArrayList[T]
+	err         error
+	cur         int
+	prev        int
+	curModCount int
+}
+
+func (i *iter[T]) Get() (T, error) {
+	var t T
+	err := i.CheckMod()
+	if err != nil {
+		return t, err
+	}
+	return i.source.Get(i.cur)
+}
+
+func (i *iter[T]) Err() error {
+	return i.err
+}
+
+func (i *iter[T]) Next() (T, error) {
+	var t T
+	err := i.CheckMod()
+	if err != nil {
+		return t, err
+	}
+
+	t, err = i.source.Get(i.cur)
+	if err != nil {
+		return t, err
+	}
+	i.prev = i.cur
+	i.cur++
+	return t, nil
+}
+
+func (i *iter[T]) HasNext() bool {
+	err := i.CheckMod()
+	if err != nil {
+		i.err = err
+		return false
+	}
+	return i.cur < i.source.Len()
+}
+
+func (i *iter[T]) Delete() error {
+	err := i.CheckMod()
+	if err != nil {
+		return err
+	}
+	if i.prev == -1 {
+		return iterator.ErrNoSuchData
+	}
+	_, err = i.source.Delete(i.cur)
+	if err != nil {
+		return err
+	}
+	i.curModCount = i.source.GetModCount()
+	i.cur = i.prev
+	i.prev = -1
+	return nil
+}
+
+// CheckMod 由于有的数据结构支持遍历修改，所有没有加到迭代器里
+func (i *iter[T]) CheckMod() error {
+	if i.curModCount != i.source.GetModCount() {
+		return iterator.ErrStructHasChange
+	}
+	return nil
 }
