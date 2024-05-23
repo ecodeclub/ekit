@@ -43,7 +43,7 @@ func LoadService[T any](dir string, symName string) ([]T, error) {
 			// 打开插件
 			p, err := plugin.Open(path)
 			if err != nil {
-				return   err
+				return err
 			}
 			// 查找变量
 			sym, err := p.Lookup(symName)
