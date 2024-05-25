@@ -15,6 +15,7 @@
 package spi
 
 import (
+	"fmt"
 	"log"
 	"testing"
 
@@ -31,13 +32,13 @@ func Test_LoadService(t *testing.T) {
 	}{
 		{
 			name:    "有一个插件",
-			dir:     "./user_service",
+			dir:     "./testdata/user_service",
 			svcName: "UserSvc",
 			want:    []string{"Get"},
 		},
 		{
 			name:    "有两个插件",
-			dir:     "./user_service2",
+			dir:     "./testdata/user_service2",
 			svcName: "UserSvc",
 			want:    []string{"A", "B"},
 		},
@@ -66,4 +67,15 @@ func Test_LoadService(t *testing.T) {
 
 type UserService interface {
 	Get() string
+}
+
+func ExampleLoadService() {
+	getters, err := LoadService[UserService]("./testdata/user_service", "UserSvc")
+	fmt.Println(err)
+	for _, getter := range getters {
+		fmt.Println(getter.Get())
+	}
+	// Output:
+	// <nil>
+	// Get
 }
