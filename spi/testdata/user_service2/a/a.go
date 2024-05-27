@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate go build --buildmode=plugin -o ../a.so ./a.go
+//go:generate go build  -race --buildmode=plugin  -o ../a.so ./a.go
 
 package main
 
