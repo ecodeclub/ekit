@@ -16,42 +16,86 @@ package spi
 
 import (
 	"fmt"
-	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_LoadService(t *testing.T) {
+type LoadServiceSuite struct {
+	suite.Suite
+}
+
+func (l *LoadServiceSuite) SetupTest() {
+	t := l.T()
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	cmd := exec.Command("go", "generate", "./...")
+	cmd.Dir = filepath.Join(wd, "testdata")
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, fmt.Sprintf("执行 go generate 失败: %v\n%s", err, output))
+}
+
+func (l *LoadServiceSuite) Test_LoadService() {
+	t := l.T()
 	testcases := []struct {
-		name    string
-		dir     string
-		svcName string
-		want    []string
-		wantErr error
+		name     string
+		dir      string
+		svcName  string
+		want     []string
+		checkErr func(err error, t *testing.T)
 	}{
 		{
 			name:    "有一个插件",
 			dir:     "./testdata/user_service",
 			svcName: "UserSvc",
 			want:    []string{"Get"},
+			checkErr: func(err error, t *testing.T) {
+
+			},
 		},
 		{
 			name:    "有两个插件",
 			dir:     "./testdata/user_service2",
 			svcName: "UserSvc",
 			want:    []string{"A", "B"},
+			checkErr: func(err error, t *testing.T) {
+
+			},
 		},
 		{
-			name:    "目录不存在",
-			dir:     "./notfound",
-			wantErr: DirNotFound,
+			name: "目录不存在",
+			dir:  "./notfound",
+			checkErr: func(err error, t *testing.T) {
+				assert.Equal(t, DirNotFound, err)
+			},
+		},
+		{
+			name:    "svcName为空",
+			dir:     "./testdata/user_service2",
+			svcName: "",
+			checkErr: func(err error, t *testing.T) {
+				assert.Equal(t, SymEmptyErr, err)
+			},
+		},
+		{
+			name:    "svcName没找到",
+			dir:     "./testdata/user_service2",
+			svcName: "notfound",
+			checkErr: func(err error, t *testing.T) {
+				assert.NotNil(t, err)
+			},
 		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			list, err := LoadService[UserService](tc.dir, tc.svcName)
-			assert.Equal(t, tc.wantErr, err)
+			tc.checkErr(err, t)
 			if err != nil {
 				return
 			}
@@ -59,10 +103,13 @@ func Test_LoadService(t *testing.T) {
 			for _, svc := range list {
 				ans = append(ans, svc.Get())
 			}
-			log.Println(ans)
 			assert.Equal(t, tc.want, ans)
 		})
 	}
+}
+
+func TestLoadServiceSuite(t *testing.T) {
+	suite.Run(t, new(LoadServiceSuite))
 }
 
 type UserService interface {

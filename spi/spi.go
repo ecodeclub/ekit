@@ -29,13 +29,19 @@ import (
 // 加载到所有的实现
 // LoadService 加载 dir 下面的所有的实现了 T 接口的类型
 
-var DirNotFound = errors.New("目录不存在")
+var (
+	DirNotFound = errors.New("目录不存在")
+	SymEmptyErr = errors.New("结构体名不能为空")
+)
 
 func LoadService[T any](dir string, symName string) ([]T, error) {
 	var services []T
 	// 检查目录是否存在
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return nil, DirNotFound
+	}
+	if symName == "" {
+		return nil, SymEmptyErr
 	}
 	// 遍历目录下的所有 .so 文件
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
