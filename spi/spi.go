@@ -15,7 +15,7 @@
 package spi
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 	"plugin"
@@ -49,12 +49,12 @@ func LoadService[T any](dir string, symName string) ([]T, error) {
 			// 打开插件
 			p, err := plugin.Open(path)
 			if err != nil {
-				return err
+				return errors.Wrap(err,"打开插件失败")
 			}
 			// 查找变量
 			sym, err := p.Lookup(symName)
 			if err != nil {
-				return err
+				return errors.Wrap(err,"从插件中查找对象失败")
 			}
 
 			// 尝试将符号断言为接口类型

@@ -44,58 +44,54 @@ func (l *LoadServiceSuite) SetupTest() {
 func (l *LoadServiceSuite) Test_LoadService() {
 	t := l.T()
 	testcases := []struct {
-		name     string
-		dir      string
-		svcName  string
-		want     []string
-		checkErr func(err error, t *testing.T)
+		name       string
+		dir        string
+		svcName    string
+		want       []string
+		assertFunc assert.ErrorAssertionFunc
 	}{
 		{
-			name:    "有一个插件",
-			dir:     "./testdata/user_service",
-			svcName: "UserSvc",
-			want:    []string{"Get"},
-			checkErr: func(err error, t *testing.T) {
-
-			},
+			name:       "有一个插件",
+			dir:        "./testdata/user_service",
+			svcName:    "UserSvc",
+			want:       []string{"Get"},
+			assertFunc: assert.NoError,
 		},
 		{
-			name:    "有两个插件",
-			dir:     "./testdata/user_service2",
-			svcName: "UserSvc",
-			want:    []string{"A", "B"},
-			checkErr: func(err error, t *testing.T) {
-
-			},
+			name:       "有两个插件",
+			dir:        "./testdata/user_service2",
+			svcName:    "UserSvc",
+			want:       []string{"A", "B"},
+			assertFunc: assert.NoError,
 		},
 		{
 			name: "目录不存在",
 			dir:  "./notfound",
-			checkErr: func(err error, t *testing.T) {
-				assert.Equal(t, DirNotFound, err)
+			assertFunc: func(t assert.TestingT, err error, i ...interface{}) bool {
+				return assert.Equal(t, DirNotFound, err)
 			},
 		},
 		{
 			name:    "svcName为空",
 			dir:     "./testdata/user_service2",
 			svcName: "",
-			checkErr: func(err error, t *testing.T) {
-				assert.Equal(t, SymEmptyErr, err)
+			assertFunc: func(t assert.TestingT, err error, i ...interface{}) bool {
+				return assert.Equal(t, SymEmptyErr, err)
 			},
 		},
 		{
 			name:    "svcName没找到",
 			dir:     "./testdata/user_service2",
 			svcName: "notfound",
-			checkErr: func(err error, t *testing.T) {
-				assert.NotNil(t, err)
+			assertFunc: func(t assert.TestingT, err error, i ...interface{}) bool {
+				return assert.Error(t, err)
 			},
 		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			list, err := LoadService[UserService](tc.dir, tc.svcName)
-			tc.checkErr(err, t)
+			tc.assertFunc(t, err)
 			if err != nil {
 				return
 			}
