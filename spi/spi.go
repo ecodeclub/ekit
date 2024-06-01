@@ -15,10 +15,11 @@
 package spi
 
 import (
-	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 	"plugin"
+
+	"github.com/pkg/errors"
 )
 
 // LoadService 加载 dir 下面的所有的实现了 T 接口的类型
@@ -49,12 +50,12 @@ func LoadService[T any](dir string, symName string) ([]T, error) {
 			// 打开插件
 			p, err := plugin.Open(path)
 			if err != nil {
-				return errors.Wrap(err,"打开插件失败")
+				return errors.Wrap(err, "打开插件失败")
 			}
 			// 查找变量
 			sym, err := p.Lookup(symName)
 			if err != nil {
-				return errors.Wrap(err,"从插件中查找对象失败")
+				return errors.Wrap(err, "从插件中查找对象失败")
 			}
 
 			// 尝试将符号断言为接口类型
