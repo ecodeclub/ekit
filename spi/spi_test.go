@@ -87,6 +87,14 @@ func (l *LoadServiceSuite) Test_LoadService() {
 				return assert.ErrorIs(t, err, ErrSymbolNameNotFound)
 			},
 		},
+		{
+			name:    "加载的对象未实现对应的抽象",
+			dir:     "./testdata/user_service3",
+			svcName: "UserSvc",
+			assertFunc: func(t assert.TestingT, err error, i ...interface{}) bool {
+				return assert.ErrorIs(t, err, ErrInvalidSo)
+			},
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

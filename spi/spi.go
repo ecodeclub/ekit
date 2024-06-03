@@ -66,7 +66,7 @@ func LoadService[T any](dir string, symName string) ([]T, error) {
 			// 尝试将符号断言为接口类型
 			service, ok := sym.(T)
 			if !ok {
-				return errors.New("插件非该接口类型")
+				return ErrInvalidSo
 			}
 			// 收集服务
 			services = append(services, service)
