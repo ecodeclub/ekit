@@ -76,7 +76,7 @@ func (l *LoadServiceSuite) Test_LoadService() {
 			dir:     "./testdata/user_service2",
 			svcName: "",
 			assertFunc: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.Equal(t, ErrSymEmptyErr, err)
+				return assert.Equal(t, ErrSymbolNameIsEmpty, err)
 			},
 		},
 		{

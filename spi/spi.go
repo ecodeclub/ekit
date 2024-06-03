@@ -33,7 +33,7 @@ import (
 
 var (
 	ErrDirNotFound        = errors.New("目录不存在")
-	ErrSymEmptyErr        = errors.New("结构体名不能为空")
+	ErrSymbolNameIsEmpty  = errors.New("结构体名不能为空")
 	ErrOpenPluginFailed   = errors.New("打开插件失败")
 	ErrSymbolNameNotFound = errors.New("从插件中查找对象失败")
 	ErrInvalidSo          = errors.New("插件非该接口类型")
@@ -46,7 +46,7 @@ func LoadService[T any](dir string, symName string) ([]T, error) {
 		return nil, ErrDirNotFound
 	}
 	if symName == "" {
-		return nil, ErrSymEmptyErr
+		return nil, ErrSymbolNameIsEmpty
 	}
 	// 遍历目录下的所有 .so 文件
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
