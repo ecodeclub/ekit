@@ -68,7 +68,7 @@ func (l *LoadServiceSuite) Test_LoadService() {
 			name: "目录不存在",
 			dir:  "./notfound",
 			assertFunc: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.Equal(t, ErrDirNotFound, err)
+				return assert.ErrorIs(t, err, ErrDirNotFound)
 			},
 		},
 		{
@@ -76,7 +76,7 @@ func (l *LoadServiceSuite) Test_LoadService() {
 			dir:     "./testdata/user_service2",
 			svcName: "",
 			assertFunc: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.Equal(t, ErrSymbolNameIsEmpty, err)
+				return assert.ErrorIs(t, err, ErrSymbolNameIsEmpty)
 			},
 		},
 		{
