@@ -32,11 +32,11 @@ import (
 // LoadService 加载 dir 下面的所有的实现了 T 接口的类型
 
 var (
-	ErrDirNotFound      = errors.New("目录不存在")
-	ErrSymEmptyErr      = errors.New("结构体名不能为空")
-	ErrOpenPluginFailed = errors.New("打开插件失败")
+	ErrDirNotFound        = errors.New("目录不存在")
+	ErrSymEmptyErr        = errors.New("结构体名不能为空")
+	ErrOpenPluginFailed   = errors.New("打开插件失败")
 	ErrSymbolNameNotFound = errors.New("从插件中查找对象失败")
-	ErrInvalidSo = errors.New("插件非该接口类型")
+	ErrInvalidSo          = errors.New("插件非该接口类型")
 )
 
 func LoadService[T any](dir string, symName string) ([]T, error) {
