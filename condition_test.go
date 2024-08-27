@@ -15,8 +15,9 @@
 package ekit
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestIfThenElse(t *testing.T) {
