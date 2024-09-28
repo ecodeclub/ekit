@@ -1,3 +1,16 @@
+// Copyright 2021 ecodeclub
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package list
 
 import (
@@ -89,15 +102,23 @@ func (a *CopyOnWriteArrayList[T]) Set(index int, t T) error {
 func (a *CopyOnWriteArrayList[T]) Delete(index int) (T, error) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	newItems := make([]T, len(a.vals))
-	copy(newItems, a.vals)
-	res, t, err := slice.Delete(newItems, index)
-	if err != nil {
-		return t, err
+	var ret T
+	n := len(a.vals)
+	if index >= n || index < 0 {
+		return ret, errs.NewErrIndexOutOfRange(n, index)
 	}
-	newItems = res
+	newItems := make([]T, len(a.vals)-1)
+	item := 0
+	for i, v := range a.vals {
+		if i == index {
+			ret = v
+			continue
+		}
+		newItems[item] = v
+		item++
+	}
 	a.vals = newItems
-	return t, nil
+	return ret, nil
 }
 
 func (a *CopyOnWriteArrayList[T]) Len() int {
