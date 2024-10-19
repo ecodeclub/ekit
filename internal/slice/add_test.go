@@ -90,3 +90,39 @@ func TestAdd(t *testing.T) {
 		})
 	}
 }
+
+func OldAdd[T any](src []T, element T, index int) ([]T, error) {
+	length := len(src)
+	if index < 0 || index > length {
+		return nil, errs.NewErrIndexOutOfRange(length, index)
+	}
+
+	//先将src扩展一个元素
+	var zeroValue T
+	src = append(src, zeroValue)
+	for i := len(src) - 1; i > index; i-- {
+		if i-1 >= 0 {
+			src[i] = src[i-1]
+		}
+	}
+	src[index] = element
+	return src, nil
+}
+
+func Benchmark_Add(b *testing.B) {
+
+	vals := []int{1, 5, 6, 3, 7}
+
+	b.Run("Newadd", func(b *testing.B) {
+		b.ReportAllocs() // 开启内存分配报告
+		for i := 0; i < b.N; i++ {
+			Add(vals, 785, 3)
+		}
+	})
+	b.Run("Oldadd", func(b *testing.B) {
+		b.ReportAllocs() // 开启内存分配报告
+		for i := 0; i < b.N; i++ {
+			OldAdd(vals, 785, 3)
+		}
+	})
+}

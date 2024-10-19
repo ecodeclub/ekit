@@ -14,7 +14,9 @@
 
 package slice
 
-import "github.com/ecodeclub/ekit/internal/errs"
+import (
+	"github.com/ecodeclub/ekit/internal/errs"
+)
 
 func Add[T any](src []T, element T, index int) ([]T, error) {
 	length := len(src)
@@ -22,14 +24,18 @@ func Add[T any](src []T, element T, index int) ([]T, error) {
 		return nil, errs.NewErrIndexOutOfRange(length, index)
 	}
 
-	//先将src扩展一个元素
-	var zeroValue T
-	src = append(src, zeroValue)
-	for i := len(src) - 1; i > index; i-- {
-		if i-1 >= 0 {
-			src[i] = src[i-1]
-		}
-	}
-	src[index] = element
+	valtmp := make([]T, length+1)
+	// 复制 index 之前的元素
+	copy(valtmp, src[:index])
+
+	// 插入新元素
+	valtmp[index] = element
+
+	// 复制 index 之后的元素
+	copy(valtmp[index+1:], src[index:])
+
+	// 更新原切片
+	src = valtmp
+
 	return src, nil
 }
