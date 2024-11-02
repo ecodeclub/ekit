@@ -14,11 +14,19 @@
 
 package ekit
 
-// IfThenElse 根据条件返回对应的泛型结果，请注意，结果值在传入时就会访问，请务必确认其合法性
-// 例：传 trueValue 时传入了一个指针对象并调用其方法，需要先判空
+// IfThenElse 根据条件返回对应的泛型结果
+// 注意避免结果的空指针问题
 func IfThenElse[T any](condition bool, trueValue, falseValue T) T {
 	if condition {
 		return trueValue
 	}
 	return falseValue
+}
+
+// IfThenElseFunc 根据条件执行对应的函数并返回泛型结果
+func IfThenElseFunc[T any](condition bool, trueFunc, falseFunc func() T) T {
+	if condition {
+		return trueFunc()
+	}
+	return falseFunc()
 }

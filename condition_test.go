@@ -15,6 +15,8 @@
 package ekit
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,4 +26,37 @@ func TestIfThenElse(t *testing.T) {
 	i := 7
 	i = IfThenElse(false, i, 0)
 	assert.Equal(t, i, 0)
+}
+
+func ExampleIfThenElse() {
+	result := IfThenElse(true, "yes", "no")
+	fmt.Println(result)
+
+	// Output:
+	// yes
+}
+
+func TestIfThenElseFunc(t *testing.T) {
+	err := IfThenElseFunc(true, func() error {
+		return nil
+	}, func() error {
+		return errors.New("some error")
+	})
+	assert.NoError(t, err)
+}
+
+func ExampleIfThenElseFunc() {
+	err := IfThenElseFunc(false, func() error {
+		// do something when condition is true
+		// ...
+		return nil
+	}, func() error {
+		// do something when condition is false
+		// ...
+		return errors.New("some error when execute func2")
+	})
+	fmt.Println(err)
+
+	// Output:
+	// some error when execute func2
 }
