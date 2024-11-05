@@ -33,7 +33,7 @@ func TestResponse_JSONScan(t *testing.T) {
 		{
 			name: "scan成功",
 			resp: &Response{
-				Response: &http.Response{
+				response: &http.Response{
 					Body: io.NopCloser(iox.NewJSONReader(User{Name: "Tom"})),
 				},
 			},

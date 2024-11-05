@@ -20,8 +20,8 @@ import (
 )
 
 type Response struct {
-	*http.Response
-	err error
+	response *http.Response
+	err      error
 }
 
 // JSONScan 将 Body 按照 JSON 反序列化为结构体
@@ -29,6 +29,10 @@ func (r *Response) JSONScan(val any) error {
 	if r.err != nil {
 		return r.err
 	}
-	err := json.NewDecoder(r.Body).Decode(val)
+	err := json.NewDecoder(r.response.Body).Decode(val)
 	return err
+}
+
+func (r *Response) GetResponse() *http.Response {
+	return r.response
 }
