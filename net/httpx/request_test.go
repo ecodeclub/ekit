@@ -116,3 +116,9 @@ func TestRequestAddHeader(t *testing.T) {
 type User struct {
 	Name string
 }
+
+func TestNewRequest_ReturnError(t *testing.T) {
+	req := NewRequest(context.Background(), http.MethodGet, "://localhost:80/a")
+	assert.NotNil(t, req.err)
+	assert.Nil(t, req.req)
+}
