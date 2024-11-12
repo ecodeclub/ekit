@@ -40,6 +40,10 @@ func TestRequest_JSONBody(t *testing.T) {
 	req = req.JSONBody(User{})
 	assert.NotNil(t, req.req.Body)
 	assert.Equal(t, "application/json", req.req.Header.Get("Content-Type"))
+
+	req2 := NewRequest(context.Background(), http.MethodGet, "://localhost:80/a")
+	assert.NotNil(t, req2.err)
+	assert.Nil(t, req2.req)
 }
 
 func TestRequest_Do(t *testing.T) {
@@ -103,6 +107,10 @@ func TestRequest_AddParam(t *testing.T) {
 		AddParam("key1", "value1").
 		AddParam("key2", "value2")
 	assert.Equal(t, "http://localhost?key1=value1&key2=value2", req.req.URL.String())
+
+	req2 := NewRequest(context.Background(), http.MethodGet, "://localhost:80/a")
+	assert.NotNil(t, req2.err)
+	assert.Nil(t, req2.req)
 }
 
 func TestRequestAddHeader(t *testing.T) {
@@ -111,6 +119,10 @@ func TestRequestAddHeader(t *testing.T) {
 		AddHeader("head1", "val1").AddHeader("head1", "val2")
 	vals := req.req.Header.Values("head1")
 	assert.Equal(t, []string{"val1", "val2"}, vals)
+
+	req2 := NewRequest(context.Background(), http.MethodGet, "://localhost:80/a")
+	assert.NotNil(t, req2.err)
+	assert.Nil(t, req2.req)
 }
 
 type User struct {
