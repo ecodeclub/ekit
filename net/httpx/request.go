@@ -39,6 +39,9 @@ func NewRequest(ctx context.Context, method, url string) *Request {
 
 // JSONBody 使用 JSON body
 func (req *Request) JSONBody(val any) *Request {
+	if req.err != nil {
+		return req
+	}
 	req.req.Body = io.NopCloser(iox.NewJSONReader(val))
 	req.req.Header.Set("Content-Type", "application/json")
 	return req
@@ -50,6 +53,9 @@ func (req *Request) Client(cli *http.Client) *Request {
 }
 
 func (req *Request) AddHeader(key string, value string) *Request {
+	if req.err != nil {
+		return req
+	}
 	req.req.Header.Add(key, value)
 	return req
 }
@@ -57,6 +63,9 @@ func (req *Request) AddHeader(key string, value string) *Request {
 // AddParam 添加查询参数
 // 这个方法性能不好，但是好用
 func (req *Request) AddParam(key string, value string) *Request {
+	if req.err != nil {
+		return req
+	}
 	q := req.req.URL.Query()
 	q.Add(key, value)
 	req.req.URL.RawQuery = q.Encode()
