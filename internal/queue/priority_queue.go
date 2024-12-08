@@ -35,12 +35,12 @@ type PriorityQueue[T any] struct {
 	compare ekit.Comparator[T]
 	// 队列容量
 	capacity int
-	// 队列中的元素，为便于计算父子节点的index，0位置留空，根节点从1开始
+	// 队列中的元素，根节点从0开始
 	data []T
 }
 
 func (p *PriorityQueue[T]) Len() int {
-	return len(p.data) - 1
+	return len(p.data)
 }
 
 // Cap 无界队列返回0，有界队列返回创建队列时设置的值
@@ -53,11 +53,11 @@ func (p *PriorityQueue[T]) IsBoundless() bool {
 }
 
 func (p *PriorityQueue[T]) isFull() bool {
-	return p.capacity > 0 && len(p.data)-1 == p.capacity
+	return p.capacity > 0 && len(p.data) == p.capacity
 }
 
 func (p *PriorityQueue[T]) isEmpty() bool {
-	return len(p.data) < 2
+	return len(p.data) < 1
 }
 
 func (p *PriorityQueue[T]) Peek() (T, error) {
@@ -65,7 +65,7 @@ func (p *PriorityQueue[T]) Peek() (T, error) {
 		var t T
 		return t, ErrEmptyQueue
 	}
-	return p.data[1], nil
+	return p.data[0], nil
 }
 
 func (p *PriorityQueue[T]) Enqueue(t T) error {
@@ -74,11 +74,12 @@ func (p *PriorityQueue[T]) Enqueue(t T) error {
 	}
 
 	p.data = append(p.data, t)
-	node, parent := len(p.data)-1, (len(p.data)-1)/2
-	for parent > 0 && p.compare(p.data[node], p.data[parent]) < 0 {
+	node := len(p.data) - 1
+	parent := (node - 1) / 2
+	for parent >= 0 && p.compare(p.data[node], p.data[parent]) < 0 {
 		p.data[parent], p.data[node] = p.data[node], p.data[parent]
 		node = parent
-		parent = parent / 2
+		parent = (parent - 1) >> 1
 	}
 
 	return nil
@@ -90,11 +91,11 @@ func (p *PriorityQueue[T]) Dequeue() (T, error) {
 		return t, ErrEmptyQueue
 	}
 
-	pop := p.data[1]
-	p.data[1] = p.data[len(p.data)-1]
+	pop := p.data[0]
+	p.data[0] = p.data[len(p.data)-1]
 	p.data = p.data[:len(p.data)-1]
 	p.shrinkIfNecessary()
-	p.heapify(p.data, len(p.data)-1, 1)
+	p.heapify(p.data, len(p.data), 0)
 	return pop, nil
 }
 
@@ -107,10 +108,10 @@ func (p *PriorityQueue[T]) shrinkIfNecessary() {
 func (p *PriorityQueue[T]) heapify(data []T, n, i int) {
 	minPos := i
 	for {
-		if left := i * 2; left <= n && p.compare(data[left], data[minPos]) < 0 {
+		if left := i*2 + 1; left < n && p.compare(data[left], data[minPos]) < 0 {
 			minPos = left
 		}
-		if right := i*2 + 1; right <= n && p.compare(data[right], data[minPos]) < 0 {
+		if right := i*2 + 2; right < n && p.compare(data[right], data[minPos]) < 0 {
 			minPos = right
 		}
 		if minPos == i {
@@ -123,14 +124,14 @@ func (p *PriorityQueue[T]) heapify(data []T, n, i int) {
 
 // NewPriorityQueue 创建优先队列 capacity <= 0 时，为无界队列，否则有有界队列
 func NewPriorityQueue[T any](capacity int, compare ekit.Comparator[T]) *PriorityQueue[T] {
-	sliceCap := capacity + 1
+	sliceCap := capacity
 	if capacity < 1 {
 		capacity = 0
 		sliceCap = 64
 	}
 	return &PriorityQueue[T]{
 		capacity: capacity,
-		data:     make([]T, 1, sliceCap),
+		data:     make([]T, 0, sliceCap),
 		compare:  compare,
 	}
 }
