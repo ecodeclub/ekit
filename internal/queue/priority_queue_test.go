@@ -179,25 +179,25 @@ func TestPriorityQueue_EnqueueElement(t *testing.T) {
 			name:      "新加入的元素是最大的",
 			data:      []int{10, 8, 7, 6, 2},
 			element:   20,
-			wantSlice: []int{0, 2, 6, 8, 10, 7, 20},
+			wantSlice: []int{2, 6, 8, 10, 7, 20},
 		},
 		{
 			name:      "新加入的元素是最小的",
 			data:      []int{10, 8, 7, 6, 2},
 			element:   1,
-			wantSlice: []int{0, 1, 6, 2, 10, 7, 8},
+			wantSlice: []int{1, 6, 2, 10, 7, 8},
 		},
 		{
 			name:      "新加入的元素子区间中",
 			data:      []int{10, 8, 7, 6, 2},
 			element:   5,
-			wantSlice: []int{0, 2, 6, 5, 10, 7, 8},
+			wantSlice: []int{2, 6, 5, 10, 7, 8},
 		},
 		{
 			name:      "新加入的元素与已有元素相同",
 			data:      []int{10, 8, 7, 6, 2},
 			element:   6,
-			wantSlice: []int{0, 2, 6, 6, 10, 7, 8},
+			wantSlice: []int{2, 6, 6, 10, 7, 8},
 		},
 	}
 	for _, tc := range testCases {
@@ -227,24 +227,24 @@ func TestPriorityQueue_EnqueueHeapStruct(t *testing.T) {
 			capacity:  len(data),
 			data:      data,
 			pivot:     2,
-			pivotData: []int{0, 4, 6, 5},
-			wantSlice: []int{0, 1, 3, 2, 6, 4, 5},
+			pivotData: []int{4, 6, 5},
+			wantSlice: []int{1, 3, 2, 6, 4, 5},
 		},
 		{
 			name:      "队列不满",
 			capacity:  len(data) * 2,
 			data:      data,
 			pivot:     3,
-			pivotData: []int{0, 3, 4, 5, 6},
-			wantSlice: []int{0, 1, 3, 2, 6, 4, 5},
+			pivotData: []int{3, 4, 5, 6},
+			wantSlice: []int{1, 3, 2, 6, 4, 5},
 		},
 		{
 			name:      "无界队列",
 			capacity:  0,
 			data:      data,
 			pivot:     3,
-			pivotData: []int{0, 3, 4, 5, 6},
-			wantSlice: []int{0, 1, 3, 2, 6, 4, 5},
+			pivotData: []int{3, 4, 5, 6},
+			wantSlice: []int{1, 3, 2, 6, 4, 5},
 		},
 	}
 	for _, tc := range testCases {
@@ -281,13 +281,13 @@ func TestPriorityQueue_Dequeue(t *testing.T) {
 			name:      "只有一个元素",
 			data:      []int{10},
 			wantVal:   10,
-			wantSlice: []int{0},
+			wantSlice: []int{},
 		},
 		{
 			name:      "many",
 			data:      []int{6, 5, 4, 3, 2, 1},
 			wantVal:   1,
-			wantSlice: []int{0, 2, 3, 5, 6, 4},
+			wantSlice: []int{2, 3, 5, 6, 4},
 		},
 	}
 
@@ -319,14 +319,14 @@ func TestPriorityQueue_DequeueComplexCheck(t *testing.T) {
 			capacity: 0,
 			data:     []int{6, 5, 4, 3, 2, 1},
 			pivot:    2,
-			want:     []int{0, 4, 6, 5},
+			want:     []int{4, 6, 5},
 		},
 		{
 			name:     "有边界",
 			capacity: 6,
 			data:     []int{6, 5, 4, 3, 2, 1},
 			pivot:    3,
-			want:     []int{0, 5, 6},
+			want:     []int{5, 6},
 		},
 	}
 	for _, tc := range testCases {
@@ -376,7 +376,7 @@ func TestPriorityQueue_Shrink(t *testing.T) {
 			enqueueLoop: 6,
 			dequeueLoop: 5,
 			expectCap:   32,
-			sliceCap:    33,
+			sliceCap:    32,
 		},
 		{
 			name:        "有界，小于2048, 不足1/4",
@@ -384,7 +384,7 @@ func TestPriorityQueue_Shrink(t *testing.T) {
 			enqueueLoop: 20,
 			dequeueLoop: 5,
 			expectCap:   1000,
-			sliceCap:    1001,
+			sliceCap:    1000,
 		},
 		{
 			name:        "有界，小于2048, 超过1/4",
@@ -392,7 +392,7 @@ func TestPriorityQueue_Shrink(t *testing.T) {
 			enqueueLoop: 400,
 			dequeueLoop: 5,
 			expectCap:   1000,
-			sliceCap:    1001,
+			sliceCap:    1000,
 		},
 		{
 			name:        "有界，大于2048，不足一半",
@@ -400,7 +400,7 @@ func TestPriorityQueue_Shrink(t *testing.T) {
 			enqueueLoop: 400,
 			dequeueLoop: 40,
 			expectCap:   3000,
-			sliceCap:    3001,
+			sliceCap:    3000,
 		},
 		{
 			name:        "有界，大于2048，大于一半",
@@ -408,7 +408,7 @@ func TestPriorityQueue_Shrink(t *testing.T) {
 			enqueueLoop: 2000,
 			dequeueLoop: 5,
 			expectCap:   3000,
-			sliceCap:    3001,
+			sliceCap:    3000,
 		},
 		{
 			name:        "无界，小于64",
