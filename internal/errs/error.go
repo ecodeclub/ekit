@@ -40,3 +40,7 @@ func NewErrInvalidMaxIntervalValue(maxInterval, initialInterval time.Duration) e
 func NewErrRetryExhausted(lastErr error) error {
 	return fmt.Errorf("ekit: 超过最大重试次数，业务返回的最后一个 error %w", lastErr)
 }
+
+func NewErrInvalidThresholdValue(threshold int) error {
+	return fmt.Errorf("ekit: 失效比率阈值 [%d]", threshold)
+}

@@ -15,6 +15,7 @@
 package retry
 
 import (
+	"context"
 	"sync/atomic"
 	"time"
 
@@ -38,7 +39,14 @@ func NewFixedIntervalRetryStrategy(interval time.Duration, maxRetries int32) (*F
 	}, nil
 }
 
-func (s *FixedIntervalRetryStrategy) Next() (time.Duration, bool) {
+func (s *FixedIntervalRetryStrategy) Next(ctx context.Context, err error) (time.Duration, bool) {
+	if err != nil {
+		return s.next()
+	}
+	return 0, false
+}
+
+func (s *FixedIntervalRetryStrategy) next() (time.Duration, bool) {
 	retries := atomic.AddInt32(&s.retries, 1)
 	if s.maxRetries <= 0 || retries <= s.maxRetries {
 		return s.interval, true

@@ -41,7 +41,7 @@ func Retry(ctx context.Context,
 		if err == nil {
 			return nil
 		}
-		duration, ok := s.Next()
+		duration, ok := s.Next(ctx, err)
 		if !ok {
 			return errs.NewErrRetryExhausted(err)
 		}

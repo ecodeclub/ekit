@@ -15,6 +15,8 @@
 package retry
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -30,23 +32,28 @@ func TestFixedIntervalRetryStrategy_Next(t *testing.T) {
 
 	testCases := []struct {
 		name     string
+		nextErr  error
+		ctx      context.Context
 		s        *FixedIntervalRetryStrategy
 		interval time.Duration
 
 		isContinue bool
 	}{
 		{
-			name: "init case, retries 0",
+			name:    "init case, retries 0",
+			ctx:     context.Background(),
+			nextErr: errors.New("test error"),
 			s: &FixedIntervalRetryStrategy{
 				maxRetries: 3,
 				interval:   time.Second,
 			},
-
 			interval:   time.Second,
 			isContinue: true,
 		},
 		{
-			name: "retries equals to MaxRetries 3 after the increase",
+			name:    "retries equals to MaxRetries 3 after the increase",
+			ctx:     context.Background(),
+			nextErr: errors.New("test error"),
 			s: &FixedIntervalRetryStrategy{
 				maxRetries: 3,
 				interval:   time.Second,
@@ -56,7 +63,9 @@ func TestFixedIntervalRetryStrategy_Next(t *testing.T) {
 			isContinue: true,
 		},
 		{
-			name: "retries over MaxRetries after the increase",
+			name:    "retries over MaxRetries after the increase",
+			ctx:     context.Background(),
+			nextErr: errors.New("test error"),
 			s: &FixedIntervalRetryStrategy{
 				maxRetries: 3,
 				interval:   time.Second,
@@ -66,7 +75,9 @@ func TestFixedIntervalRetryStrategy_Next(t *testing.T) {
 			isContinue: false,
 		},
 		{
-			name: "MaxRetries equals to 0",
+			name:    "MaxRetries equals to 0",
+			ctx:     context.Background(),
+			nextErr: errors.New("test error"),
 			s: &FixedIntervalRetryStrategy{
 				maxRetries: 0,
 				interval:   time.Second,
@@ -75,7 +86,9 @@ func TestFixedIntervalRetryStrategy_Next(t *testing.T) {
 			isContinue: true,
 		},
 		{
-			name: "negative MaxRetries",
+			name:    "negative MaxRetries",
+			ctx:     context.Background(),
+			nextErr: errors.New("test error"),
 			s: &FixedIntervalRetryStrategy{
 				maxRetries: -1,
 				interval:   time.Second,
@@ -84,10 +97,19 @@ func TestFixedIntervalRetryStrategy_Next(t *testing.T) {
 			interval:   time.Second,
 			isContinue: true,
 		},
+		{
+			name: "not retry",
+			ctx:  context.Background(),
+			s: &FixedIntervalRetryStrategy{
+				maxRetries: -1,
+				interval:   time.Second,
+				retries:    0,
+			},
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			interval, isContinue := tt.s.Next()
+			interval, isContinue := tt.s.Next(tt.ctx, tt.nextErr)
 			assert.Equal(t, tt.interval, interval)
 			assert.Equal(t, tt.isContinue, isContinue)
 		})
@@ -154,7 +176,7 @@ func testNext4InfiniteRetry(t *testing.T, maxRetries int32) {
 
 	intervals := make([]time.Duration, 0, n)
 	for i := 0; i < n; i++ {
-		res, _ := s.Next()
+		res, _ := s.next()
 		intervals = append(intervals, res)
 	}
 	assert.Equal(t, wantIntervals, intervals)
@@ -166,10 +188,10 @@ func ExampleFixedIntervalRetryStrategy_Next() {
 		fmt.Println(err)
 		return
 	}
-	interval, ok := retry.Next()
+	interval, ok := retry.next()
 	for ok {
 		fmt.Println(interval)
-		interval, ok = retry.Next()
+		interval, ok = retry.next()
 	}
 	// Output:
 	// 1s

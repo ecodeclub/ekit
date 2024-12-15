@@ -15,6 +15,8 @@
 package retry
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -82,12 +84,16 @@ func TestNewExponentialBackoffRetryStrategy_New(t *testing.T) {
 func TestExponentialBackoffRetryStrategy_Next(t *testing.T) {
 	testCases := []struct {
 		name     string
+		nextErr  error
+		ctx      context.Context
 		strategy *ExponentialBackoffRetryStrategy
 
 		wantIntervals []time.Duration
 	}{
 		{
-			name: "stop if retries reaches maxRetries",
+			name:    "stop if retries reaches maxRetries",
+			ctx:     context.Background(),
+			nextErr: errors.New("test error"),
 			strategy: func() *ExponentialBackoffRetryStrategy {
 				s, err := NewExponentialBackoffRetryStrategy(1*time.Second, 10*time.Second, 3)
 				require.NoError(t, err)
@@ -97,7 +103,9 @@ func TestExponentialBackoffRetryStrategy_Next(t *testing.T) {
 			wantIntervals: []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second},
 		},
 		{
-			name: "initialInterval over maxInterval",
+			name:    "initialInterval over maxInterval",
+			ctx:     context.Background(),
+			nextErr: errors.New("test error"),
 			strategy: func() *ExponentialBackoffRetryStrategy {
 				s, err := NewExponentialBackoffRetryStrategy(1*time.Second, 4*time.Second, 5)
 				require.NoError(t, err)
@@ -106,12 +114,22 @@ func TestExponentialBackoffRetryStrategy_Next(t *testing.T) {
 
 			wantIntervals: []time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second, 4 * time.Second, 4 * time.Second},
 		},
+		{
+			name: "not retry",
+			ctx:  context.Background(),
+			strategy: func() *ExponentialBackoffRetryStrategy {
+				s, err := NewExponentialBackoffRetryStrategy(1*time.Second, 4*time.Second, 5)
+				require.NoError(t, err)
+				return s
+			}(),
+			wantIntervals: []time.Duration{},
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			intervals := make([]time.Duration, 0)
 			for {
-				if interval, ok := tt.strategy.Next(); ok {
+				if interval, ok := tt.strategy.Next(tt.ctx, tt.nextErr); ok {
 					intervals = append(intervals, interval)
 				} else {
 					break
@@ -142,10 +160,10 @@ func ExampleExponentialBackoffRetryStrategy_Next() {
 		fmt.Println(err)
 		return
 	}
-	interval, ok := retry.Next()
+	interval, ok := retry.next()
 	for ok {
 		fmt.Println(interval)
-		interval, ok = retry.Next()
+		interval, ok = retry.next()
 	}
 	// Output:
 	// 1s

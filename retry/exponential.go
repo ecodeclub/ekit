@@ -15,6 +15,7 @@
 package retry
 
 import (
+	"context"
 	"math"
 	"sync/atomic"
 	"time"
@@ -49,7 +50,14 @@ func NewExponentialBackoffRetryStrategy(initialInterval, maxInterval time.Durati
 	}, nil
 }
 
-func (s *ExponentialBackoffRetryStrategy) Next() (time.Duration, bool) {
+func (s *ExponentialBackoffRetryStrategy) Next(ctx context.Context, err error) (time.Duration, bool) {
+	if err != nil {
+		return s.next()
+	}
+	return 0, false
+}
+
+func (s *ExponentialBackoffRetryStrategy) next() (time.Duration, bool) {
 	retries := atomic.AddInt32(&s.retries, 1)
 	if s.maxRetries <= 0 || retries <= s.maxRetries {
 		if reached, ok := s.maxIntervalReached.Load().(bool); ok && reached {
