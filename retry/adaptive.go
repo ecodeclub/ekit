@@ -51,19 +51,6 @@ func (s *AdaptiveTimeoutRetryStrategy) Report(err error) Strategy {
 	return s
 }
 
-//func (s *AdaptiveTimeoutRetryStrategy) Next(ctx context.Context, err error) (time.Duration, bool) {
-//	if err == nil {
-//		s.markSuccess()
-//		return 0, false
-//	}
-//	failCount := s.getFailed()
-//	s.markFail()
-//	if failCount >= s.threshold {
-//		return 0, false
-//	}
-//	return s.strategy.Next(ctx, err)
-//}
-
 func (s *AdaptiveTimeoutRetryStrategy) markSuccess() {
 	count := atomic.AddUint64(&s.reqCount, 1)
 	count = count % (uint64(64) * uint64(len(s.ringBuffer)))
