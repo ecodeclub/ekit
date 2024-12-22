@@ -15,7 +15,6 @@
 package retry
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -89,32 +88,24 @@ func TestAdaptiveTimeoutRetryStrategy_Next(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		err       error
 		wantDelay time.Duration
 		wantOk    bool
 	}{
 		{
 			name:      "error below threshold",
-			err:       errors.New("test error"),
 			wantDelay: 1 * time.Second,
 			wantOk:    true,
 		},
 		{
 			name:      "error above threshold",
-			err:       errors.New("test error"),
 			wantDelay: 1 * time.Second,
 			wantOk:    true,
-		},
-		{
-			name:      "not retry",
-			wantDelay: 0,
-			wantOk:    false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			delay, ok := strategy.Next(context.Background(), tt.err)
+			delay, ok := strategy.Next()
 			assert.Equal(t, tt.wantDelay, delay)
 			assert.Equal(t, tt.wantOk, ok)
 		})
@@ -147,7 +138,8 @@ func TestAdaptiveTimeoutRetryStrategy_Next_Concurrent(t *testing.T) {
 			if index >= 1500 {
 				err = mockErr
 			}
-			_, allowed := strategy.Next(context.Background(), err)
+			strategy.Report(err)
+			_, allowed := strategy.Next()
 			if err != nil {
 				// 失败请求的统计
 				if allowed {
@@ -187,11 +179,10 @@ func ExampleAdaptiveTimeoutRetryStrategy_Next() {
 		fmt.Println(err)
 		return
 	}
-	nextErr := errors.New("test error")
-	interval, ok := strategy.Next(context.Background(), nextErr)
+	interval, ok := strategy.Next()
 	for ok {
 		fmt.Println(interval)
-		interval, ok = strategy.Next(context.Background(), nextErr)
+		interval, ok = strategy.Next()
 	}
 	// Output:
 	// 1s
@@ -209,6 +200,10 @@ func ExampleAdaptiveTimeoutRetryStrategy_Next() {
 type MockStrategy struct {
 }
 
-func (m MockStrategy) Next(ctx context.Context, err error) (time.Duration, bool) {
+func (m MockStrategy) Next() (time.Duration, bool) {
 	return 1 * time.Second, true
+}
+
+func (m MockStrategy) Report(err error) Strategy {
+	return m
 }

@@ -15,7 +15,6 @@
 package retry
 
 import (
-	"context"
 	"fmt"
 	"math/bits"
 	"sync/atomic"
@@ -24,26 +23,46 @@ import (
 	"github.com/ecodeclub/ekit/internal/errs"
 )
 
+var _ Strategy = (*AdaptiveTimeoutRetryStrategy)(nil)
+
 type AdaptiveTimeoutRetryStrategy struct {
 	strategy      Strategy // 基础重试策略
 	threshold     int      // 超时比率阈值 (单位：比特数量)
 	ringBuffer    []uint64 // 比特环（滑动窗口存储超时信息）
 	reqCount      uint64   // 当前滑动窗口内超时的数量
 	ringBufferLen int      // 滑动窗口长度
+
 }
 
-func (s *AdaptiveTimeoutRetryStrategy) Next(ctx context.Context, err error) (time.Duration, bool) {
-	if err == nil {
-		s.markSuccess()
-		return 0, false
-	}
+func (s *AdaptiveTimeoutRetryStrategy) Next() (time.Duration, bool) {
 	failCount := s.getFailed()
-	s.markFail()
 	if failCount >= s.threshold {
 		return 0, false
 	}
-	return s.strategy.Next(ctx, err)
+	return s.strategy.Next()
 }
+
+func (s *AdaptiveTimeoutRetryStrategy) Report(err error) Strategy {
+	if err == nil {
+		s.markSuccess()
+	} else {
+		s.markFail()
+	}
+	return s
+}
+
+//func (s *AdaptiveTimeoutRetryStrategy) Next(ctx context.Context, err error) (time.Duration, bool) {
+//	if err == nil {
+//		s.markSuccess()
+//		return 0, false
+//	}
+//	failCount := s.getFailed()
+//	s.markFail()
+//	if failCount >= s.threshold {
+//		return 0, false
+//	}
+//	return s.strategy.Next(ctx, err)
+//}
 
 func (s *AdaptiveTimeoutRetryStrategy) markSuccess() {
 	count := atomic.AddUint64(&s.reqCount, 1)

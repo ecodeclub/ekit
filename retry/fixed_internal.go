@@ -15,12 +15,13 @@
 package retry
 
 import (
-	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/ecodeclub/ekit/internal/errs"
 )
+
+var _ Strategy = (*FixedIntervalRetryStrategy)(nil)
 
 // FixedIntervalRetryStrategy 等间隔重试
 type FixedIntervalRetryStrategy struct {
@@ -39,17 +40,14 @@ func NewFixedIntervalRetryStrategy(interval time.Duration, maxRetries int32) (*F
 	}, nil
 }
 
-func (s *FixedIntervalRetryStrategy) Next(ctx context.Context, err error) (time.Duration, bool) {
-	if err != nil {
-		return s.next()
-	}
-	return 0, false
-}
-
-func (s *FixedIntervalRetryStrategy) next() (time.Duration, bool) {
+func (s *FixedIntervalRetryStrategy) Next() (time.Duration, bool) {
 	retries := atomic.AddInt32(&s.retries, 1)
 	if s.maxRetries <= 0 || retries <= s.maxRetries {
 		return s.interval, true
 	}
 	return 0, false
+}
+
+func (s *FixedIntervalRetryStrategy) Report(err error) Strategy {
+	return s
 }

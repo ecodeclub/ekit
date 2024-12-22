@@ -15,13 +15,14 @@
 package retry
 
 import (
-	"context"
 	"math"
 	"sync/atomic"
 	"time"
 
 	"github.com/ecodeclub/ekit/internal/errs"
 )
+
+var _ Strategy = (*ExponentialBackoffRetryStrategy)(nil)
 
 // ExponentialBackoffRetryStrategy 指数退避重试
 type ExponentialBackoffRetryStrategy struct {
@@ -50,14 +51,11 @@ func NewExponentialBackoffRetryStrategy(initialInterval, maxInterval time.Durati
 	}, nil
 }
 
-func (s *ExponentialBackoffRetryStrategy) Next(ctx context.Context, err error) (time.Duration, bool) {
-	if err != nil {
-		return s.next()
-	}
-	return 0, false
+func (s *ExponentialBackoffRetryStrategy) Report(err error) Strategy {
+	return s
 }
 
-func (s *ExponentialBackoffRetryStrategy) next() (time.Duration, bool) {
+func (s *ExponentialBackoffRetryStrategy) Next() (time.Duration, bool) {
 	retries := atomic.AddInt32(&s.retries, 1)
 	if s.maxRetries <= 0 || retries <= s.maxRetries {
 		if reached, ok := s.maxIntervalReached.Load().(bool); ok && reached {
