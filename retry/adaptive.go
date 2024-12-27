@@ -29,9 +29,8 @@ type AdaptiveTimeoutRetryStrategy struct {
 	strategy      Strategy // 基础重试策略
 	threshold     int      // 超时比率阈值 (单位：比特数量)
 	ringBuffer    []uint64 // 比特环（滑动窗口存储超时信息）
-	reqCount      uint64   // 当前滑动窗口内超时的数量
+	reqCount      uint64   // 请求数量
 	ringBufferLen int      // 滑动窗口长度
-
 }
 
 func (s *AdaptiveTimeoutRetryStrategy) Next() (time.Duration, bool) {
@@ -54,25 +53,26 @@ func (s *AdaptiveTimeoutRetryStrategy) Report(err error) Strategy {
 func (s *AdaptiveTimeoutRetryStrategy) markSuccess() {
 	count := atomic.AddUint64(&s.reqCount, 1)
 	count = count % (uint64(64) * uint64(len(s.ringBuffer)))
-	idx := count / 64
-	bitPos := count % 64
+	// 对2^x进行取模或者整除运算时可以用位运算代替除法和取模
+	// count / 64 可以转换成 count >> 6。 位运算会更高效。
+	idx := count >> 6
+	// count % 64 可以转换成 count & 63
+	bitPos := count & 63
 	for {
 		old := atomic.LoadUint64(&s.ringBuffer[idx])
 		// 检查 old 的第 bitPos 位是否为 1。如果结果为 0，表示该位为 0，即没有记录失败
 		if old&(uint64(1)<<bitPos) == 0 {
 			break
 		}
-		if atomic.CompareAndSwapUint64(&s.ringBuffer[idx], old, old&^(uint64(1)<<bitPos)) {
-			break
-		}
+		atomic.StoreUint64(&s.ringBuffer[idx], old&^(uint64(1)<<bitPos))
 	}
 }
 
 func (s *AdaptiveTimeoutRetryStrategy) markFail() {
 	count := atomic.AddUint64(&s.reqCount, 1)
 	count = count % (uint64(64) * uint64(len(s.ringBuffer)))
-	idx := count / 64
-	bitPos := count % 64
+	idx := count >> 6
+	bitPos := count & 63
 	for {
 		old := atomic.LoadUint64(&s.ringBuffer[idx])
 		// 检查 old 的第 bitPos 位是否为1。如果结果不等于0，表示该位已经被设置为1。
@@ -81,9 +81,7 @@ func (s *AdaptiveTimeoutRetryStrategy) markFail() {
 			break
 		}
 		// (uint64(1)<<bitPos) 将目标位设置为1
-		if atomic.CompareAndSwapUint64(&s.ringBuffer[idx], old, old|(uint64(1)<<bitPos)) {
-			break
-		}
+		atomic.StoreUint64(&s.ringBuffer[idx], old|(uint64(1)<<bitPos))
 	}
 }
 
