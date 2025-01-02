@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewAdaptiveTimeoutRetryStrategy_New(t *testing.T) {
@@ -40,42 +39,14 @@ func TestNewAdaptiveTimeoutRetryStrategy_New(t *testing.T) {
 			strategy:      &MockStrategy{}, // 假设有一个 MockStrategy 用于测试
 			threshold:     50,
 			ringBufferLen: 16,
-			want: func() *AdaptiveTimeoutRetryStrategy {
-				s, err := NewAdaptiveTimeoutRetryStrategy(&MockStrategy{}, WithThreshold(50), WithRingBufferLen(16))
-				require.NoError(t, err)
-				return s
-			}(),
-			wantErr: nil,
-		},
-		{
-			name:          "threshold less than or equal to zero",
-			strategy:      &MockStrategy{},
-			ringBufferLen: 16,
-			threshold:     0,
-			want:          nil,
-			wantErr:       fmt.Errorf("ekit: 失效比率阈值 [%d]", 0),
-		},
-		{
-			name:          "ring buffer len less than or equal to zero",
-			strategy:      &MockStrategy{},
-			threshold:     10,
-			ringBufferLen: 0,
-			want:          nil,
-			wantErr:       fmt.Errorf("ekit: 无效的滑动窗口长度 [%d]", 0),
-		},
-		{
-			name:      "strategy is nil",
-			strategy:  nil,
-			threshold: 10,
-			want:      nil,
-			wantErr:   fmt.Errorf("ekit: strategy 不能为空"),
+			want:          NewAdaptiveTimeoutRetryStrategy(&MockStrategy{}, 16, 50),
+			wantErr:       nil,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewAdaptiveTimeoutRetryStrategy(tt.strategy, WithThreshold(tt.threshold), WithRingBufferLen(tt.ringBufferLen))
-			assert.Equal(t, tt.wantErr, err)
+			s := NewAdaptiveTimeoutRetryStrategy(tt.strategy, tt.ringBufferLen, tt.threshold)
 			assert.Equal(t, tt.want, s)
 		})
 	}
@@ -83,8 +54,7 @@ func TestNewAdaptiveTimeoutRetryStrategy_New(t *testing.T) {
 
 func TestAdaptiveTimeoutRetryStrategy_Next(t *testing.T) {
 	baseStrategy := &MockStrategy{}
-	strategy, err := NewAdaptiveTimeoutRetryStrategy(baseStrategy, WithThreshold(50), WithRingBufferLen(16))
-	require.NoError(t, err)
+	strategy := NewAdaptiveTimeoutRetryStrategy(baseStrategy, 16, 50)
 
 	tests := []struct {
 		name      string
@@ -120,9 +90,7 @@ func TestAdaptiveTimeoutRetryStrategy_Next_Concurrent(t *testing.T) {
 	baseStrategy := &MockStrategy{}
 
 	// 创建升级版自适应策略，设置阈值为50
-	strategy, err := NewAdaptiveTimeoutRetryStrategy(baseStrategy,
-		WithThreshold(50), WithRingBufferLen(16))
-	assert.Nil(t, err)
+	strategy := NewAdaptiveTimeoutRetryStrategy(baseStrategy, 16, 50)
 
 	var wg sync.WaitGroup
 	var successCount, errCount int64
@@ -173,12 +141,7 @@ func ExampleAdaptiveTimeoutRetryStrategy_Next() {
 		fmt.Println(err)
 		return
 	}
-	strategy, err := NewAdaptiveTimeoutRetryStrategy(baseStrategy,
-		WithThreshold(50), WithRingBufferLen(16))
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	strategy := NewAdaptiveTimeoutRetryStrategy(baseStrategy, 16, 50)
 	interval, ok := strategy.Next()
 	for ok {
 		fmt.Println(interval)
