@@ -21,6 +21,8 @@ import (
 	"github.com/ecodeclub/ekit/internal/errs"
 )
 
+var _ Strategy = (*FixedIntervalRetryStrategy)(nil)
+
 // FixedIntervalRetryStrategy 等间隔重试
 type FixedIntervalRetryStrategy struct {
 	maxRetries int32         // 最大重试次数，如果是 0 或负数，表示无限重试
@@ -44,4 +46,8 @@ func (s *FixedIntervalRetryStrategy) Next() (time.Duration, bool) {
 		return s.interval, true
 	}
 	return 0, false
+}
+
+func (s *FixedIntervalRetryStrategy) Report(err error) Strategy {
+	return s
 }

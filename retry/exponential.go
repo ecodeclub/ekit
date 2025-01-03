@@ -22,6 +22,8 @@ import (
 	"github.com/ecodeclub/ekit/internal/errs"
 )
 
+var _ Strategy = (*ExponentialBackoffRetryStrategy)(nil)
+
 // ExponentialBackoffRetryStrategy 指数退避重试
 type ExponentialBackoffRetryStrategy struct {
 	// 初始重试间隔
@@ -47,6 +49,10 @@ func NewExponentialBackoffRetryStrategy(initialInterval, maxInterval time.Durati
 		maxInterval:     maxInterval,
 		maxRetries:      maxRetries,
 	}, nil
+}
+
+func (s *ExponentialBackoffRetryStrategy) Report(err error) Strategy {
+	return s
 }
 
 func (s *ExponentialBackoffRetryStrategy) Next() (time.Duration, bool) {
