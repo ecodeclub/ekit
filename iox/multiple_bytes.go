@@ -16,32 +16,27 @@ package iox
 
 import (
 	"io"
-	"sync"
 )
 
 // MultipleBytes 是一个实现了 io.Reader 和 io.Writer 接口的结构体
 // 它可以安全地在多个 goroutine 之间共享
 type MultipleBytes struct {
-	data  [][]byte
-	idx1  int // 第几个切片
-	idx2  int // data[idx1] 中的下标
-	mutex sync.RWMutex
+	data [][]byte
+	idx1 int // 第几个切片
+	idx2 int // data[idx1] 中的下标
 }
 
 // NewMultipleBytes 创建一个新的 MultipleBytes 实例
-// capacity 参数用于预分配内部缓冲区的容量
-func NewMultipleBytes(capacity int) *MultipleBytes {
+// sliceCount 参数用于预分配内部切片数组的容量
+func NewMultipleBytes(sliceCount int) *MultipleBytes {
 	return &MultipleBytes{
-		data: make([][]byte, 0, 1),
+		data: make([][]byte, 0, sliceCount),
 	}
 }
 
 // Read 实现 io.Reader 接口
 // 从当前位置读取数据到 p 中，如果没有数据可读返回 io.EOF
 func (m *MultipleBytes) Read(p []byte) (n int, err error) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
 	// 如果没有数据或者已经读完了所有数据
 	if len(m.data) == 0 || (m.idx1 >= len(m.data)) {
 		return 0, io.EOF
@@ -83,9 +78,6 @@ func (m *MultipleBytes) Write(p []byte) (n int, err error) {
 		return 0, nil
 	}
 
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
 	// 创建新的切片来存储数据
 	newSlice := make([]byte, len(p))
 	copy(newSlice, p)
@@ -94,62 +86,8 @@ func (m *MultipleBytes) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-// Len 返回当前缓冲区中的数据总长度
-func (m *MultipleBytes) Len() int {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
-	total := 0
-	for _, slice := range m.data {
-		total += len(slice)
-	}
-	return total
-}
-
-// Cap 返回当前缓冲区的容量
-func (m *MultipleBytes) Cap() int {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
-	total := 0
-	for _, slice := range m.data {
-		total += cap(slice)
-	}
-	return total
-}
-
 // Reset 重置读取位置到开始处
 func (m *MultipleBytes) Reset() {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
 	m.idx1 = 0
 	m.idx2 = 0
-}
-
-// Clear 清空缓冲区并重置读取位置
-func (m *MultipleBytes) Clear() {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	m.data = m.data[:0]
-	m.idx1 = 0
-	m.idx2 = 0
-}
-
-// Bytes 返回内部缓冲区的副本
-func (m *MultipleBytes) Bytes() []byte {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
-	total := 0
-	for _, slice := range m.data {
-		total += len(slice)
-	}
-
-	result := make([]byte, total)
-	pos := 0
-	for _, slice := range m.data {
-		pos += copy(result[pos:], slice)
-	}
-
-	return result
 }

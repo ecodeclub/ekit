@@ -78,6 +78,98 @@ func TestMultipleBytes_ReadWrite(t *testing.T) {
 	}
 }
 
+func TestMultipleBytes_ReadEdgeCases(t *testing.T) {
+	testCases := []struct {
+		name      string
+		writes    [][]byte // 多次写入的数据
+		readSizes []int    // 多次读取的大小
+		wantReads [][]byte // 期望的读取结果
+		wantErrs  []error  // 期望的错误
+	}{
+		{
+			name:      "单片-恰好读完",
+			writes:    [][]byte{{1, 2, 3}},
+			readSizes: []int{3},
+			wantReads: [][]byte{{1, 2, 3}},
+			wantErrs:  []error{nil},
+		},
+		{
+			name:      "单片-部分读取",
+			writes:    [][]byte{{1, 2, 3}},
+			readSizes: []int{2, 1},
+			wantReads: [][]byte{{1, 2}, {3}},
+			wantErrs:  []error{nil, nil},
+		},
+		{
+			name:      "单片-读取溢出",
+			writes:    [][]byte{{1, 2}},
+			readSizes: []int{3},
+			wantReads: [][]byte{{1, 2}},
+			wantErrs:  []error{nil},
+		},
+		{
+			name:      "多片-跨片读取",
+			writes:    [][]byte{{1, 2}, {3, 4}, {5, 6}},
+			readSizes: []int{4},
+			wantReads: [][]byte{{1, 2, 3, 4}},
+			wantErrs:  []error{nil},
+		},
+		{
+			name:      "多片-恰好读完",
+			writes:    [][]byte{{1, 2}, {3, 4}},
+			readSizes: []int{4},
+			wantReads: [][]byte{{1, 2, 3, 4}},
+			wantErrs:  []error{nil},
+		},
+		{
+			name:      "多片-未读完",
+			writes:    [][]byte{{1, 2}, {3, 4}, {5, 6}},
+			readSizes: []int{3},
+			wantReads: [][]byte{{1, 2, 3}},
+			wantErrs:  []error{nil},
+		},
+		{
+			name:      "索引边界-首尾交叉验证",
+			writes:    [][]byte{{1}, {2}, {3}},
+			readSizes: []int{1, 1, 1, 1},
+			wantReads: [][]byte{{1}, {2}, {3}, {}},
+			wantErrs:  []error{nil, nil, nil, io.EOF},
+		},
+		{
+			name:      "空切片读取",
+			writes:    [][]byte{{}},
+			readSizes: []int{1},
+			wantReads: [][]byte{{}},
+			wantErrs:  []error{io.EOF},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mb := NewMultipleBytes(len(tc.writes))
+
+			// 写入数据
+			for _, w := range tc.writes {
+				n, err := mb.Write(w)
+				assert.Equal(t, len(w), n)
+				assert.Nil(t, err)
+			}
+
+			// 读取数据
+			for i, size := range tc.readSizes {
+				read := make([]byte, size)
+				n, err := mb.Read(read)
+				if tc.wantErrs[i] != nil {
+					assert.Equal(t, tc.wantErrs[i], err)
+				} else {
+					assert.Nil(t, err)
+					assert.Equal(t, tc.wantReads[i], read[:n])
+				}
+			}
+		})
+	}
+}
+
 func TestMultipleBytes_Reset(t *testing.T) {
 	mb := NewMultipleBytes(4)
 	data := []byte{1, 2, 3, 4}
@@ -103,45 +195,4 @@ func TestMultipleBytes_Reset(t *testing.T) {
 	assert.Equal(t, 4, n)
 	assert.Nil(t, err)
 	assert.Equal(t, data, read)
-}
-
-func TestMultipleBytes_Clear(t *testing.T) {
-	mb := NewMultipleBytes(4)
-	data := []byte{1, 2, 3, 4}
-
-	// 写入数据
-	n, err := mb.Write(data)
-	assert.Equal(t, len(data), n)
-	assert.Nil(t, err)
-
-	// 清空
-	mb.Clear()
-
-	// 清空后读取
-	read := make([]byte, 1)
-	n, err = mb.Read(read)
-	assert.Equal(t, 0, n)
-	assert.Equal(t, io.EOF, err)
-
-	// 验证长度
-	assert.Equal(t, 0, mb.Len())
-}
-
-func TestMultipleBytes_Bytes(t *testing.T) {
-	mb := NewMultipleBytes(4)
-	data := []byte{1, 2, 3, 4}
-
-	// 写入数据
-	n, err := mb.Write(data)
-	assert.Equal(t, len(data), n)
-	assert.Nil(t, err)
-
-	// 获取副本
-	copy := mb.Bytes()
-	assert.Equal(t, data, copy)
-
-	// 修改副本不影响原数据
-	copy[0] = 5
-	original := mb.Bytes()
-	assert.Equal(t, data, original)
 }
