@@ -22,8 +22,9 @@ import (
 // MultipleBytes 是一个实现了 io.Reader 和 io.Writer 接口的结构体
 // 它可以安全地在多个 goroutine 之间共享
 type MultipleBytes struct {
-	buf   []byte
-	pos   int
+	data  [][]byte
+	idx1  int // 第几个切片
+	idx2  int // data[idx1] 中的下标
 	mutex sync.RWMutex
 }
 
@@ -31,7 +32,7 @@ type MultipleBytes struct {
 // capacity 参数用于预分配内部缓冲区的容量
 func NewMultipleBytes(capacity int) *MultipleBytes {
 	return &MultipleBytes{
-		buf: make([]byte, 0, capacity),
+		data: make([][]byte, 0, 1),
 	}
 }
 
@@ -41,59 +42,114 @@ func (m *MultipleBytes) Read(p []byte) (n int, err error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
-	if m.pos >= len(m.buf) {
+	// 如果没有数据或者已经读完了所有数据
+	if len(m.data) == 0 || (m.idx1 >= len(m.data)) {
 		return 0, io.EOF
 	}
 
-	n = copy(p, m.buf[m.pos:])
-	m.pos += n
-	return n, nil
+	totalRead := 0
+	for m.idx1 < len(m.data) {
+		currentSlice := m.data[m.idx1]
+		remaining := len(currentSlice) - m.idx2
+		if remaining <= 0 {
+			m.idx1++
+			m.idx2 = 0
+			continue
+		}
+
+		toRead := len(p) - totalRead
+		if toRead <= 0 {
+			break
+		}
+
+		if remaining > toRead {
+			n = copy(p[totalRead:], currentSlice[m.idx2:m.idx2+toRead])
+			m.idx2 += n
+		} else {
+			n = copy(p[totalRead:], currentSlice[m.idx2:])
+			m.idx1++
+			m.idx2 = 0
+		}
+		totalRead += n
+	}
+
+	return totalRead, nil
 }
 
 // Write 实现 io.Writer 接口
 // 将 p 中的数据写入到内部缓冲区
 func (m *MultipleBytes) Write(p []byte) (n int, err error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	m.buf = append(m.buf, p...)
+	// 创建新的切片来存储数据
+	newSlice := make([]byte, len(p))
+	copy(newSlice, p)
+	m.data = append(m.data, newSlice)
+
 	return len(p), nil
 }
 
-// Len 返回当前缓冲区中的数据长度
+// Len 返回当前缓冲区中的数据总长度
 func (m *MultipleBytes) Len() int {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
-	return len(m.buf)
+
+	total := 0
+	for _, slice := range m.data {
+		total += len(slice)
+	}
+	return total
 }
 
 // Cap 返回当前缓冲区的容量
 func (m *MultipleBytes) Cap() int {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
-	return cap(m.buf)
+
+	total := 0
+	for _, slice := range m.data {
+		total += cap(slice)
+	}
+	return total
 }
 
 // Reset 重置读取位置到开始处
 func (m *MultipleBytes) Reset() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	m.pos = 0
+	m.idx1 = 0
+	m.idx2 = 0
 }
 
 // Clear 清空缓冲区并重置读取位置
 func (m *MultipleBytes) Clear() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	m.buf = m.buf[:0]
-	m.pos = 0
+	m.data = m.data[:0]
+	m.idx1 = 0
+	m.idx2 = 0
 }
 
 // Bytes 返回内部缓冲区的副本
 func (m *MultipleBytes) Bytes() []byte {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
-	res := make([]byte, len(m.buf))
-	copy(res, m.buf)
-	return res
+
+	total := 0
+	for _, slice := range m.data {
+		total += len(slice)
+	}
+
+	result := make([]byte, total)
+	pos := 0
+	for _, slice := range m.data {
+		pos += copy(result[pos:], slice)
+	}
+
+	return result
 }
