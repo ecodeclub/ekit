@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMultipleBytes_ReadWrite(t *testing.T) {
+func TestMultipleBytesReadWrite(t *testing.T) {
 	testCases := []struct {
 		name     string
 		write    []byte
@@ -78,7 +78,7 @@ func TestMultipleBytes_ReadWrite(t *testing.T) {
 	}
 }
 
-func TestMultipleBytes_ReadEdgeCases(t *testing.T) {
+func TestMultipleBytesReadEdgeCases(t *testing.T) {
 	testCases := []struct {
 		name      string
 		writes    [][]byte // 多次写入的数据
@@ -170,7 +170,7 @@ func TestMultipleBytes_ReadEdgeCases(t *testing.T) {
 	}
 }
 
-func TestMultipleBytes_Reset(t *testing.T) {
+func TestMultipleBytesReset(t *testing.T) {
 	mb := NewMultipleBytes(4)
 	data := []byte{1, 2, 3, 4}
 
