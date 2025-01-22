@@ -78,10 +78,8 @@ func (m *MultipleBytes) Write(p []byte) (n int, err error) {
 		return 0, nil
 	}
 
-	// 创建新的切片来存储数据
-	newSlice := make([]byte, len(p))
-	copy(newSlice, p)
-	m.data = append(m.data, newSlice)
+	// 直接将输入切片追加到内部存储
+	m.data = append(m.data, p)
 
 	return len(p), nil
 }

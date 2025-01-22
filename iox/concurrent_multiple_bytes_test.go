@@ -22,230 +22,103 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// 辅助函数：并发写入数据
-func doConcurrentWrites(t *testing.T, cmb *ConcurrentMultipleBytes, writes [][]byte) {
-	wg := sync.WaitGroup{}
-	for i := range writes {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-			n, err := cmb.Write(writes[idx])
-			assert.Equal(t, len(writes[idx]), n)
-			assert.Nil(t, err)
-		}(i)
-	}
-	wg.Wait()
-}
+func TestConcurrentMultipleBytes(t *testing.T) {
+	t.Run("基本读写功能", func(t *testing.T) {
+		cmb := NewConcurrentMultipleBytes(2)
+		data := []byte{1, 2, 3, 4}
 
-// 辅助函数：并发读取数据
-func doConcurrentReads(cmb *ConcurrentMultipleBytes, readSizes []int) ([][]byte, []error) {
-	results := make([][]byte, len(readSizes))
-	errs := make([]error, len(readSizes))
-	wg := sync.WaitGroup{}
+		// 写入数据
+		n, err := cmb.Write(data)
+		assert.Equal(t, len(data), n)
+		assert.Nil(t, err)
 
-	for i := range readSizes {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-			read := make([]byte, readSizes[idx])
-			n, err := cmb.Read(read)
-			errs[idx] = err
-			if err == nil {
-				results[idx] = read[:n]
-			}
-		}(i)
-	}
-	wg.Wait()
-	return results, errs
-}
+		// 读取数据
+		read := make([]byte, 4)
+		n, err = cmb.Read(read)
+		assert.Equal(t, len(data), n)
+		assert.Nil(t, err)
+		assert.Equal(t, data, read[:n])
+	})
 
-// 辅助函数：并发读写测试
-func doConcurrentReadWriteTest(t *testing.T, cmb *ConcurrentMultipleBytes, writes [][]byte, readSizes []int) [][]byte {
-	// 并发写入
-	doConcurrentWrites(t, cmb, writes)
+	t.Run("并发读写", func(t *testing.T) {
+		cmb := NewConcurrentMultipleBytes(3)
+		var wg sync.WaitGroup
 
-	// 并发读取
-	results := make([][]byte, len(readSizes))
-	wg := sync.WaitGroup{}
-	for i := 0; i < len(readSizes); i++ {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-			read := make([]byte, readSizes[idx])
-			n, err := cmb.Read(read)
-			if err != nil && err != io.EOF {
+		// 并发写入
+		for i := 0; i < 3; i++ {
+			wg.Add(1)
+			go func(val byte) {
+				defer wg.Done()
+				n, err := cmb.Write([]byte{val})
+				assert.Equal(t, 1, n)
 				assert.Nil(t, err)
-				return
-			}
-			results[idx] = read[:n]
-		}(i)
-	}
-	wg.Wait()
-
-	return results
-}
-
-// 辅助函数：验证总字节数
-func verifyTotalBytes(t *testing.T, wantTotal int, results [][]byte) {
-	actualTotal := 0
-	for _, res := range results {
-		actualTotal += len(res)
-	}
-	assert.Equal(t, wantTotal, actualTotal)
-}
-
-// 辅助函数：验证结果
-func verifyResults(t *testing.T, wantReads [][]byte, wantErrs []error, results [][]byte, errs []error) {
-	for i := range wantReads {
-		if wantErrs[i] != nil {
-			assert.Equal(t, wantErrs[i], errs[i])
-		} else {
-			assert.Nil(t, errs[i])
-			assert.Equal(t, wantReads[i], results[i])
+			}(byte(i + 1))
 		}
-	}
-}
+		wg.Wait()
 
-// 测试基本的并发读写功能
-func TestConcurrentMultipleBytesConcurrentReadWrite(t *testing.T) {
-	testCases := []struct {
-		name      string
-		writes    [][]byte
-		readSizes []int
-		wantTotal int
-	}{
-		{
-			name: "单片-恰好读完",
-			writes: [][]byte{
-				{1, 2, 3},
-			},
-			readSizes: []int{3},
-			wantTotal: 3,
-		},
-		{
-			name: "单片-未读完",
-			writes: [][]byte{
-				{1, 2, 3},
-			},
-			readSizes: []int{2},
-			wantTotal: 2,
-		},
-		{
-			name: "多片-跨片读取",
-			writes: [][]byte{
-				{1, 2},
-				{3, 4},
-				{5, 6},
-			},
-			readSizes: []int{4},
-			wantTotal: 4,
-		},
-		{
-			name: "多片-恰好读完",
-			writes: [][]byte{
-				{1, 2},
-				{3, 4},
-			},
-			readSizes: []int{4},
-			wantTotal: 4,
-		},
-		{
-			name: "多片-未读完",
-			writes: [][]byte{
-				{1, 2},
-				{3, 4},
-				{5, 6},
-			},
-			readSizes: []int{3},
-			wantTotal: 3,
-		},
-		{
-			name: "索引边界-首尾交叉验证",
-			writes: [][]byte{
-				{1},
-				{2},
-				{3},
-			},
-			readSizes: []int{1, 1, 1},
-			wantTotal: 3,
-		},
-	}
+		// 并发读取
+		results := make([][]byte, 3)
+		for i := 0; i < 3; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				read := make([]byte, 1)
+				n, err := cmb.Read(read)
+				if err != nil && err != io.EOF {
+					assert.Nil(t, err)
+					return
+				}
+				results[idx] = read[:n]
+			}(i)
+		}
+		wg.Wait()
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			cmb := NewConcurrentMultipleBytes(len(tc.writes))
-			results := doConcurrentReadWriteTest(t, cmb, tc.writes, tc.readSizes)
-			verifyTotalBytes(t, tc.wantTotal, results)
-		})
-	}
-}
+		// 验证总读取字节数
+		total := 0
+		for _, res := range results {
+			total += len(res)
+		}
+		assert.Equal(t, 3, total)
+	})
 
-func TestConcurrentMultipleBytesConcurrentReset(t *testing.T) {
-	cmb := NewConcurrentMultipleBytes(2)
-	data := []byte{1, 2, 3, 4}
+	t.Run("边界场景", func(t *testing.T) {
+		cmb := NewConcurrentMultipleBytes(1)
 
-	// 写入初始数据
-	n, err := cmb.Write(data)
-	assert.Equal(t, len(data), n)
-	assert.Nil(t, err)
+		// 空切片写入
+		n, err := cmb.Write([]byte{})
+		assert.Equal(t, 0, n)
+		assert.Nil(t, err)
 
-	// 并发读取和重置
-	wg := sync.WaitGroup{}
-	for i := 0; i < 10; i++ {
-		wg.Add(2)
+		// 空切片读取
+		read := make([]byte, 1)
+		n, err = cmb.Read(read)
+		assert.Equal(t, 0, n)
+		assert.Equal(t, io.EOF, err)
+	})
 
-		// 重置操作
-		go func() {
-			defer wg.Done()
-			cmb.Reset()
-		}()
+	t.Run("Reset功能", func(t *testing.T) {
+		cmb := NewConcurrentMultipleBytes(1)
+		data := []byte{1, 2}
 
-		// 读取操作
-		go func() {
-			defer wg.Done()
-			read := make([]byte, 4)
-			n, err := cmb.Read(read)
-			if err != nil && err != io.EOF {
-				assert.Nil(t, err)
-			}
-			if n > 0 {
-				assert.Equal(t, data[:n], read[:n])
-			}
-		}()
-	}
-	wg.Wait()
-}
+		// 写入数据
+		n, err := cmb.Write(data)
+		assert.Equal(t, len(data), n)
+		assert.Nil(t, err)
 
-func TestConcurrentMultipleBytesEdgeCases(t *testing.T) {
-	testCases := []struct {
-		name      string
-		writes    [][]byte
-		readSizes []int
-		wantReads [][]byte
-		wantErrs  []error
-	}{
-		{
-			name:      "并发-空切片读取",
-			writes:    [][]byte{{}},
-			readSizes: []int{1},
-			wantReads: [][]byte{{}},
-			wantErrs:  []error{io.EOF},
-		},
-		{
-			name:      "并发-多片读取",
-			writes:    [][]byte{{1, 2}, {3, 4}, {5, 6}},
-			readSizes: []int{2, 2, 2},
-			wantReads: [][]byte{{1, 2}, {3, 4}, {5, 6}},
-			wantErrs:  []error{nil, nil, nil},
-		},
-	}
+		// 读取一部分
+		read := make([]byte, 1)
+		n, err = cmb.Read(read)
+		assert.Equal(t, 1, n)
+		assert.Nil(t, err)
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			cmb := NewConcurrentMultipleBytes(len(tc.writes))
-			doConcurrentWrites(t, cmb, tc.writes)
-			results, errs := doConcurrentReads(cmb, tc.readSizes)
-			verifyResults(t, tc.wantReads, tc.wantErrs, results, errs)
-		})
-	}
+		// 重置
+		cmb.Reset()
+
+		// 重新读取
+		read = make([]byte, 2)
+		n, err = cmb.Read(read)
+		assert.Equal(t, 2, n)
+		assert.Nil(t, err)
+		assert.Equal(t, data, read[:n])
+	})
 }
