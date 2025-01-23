@@ -189,7 +189,8 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 				n, err := mb.Read(read)
 				assert.Equal(t, tc.wantErrs[i], err)
 				if err == nil {
-					assert.Equal(t, tc.wantReads[i], read[:n])
+					assert.Equal(t, len(tc.wantReads[i]), n, "读取长度与期望不符")
+					assert.Equal(t, tc.wantReads[i], read)
 				}
 			}
 		})
