@@ -142,6 +142,34 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 			wantReads: [][]byte{{}},
 			wantErrs:  []error{io.EOF},
 		},
+		{
+			name:      "多次写入-交替读取",
+			writes:    [][]byte{{1, 2}, {3, 4}, {5, 6}},
+			readSizes: []int{2, 2, 2, 1},
+			wantReads: [][]byte{{1, 2}, {3, 4}, {5, 6}, {}},
+			wantErrs:  []error{nil, nil, nil, io.EOF},
+		},
+		{
+			name:      "多个空切片写入",
+			writes:    [][]byte{{}, {}, {}},
+			readSizes: []int{1},
+			wantReads: [][]byte{{}},
+			wantErrs:  []error{io.EOF},
+		},
+		{
+			name:      "空切片与非空切片混合",
+			writes:    [][]byte{{}, {1}, {}},
+			readSizes: []int{1, 1},
+			wantReads: [][]byte{{1}, {}},
+			wantErrs:  []error{nil, io.EOF},
+		},
+		{
+			name:      "读取缓冲区为0",
+			writes:    [][]byte{{1, 2, 3}},
+			readSizes: []int{0, 2},
+			wantReads: [][]byte{{}, {1, 2}},
+			wantErrs:  []error{nil, nil},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -163,8 +191,15 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 					assert.Equal(t, tc.wantErrs[i], err)
 				} else {
 					assert.Nil(t, err)
-					assert.Equal(t, len(tc.wantReads[i]), n, "返回的读取长度应该与期望结果长度一致")
+					// 验证读取的内容
 					assert.Equal(t, tc.wantReads[i], read[:n])
+
+					// 验证未读取部分是否未被修改
+					if n < len(read) {
+						for j := n; j < len(read); j++ {
+							assert.Equal(t, byte(0), read[j], "未读取的部分应该保持为0")
+						}
+					}
 				}
 			}
 		})
