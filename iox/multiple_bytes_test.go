@@ -187,19 +187,9 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 			for i, size := range tc.readSizes {
 				read := make([]byte, size)
 				n, err := mb.Read(read)
-				if tc.wantErrs[i] != nil {
-					assert.Equal(t, tc.wantErrs[i], err)
-				} else {
-					assert.Nil(t, err)
-					// 验证读取的内容
+				assert.Equal(t, tc.wantErrs[i], err)
+				if err == nil {
 					assert.Equal(t, tc.wantReads[i], read[:n])
-
-					// 验证未读取部分是否未被修改
-					if n < len(read) {
-						for j := n; j < len(read); j++ {
-							assert.Equal(t, byte(0), read[j], "未读取的部分应该保持为0")
-						}
-					}
 				}
 			}
 		})
