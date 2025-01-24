@@ -34,7 +34,7 @@ func TestMultipleBytesReadWrite(t *testing.T) {
 			name:     "空读取",
 			write:    []byte{},
 			readSize: 1,
-			wantRead: []byte{},
+			wantRead: []byte{0},
 			wantN:    0,
 			wantErr:  io.EOF,
 		},
@@ -73,13 +73,9 @@ func TestMultipleBytesReadWrite(t *testing.T) {
 
 			read := make([]byte, tc.readSize)
 			n, err = mb.Read(read)
-			if tc.wantErr != nil {
-				assert.Equal(t, tc.wantErr, err)
-			} else {
-				assert.Nil(t, err)
-				assert.Equal(t, tc.wantN, n, "读取的字节数应该等于期望的字节数")
-				assert.Equal(t, tc.wantRead, read, "读取的数据应该等于期望读取的数据")
-			}
+			assert.Equal(t, tc.wantErr, err)
+			assert.Equal(t, tc.wantN, n, "读取的字节数应该等于期望的字节数")
+			assert.Equal(t, tc.wantRead, read, "读取的数据应该等于期望读取的数据")
 		})
 	}
 }
