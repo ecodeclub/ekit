@@ -27,34 +27,39 @@ func TestMultipleBytesReadWrite(t *testing.T) {
 		write    []byte
 		readSize int
 		wantRead []byte
+		wantN    int
 		wantErr  error
 	}{
 		{
-			name:     "empty read",
+			name:     "空读取",
 			write:    []byte{},
 			readSize: 1,
 			wantRead: []byte{},
+			wantN:    0,
 			wantErr:  io.EOF,
 		},
 		{
-			name:     "single byte",
+			name:     "单字节读取",
 			write:    []byte{1},
 			readSize: 1,
 			wantRead: []byte{1},
+			wantN:    1,
 			wantErr:  nil,
 		},
 		{
-			name:     "multiple bytes",
+			name:     "多字节读取",
 			write:    []byte{1, 2, 3, 4, 5},
 			readSize: 3,
 			wantRead: []byte{1, 2, 3},
+			wantN:    3,
 			wantErr:  nil,
 		},
 		{
-			name:     "read more than available",
+			name:     "读取长度超过可用数据",
 			write:    []byte{1, 2},
 			readSize: 4,
-			wantRead: []byte{1, 2},
+			wantRead: []byte{1, 2, 0, 0},
+			wantN:    2,
 			wantErr:  nil,
 		},
 	}
@@ -72,7 +77,8 @@ func TestMultipleBytesReadWrite(t *testing.T) {
 				assert.Equal(t, tc.wantErr, err)
 			} else {
 				assert.Nil(t, err)
-				assert.Equal(t, tc.wantRead, read[:n])
+				assert.Equal(t, tc.wantN, n, "读取的字节数应该等于期望的字节数")
+				assert.Equal(t, tc.wantRead, read, "读取的数据应该等于期望读取的数据")
 			}
 		})
 	}
@@ -84,6 +90,7 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 		writes    [][]byte // 多次写入的数据
 		readSizes []int    // 多次读取的大小
 		wantReads [][]byte // 期望的读取结果
+		wantNs    []int    // 期望的读取字节数
 		wantErrs  []error  // 期望的错误
 	}{
 		{
@@ -91,6 +98,7 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 			writes:    [][]byte{{1, 2, 3}},
 			readSizes: []int{3},
 			wantReads: [][]byte{{1, 2, 3}},
+			wantNs:    []int{3},
 			wantErrs:  []error{nil},
 		},
 		{
@@ -98,13 +106,15 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 			writes:    [][]byte{{1, 2, 3}},
 			readSizes: []int{2, 1},
 			wantReads: [][]byte{{1, 2}, {3}},
+			wantNs:    []int{2, 1},
 			wantErrs:  []error{nil, nil},
 		},
 		{
 			name:      "单片-读取溢出",
 			writes:    [][]byte{{1, 2}},
 			readSizes: []int{3},
-			wantReads: [][]byte{{1, 2}},
+			wantReads: [][]byte{{1, 2, 0}},
+			wantNs:    []int{2},
 			wantErrs:  []error{nil},
 		},
 		{
@@ -112,6 +122,7 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 			writes:    [][]byte{{1, 2}, {3, 4}, {5, 6}},
 			readSizes: []int{4},
 			wantReads: [][]byte{{1, 2, 3, 4}},
+			wantNs:    []int{4},
 			wantErrs:  []error{nil},
 		},
 		{
@@ -119,6 +130,7 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 			writes:    [][]byte{{1, 2}, {3, 4}},
 			readSizes: []int{4},
 			wantReads: [][]byte{{1, 2, 3, 4}},
+			wantNs:    []int{4},
 			wantErrs:  []error{nil},
 		},
 		{
@@ -126,6 +138,7 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 			writes:    [][]byte{{1, 2}, {3, 4}, {5, 6}},
 			readSizes: []int{3},
 			wantReads: [][]byte{{1, 2, 3}},
+			wantNs:    []int{3},
 			wantErrs:  []error{nil},
 		},
 		{
@@ -133,6 +146,7 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 			writes:    [][]byte{{1}, {2}, {3}},
 			readSizes: []int{1, 1, 1, 1},
 			wantReads: [][]byte{{1}, {2}, {3}, {}},
+			wantNs:    []int{1, 1, 1, 0},
 			wantErrs:  []error{nil, nil, nil, io.EOF},
 		},
 		{
@@ -140,6 +154,7 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 			writes:    [][]byte{{}},
 			readSizes: []int{1},
 			wantReads: [][]byte{{}},
+			wantNs:    []int{0},
 			wantErrs:  []error{io.EOF},
 		},
 		{
@@ -147,6 +162,7 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 			writes:    [][]byte{{1, 2}, {3, 4}, {5, 6}},
 			readSizes: []int{2, 2, 2, 1},
 			wantReads: [][]byte{{1, 2}, {3, 4}, {5, 6}, {}},
+			wantNs:    []int{2, 2, 2, 0},
 			wantErrs:  []error{nil, nil, nil, io.EOF},
 		},
 		{
@@ -154,6 +170,7 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 			writes:    [][]byte{{}, {}, {}},
 			readSizes: []int{1},
 			wantReads: [][]byte{{}},
+			wantNs:    []int{0},
 			wantErrs:  []error{io.EOF},
 		},
 		{
@@ -161,13 +178,23 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 			writes:    [][]byte{{}, {1}, {}},
 			readSizes: []int{1, 1},
 			wantReads: [][]byte{{1}, {}},
+			wantNs:    []int{1, 0},
 			wantErrs:  []error{nil, io.EOF},
+		},
+		{
+			name:      "读取到最后一个切片末尾返回EOF",
+			writes:    [][]byte{{1, 2}, {3, 4}},
+			readSizes: []int{2, 2, 1},
+			wantReads: [][]byte{{1, 2}, {3, 4}, {}},
+			wantNs:    []int{2, 2, 0},
+			wantErrs:  []error{nil, nil, io.EOF},
 		},
 		{
 			name:      "读取缓冲区为0",
 			writes:    [][]byte{{1, 2, 3}},
 			readSizes: []int{0, 2},
 			wantReads: [][]byte{{}, {1, 2}},
+			wantNs:    []int{0, 2},
 			wantErrs:  []error{nil, nil},
 		},
 	}
@@ -189,7 +216,7 @@ func TestMultipleBytesReadEdgeCases(t *testing.T) {
 				n, err := mb.Read(read)
 				assert.Equal(t, tc.wantErrs[i], err)
 				if err == nil {
-					assert.Equal(t, len(tc.wantReads[i]), n, "读取长度与期望不符")
+					assert.Equal(t, tc.wantNs[i], n, "读取的字节数应该等于期望的字节数")
 					assert.Equal(t, tc.wantReads[i], read)
 				}
 			}
