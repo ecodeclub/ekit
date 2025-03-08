@@ -14,7 +14,7 @@
 package main
 
 // 测试用
-//go:generate go build -race --buildmode=plugin   -o a.so ./a.go
+//go:generate go build -race -tags=goexperiment.arenas --buildmode=plugin -o a.so ./a.go
 
 type UserService struct{}
 

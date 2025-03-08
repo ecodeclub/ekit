@@ -6,6 +6,10 @@ bench:
 ut:
 	@go test -tags=goexperiment.arenas -race ./...
 
+.PHONY:	ut-coverage
+ut-coverage:
+	@go test -tags=goexperiment.arenas -race -coverprofile=cover.out ./...
+
 .PHONY:	setup
 setup:
 	@sh ./.script/setup.sh
