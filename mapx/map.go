@@ -72,3 +72,31 @@ func ToMap[K comparable, V any](keys []K, values []V) (m map[K]V, err error) {
 	}
 	return
 }
+
+// Merge 如果同一个键对应多个值，则会使用最后一个值
+func Merge[K comparable, V any](ms ...map[K]V) map[K]V {
+	fc := func(val1, val2 V) V {
+		return val2
+	}
+	return MergeFunc(fc, ms...)
+}
+
+// MergeFunc 如果同一个键对应多个值，需要指定合并方式
+func MergeFunc[K comparable, V any](mergeFunc func(val1, val2 V) V, ms ...map[K]V) map[K]V {
+	total := 0
+	for _, m := range ms {
+		total += len(m)
+	}
+	merged := make(map[K]V, total)
+
+	for _, m := range ms {
+		for k, v := range m {
+			if value, ok := merged[k]; ok {
+				merged[k] = mergeFunc(value, v)
+			} else {
+				merged[k] = v
+			}
+		}
+	}
+	return merged
+}
