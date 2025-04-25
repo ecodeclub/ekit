@@ -229,7 +229,7 @@ func TestMerge(t *testing.T) {
 		1: 1, 2: 3, 3: 3, 4: 5,
 	}
 	got = Merge(input2...)
-	assert.Equal(t, want2, want2)
+	assert.Equal(t, want2, got)
 }
 
 func TestMergeFunc(t *testing.T) {
