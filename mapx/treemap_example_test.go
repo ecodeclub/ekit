@@ -30,7 +30,7 @@ func ExampleNewTreeMap() {
 	// 11
 }
 
-func ExampleIterateTreeMap() {
+func ExampleTreeMap_Iterate() {
 	m, _ := mapx.NewTreeMap[int, int](ekit.ComparatorRealNumber[int])
 	_ = m.Put(1, 11)
 	_ = m.Put(-1, 12)
