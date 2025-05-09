@@ -29,3 +29,26 @@ func ExampleNewTreeMap() {
 	// Output:
 	// 11
 }
+
+func ExampleIterateTreeMap() {
+	m, _ := mapx.NewTreeMap[int, int](ekit.ComparatorRealNumber[int])
+	_ = m.Put(1, 11)
+	_ = m.Put(-1, 12)
+	_ = m.Put(100, 13)
+	_ = m.Put(-100, 14)
+	_ = m.Put(-101, 15)
+
+	m.Iterate(func(key, value int) bool {
+		if key > 1 {
+			return false
+		}
+		fmt.Println(key, value)
+		return true
+	})
+
+	// Output:
+	// -101 15
+	// -100 14
+	// -1 12
+	// 1 11
+}

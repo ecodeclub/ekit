@@ -1397,6 +1397,29 @@ func TestRBTree_KeyValues(t *testing.T) {
 	}
 }
 
+// 测试遍历
+// 插入10000个数字，遍历到第8000个为止，并且是按顺序遍历
+func TestRBTree_Iterate(t *testing.T) {
+	rbTree := NewRBTree[int, int](compare())
+	n := 10000
+	end := 8000
+	for i := n; i >= 1; i-- {
+		assert.Nil(t, rbTree.Add(i, i))
+	}
+	arr := make([]int, 0)
+	rbTree.Iterate(func(key, value int) bool {
+		if key > end {
+			return false
+		}
+		arr = append(arr, value)
+		return true
+	})
+	assert.Equal(t, end, len(arr))
+	for i := 1; i <= end; i++ {
+		assert.Equal(t, i, arr[i-1])
+	}
+}
+
 // IsRedBlackTree 检测是否满足红黑树
 func IsRedBlackTree[K any, V any](root *rbNode[K, V]) bool {
 	// 检测节点是否黑色

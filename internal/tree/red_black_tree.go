@@ -118,16 +118,24 @@ func (rb *RBTree[K, V]) KeyValues() ([]K, []V) {
 	if rb.root == nil {
 		return keys, values
 	}
-	rb.inOrderTraversal(func(node *rbNode[K, V]) {
+	rb.inOrderTraversal(func(node *rbNode[K, V]) bool {
 		keys = append(keys, node.key)
 		values = append(values, node.value)
+		return true
 	})
 	return keys, values
 }
 
+// Iterate 按照key的顺序遍历并执行cb，如果cb返回值为false则结束遍历，否则继续遍历
+func (rb *RBTree[K, V]) Iterate(cb func(key K, value V) bool) {
+	rb.inOrderTraversal(func(node *rbNode[K, V]) bool {
+		return cb(node.key, node.value)
+	})
+}
+
 // inOrderTraversal 中序遍历
-func (rb *RBTree[K, V]) inOrderTraversal(visit func(node *rbNode[K, V])) {
-	stack := make([]*rbNode[K, V], 0, rb.size)
+func (rb *RBTree[K, V]) inOrderTraversal(visit func(node *rbNode[K, V]) bool) {
+	stack := make([]*rbNode[K, V], 0)
 	curr := rb.root
 	for curr != nil || len(stack) > 0 {
 		for curr != nil {

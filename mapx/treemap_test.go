@@ -445,6 +445,28 @@ func TestTreeMap_Len(t *testing.T) {
 	}
 }
 
+func TestRBTree_Iterate(t *testing.T) {
+	treeMap, err := NewTreeMap[int, int](compare())
+	assert.Nil(t, err)
+	n := 10000
+	end := 8000
+	for i := n; i >= 1; i-- {
+		assert.Nil(t, treeMap.Put(i, i))
+	}
+	arr := make([]int, 0)
+	treeMap.Iterate(func(key, value int) bool {
+		if key > end {
+			return false
+		}
+		arr = append(arr, value)
+		return true
+	})
+	assert.Equal(t, end, len(arr))
+	for i := 1; i <= end; i++ {
+		assert.Equal(t, i, arr[i-1])
+	}
+}
+
 func compare() ekit.Comparator[int] {
 	return ekit.ComparatorRealNumber[int]
 }
