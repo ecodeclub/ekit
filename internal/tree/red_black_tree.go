@@ -144,7 +144,9 @@ func (rb *RBTree[K, V]) inOrderTraversal(visit func(node *rbNode[K, V]) bool) {
 		}
 		curr = stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
-		visit(curr)
+		if !visit(curr) {
+			break
+		}
 		curr = curr.right
 	}
 }
