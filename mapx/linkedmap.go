@@ -114,3 +114,13 @@ func (l *LinkedMap[K, V]) Values() []V {
 func (l *LinkedMap[K, V]) Len() int64 {
 	return int64(l.length)
 }
+
+// Iterate 按照随机顺序遍历, 并对每个键值对执行cb(k, v)
+// 如果cb的返回值为 true 则继续遍历，否则遍历结束
+func (l *LinkedMap[K, V]) Iterate(cb func(K, V) bool) {
+	for cur := l.head; cur != nil; cur = cur.next {
+		if !cb(cur.key, cur.value) {
+			return
+		}
+	}
+}

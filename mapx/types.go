@@ -31,4 +31,6 @@ type mapi[K any, V any] interface {
 	Values() []V
 	// 返回键值对数量
 	Len() int64
+	// cb 返回值为 true 就是继续遍历，为 false 就是中断，直接返回
+	Iterate(cb func(key K, val V) bool)
 }

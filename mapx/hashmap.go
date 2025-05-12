@@ -162,3 +162,16 @@ func (n *node[T, ValType]) formatting() {
 func (m *HashMap[T, ValType]) Len() int64 {
 	return int64(len(m.hashmap))
 }
+
+// Iterate 随机顺序遍历，并对每个键值对执行cb(k, v)
+// 如果cb的返回值为 true 则继续遍历，否则遍历结束
+func (m *HashMap[T, ValType]) Iterate(cb func(key T, val ValType) bool) {
+	for _, nodeHead := range m.hashmap {
+		cur := nodeHead
+		for ; cur != nil; cur = cur.next {
+			if !cb(cur.key, cur.value) {
+				return
+			}
+		}
+	}
+}

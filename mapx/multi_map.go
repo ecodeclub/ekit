@@ -98,3 +98,16 @@ func (m *MultiMap[K, V]) Values() [][]V {
 func (m *MultiMap[K, V]) Len() int64 {
 	return m.m.Len()
 }
+
+// Iterate 按照随机顺序遍历, 并对每个键值对执行cb(k, v)
+// 如果cb的返回值为 true 则继续遍历，否则遍历结束
+func (m *MultiMap[K, V]) Iterate(cb func(K, V) bool) {
+	m.m.Iterate(func(key K, val []V) bool {
+		for _, v := range val {
+			if !cb(key, v) {
+				return false
+			}
+		}
+		return true
+	})
+}

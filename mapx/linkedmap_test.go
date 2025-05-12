@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	fakeErr = errors.New("fakeMap: put error")
+	errFake = errors.New("fakeMap: put error")
 )
 
 type fakeMap[K any, V any] struct {
@@ -36,13 +36,13 @@ func (f *fakeMap[K, V]) Put(key K, val V) error {
 	f.count++
 	if f.activeFirstErr {
 		f.activeFirstErr = false
-		return fakeErr
+		return errFake
 	}
 	if f.count == 3 {
-		return fakeErr
+		return errFake
 	}
 	if f.count == 5 {
-		return fakeErr
+		return errFake
 	}
 	return f.LinkedMap.Put(key, val)
 }
@@ -207,7 +207,7 @@ func TestLinkedMap_Put(t *testing.T) {
 
 			wantKeys:   []int{},
 			wantValues: []int{},
-			wantErrs:   []error{fakeErr},
+			wantErrs:   []error{errFake},
 		},
 		{
 			name: "get multiple errors when put multiple keys",
@@ -221,7 +221,7 @@ func TestLinkedMap_Put(t *testing.T) {
 
 			wantKeys:   []int{2, 4},
 			wantValues: []int{2, 4},
-			wantErrs:   []error{fakeErr, nil, fakeErr, nil, fakeErr},
+			wantErrs:   []error{errFake, nil, errFake, nil, errFake},
 		},
 	}
 	for _, tt := range testCases {
