@@ -647,6 +647,16 @@ func (h hashInt) Equals(key any) bool {
 	}
 }
 
+func hashIntCompare(src, dst hashInt) int {
+	if src < dst {
+		return -1
+	} else if src == dst {
+		return 0
+	} else {
+		return 1
+	}
+}
+
 func newHashInt(i int) hashInt {
 	return hashInt(i)
 }

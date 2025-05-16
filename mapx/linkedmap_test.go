@@ -513,28 +513,51 @@ func TestLinkedMap_Iterate(t *testing.T) {
 		inputEnd    int
 		// 如果为true则遍历结束
 		endConditionFunc func(key hashInt) bool
+		currentMap       *LinkedMap[hashInt, int]
 	}{
 		{
-			name:        "linkedMap 为空",
+			name:        "linkedHashMap 为空",
 			expectedLen: 0,
 			inputStart:  1,
 			inputEnd:    0,
 			endConditionFunc: func(key hashInt) bool {
 				return false
 			},
+			currentMap: NewLinkedHashMap[hashInt, int](0),
 		},
 		{
-			name:        "linkedMap 有100个元素,遍历所有元素",
+			name:        "linkedTreeMap 为空",
+			expectedLen: 0,
+			inputStart:  1,
+			inputEnd:    0,
+			endConditionFunc: func(key hashInt) bool {
+				return false
+			},
+			currentMap: newLinkedTreeMapFunc(),
+		},
+		{
+			name:        "linkedHashMap 有100个元素,遍历所有元素",
 			expectedLen: 100,
 			inputStart:  1,
 			inputEnd:    100,
 			endConditionFunc: func(key hashInt) bool {
 				return false
 			},
+			currentMap: NewLinkedHashMap[hashInt, int](0),
+		},
+		{
+			name:        "linkedTreeMap 有100个元素,遍历所有元素",
+			expectedLen: 100,
+			inputStart:  1,
+			inputEnd:    100,
+			endConditionFunc: func(key hashInt) bool {
+				return false
+			},
+			currentMap: newLinkedTreeMapFunc(),
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			linkedMap := NewLinkedHashMap[hashInt, int](0)
+			linkedMap := testCase.currentMap
 			for i := testCase.inputStart; i <= testCase.inputEnd; i++ {
 				assert.Nil(t, linkedMap.Put(newHashInt(i), i))
 			}
@@ -556,19 +579,40 @@ func TestLinkedMap_Iterate(t *testing.T) {
 }
 
 func TestLinkedMap_Iterate_OnlyIterateHalf(t *testing.T) {
-	linkedMap := NewLinkedHashMap[hashInt, int](0)
-	n := 100
-	for i := 1; i <= n; i++ {
-		assert.Nil(t, linkedMap.Put(newHashInt(i), i))
+	for _, testCase := range []struct {
+		name       string
+		currentMap *LinkedMap[hashInt, int]
+	}{
+		{
+			name:       "linkedHashMap",
+			currentMap: NewLinkedHashMap[hashInt, int](0),
+		},
+		{
+			name:       "linkedTreeMap",
+			currentMap: newLinkedTreeMapFunc(),
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			linkedMap := testCase.currentMap
+			n := 100
+			for i := 1; i <= n; i++ {
+				assert.Nil(t, linkedMap.Put(newHashInt(i), i))
+			}
+			arr := make([]int, 0)
+			linkedMap.Iterate(func(key hashInt, value int) bool {
+				if len(arr) >= n/2 {
+					return false
+				}
+				arr = append(arr, value)
+				return true
+			})
+			assert.Equal(t, n/2, len(arr))
+			sort.Ints(arr)
+		})
 	}
-	arr := make([]int, 0)
-	linkedMap.Iterate(func(key hashInt, value int) bool {
-		if len(arr) >= n/2 {
-			return false
-		}
-		arr = append(arr, value)
-		return true
-	})
-	assert.Equal(t, n/2, len(arr))
-	sort.Ints(arr)
+}
+
+func newLinkedTreeMapFunc() (mp *LinkedMap[hashInt, int]) {
+	mp, _ = NewLinkedTreeMap[hashInt, int](hashIntCompare)
+	return
 }
