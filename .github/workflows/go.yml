@@ -37,5 +37,7 @@ jobs:
       - name: Test
         run: make ut-coverage
 
-      - name: Post Coverage
-        uses: codecov/codecov-action@v2
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
