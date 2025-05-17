@@ -45,6 +45,16 @@ func (b *builtinMap[K, V]) Values() []V {
 	return Values[K, V](b.data)
 }
 
+// Iterate 按照随机顺序遍历, 并对每个键值对执行cb(k, v)
+// 如果cb的返回值为 true 则继续遍历，否则遍历结束
+func (b *builtinMap[K, V]) Iterate(cb func(key K, val V) bool) {
+	for k, v := range b.data {
+		if !cb(k, v) {
+			break
+		}
+	}
+}
+
 func newBuiltinMap[K comparable, V any](capacity int) *builtinMap[K, V] {
 	return &builtinMap[K, V]{
 		data: make(map[K]V, capacity),

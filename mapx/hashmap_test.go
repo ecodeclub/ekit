@@ -15,6 +15,7 @@
 package mapx
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -540,6 +541,74 @@ func TestHashMap_Len(t *testing.T) {
 	}
 }
 
+func TestHashMap_Iterate(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		expectedLen int
+		inputStart  int
+		inputEnd    int
+		// 如果为true则遍历结束
+		endConditionFunc func(key hashInt) bool
+	}{
+		{
+			name:        "hashMap 为空",
+			expectedLen: 0,
+			inputStart:  1,
+			inputEnd:    0,
+			endConditionFunc: func(key hashInt) bool {
+				return false
+			},
+		},
+		{
+			name:        "hashMap 有100个元素,遍历所有元素",
+			expectedLen: 100,
+			inputStart:  1,
+			inputEnd:    100,
+			endConditionFunc: func(key hashInt) bool {
+				return false
+			},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			hashMap := NewHashMap[hashInt, int](0)
+			for i := testCase.inputStart; i <= testCase.inputEnd; i++ {
+				assert.Nil(t, hashMap.Put(newHashInt(i), i))
+			}
+			arr := make([]int, 0)
+			hashMap.Iterate(func(key hashInt, value int) bool {
+				if testCase.endConditionFunc(key) {
+					return false
+				}
+				arr = append(arr, value)
+				return true
+			})
+			assert.Equal(t, testCase.expectedLen, len(arr))
+			sort.Ints(arr)
+			for i := 0; i < testCase.expectedLen; i++ {
+				assert.Equal(t, testCase.inputStart+i, arr[i])
+			}
+		})
+	}
+}
+
+func TestHashMap_Iterate_OnlyIterateHalf(t *testing.T) {
+	hashMap := NewHashMap[hashInt, int](0)
+	n := 100
+	for i := 1; i <= n; i++ {
+		assert.Nil(t, hashMap.Put(newHashInt(i), i))
+	}
+	arr := make([]int, 0)
+	hashMap.Iterate(func(key hashInt, value int) bool {
+		if len(arr) >= n/2 {
+			return false
+		}
+		arr = append(arr, value)
+		return true
+	})
+	assert.Equal(t, n/2, len(arr))
+	sort.Ints(arr)
+}
+
 type testData struct {
 	id int
 }
@@ -575,6 +644,16 @@ func (h hashInt) Equals(key any) bool {
 		return keyVal == h
 	default:
 		return false
+	}
+}
+
+func hashIntCompare(src, dst hashInt) int {
+	if src < dst {
+		return -1
+	} else if src == dst {
+		return 0
+	} else {
+		return 1
 	}
 }
 

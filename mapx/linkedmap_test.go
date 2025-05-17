@@ -16,6 +16,7 @@ package mapx
 
 import (
 	"errors"
+	"sort"
 	"testing"
 
 	"github.com/ecodeclub/ekit"
@@ -23,7 +24,7 @@ import (
 )
 
 var (
-	fakeErr = errors.New("fakeMap: put error")
+	errFake = errors.New("fakeMap: put error")
 )
 
 type fakeMap[K any, V any] struct {
@@ -36,13 +37,13 @@ func (f *fakeMap[K, V]) Put(key K, val V) error {
 	f.count++
 	if f.activeFirstErr {
 		f.activeFirstErr = false
-		return fakeErr
+		return errFake
 	}
 	if f.count == 3 {
-		return fakeErr
+		return errFake
 	}
 	if f.count == 5 {
-		return fakeErr
+		return errFake
 	}
 	return f.LinkedMap.Put(key, val)
 }
@@ -207,7 +208,7 @@ func TestLinkedMap_Put(t *testing.T) {
 
 			wantKeys:   []int{},
 			wantValues: []int{},
-			wantErrs:   []error{fakeErr},
+			wantErrs:   []error{errFake},
 		},
 		{
 			name: "get multiple errors when put multiple keys",
@@ -221,7 +222,7 @@ func TestLinkedMap_Put(t *testing.T) {
 
 			wantKeys:   []int{2, 4},
 			wantValues: []int{2, 4},
-			wantErrs:   []error{fakeErr, nil, fakeErr, nil, fakeErr},
+			wantErrs:   []error{errFake, nil, errFake, nil, errFake},
 		},
 	}
 	for _, tt := range testCases {
@@ -502,4 +503,116 @@ func TestLinkedMap_Len(t *testing.T) {
 			assert.Equal(t, tt.wantLen, tt.linkedMap(t).Len())
 		})
 	}
+}
+
+func TestLinkedMap_Iterate(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		expectedLen int
+		inputStart  int
+		inputEnd    int
+		// 如果为true则遍历结束
+		endConditionFunc func(key hashInt) bool
+		currentMap       *LinkedMap[hashInt, int]
+	}{
+		{
+			name:        "linkedHashMap 为空",
+			expectedLen: 0,
+			inputStart:  1,
+			inputEnd:    0,
+			endConditionFunc: func(key hashInt) bool {
+				return false
+			},
+			currentMap: NewLinkedHashMap[hashInt, int](0),
+		},
+		{
+			name:        "linkedTreeMap 为空",
+			expectedLen: 0,
+			inputStart:  1,
+			inputEnd:    0,
+			endConditionFunc: func(key hashInt) bool {
+				return false
+			},
+			currentMap: newLinkedTreeMapFunc(),
+		},
+		{
+			name:        "linkedHashMap 有100个元素,遍历所有元素",
+			expectedLen: 100,
+			inputStart:  1,
+			inputEnd:    100,
+			endConditionFunc: func(key hashInt) bool {
+				return false
+			},
+			currentMap: NewLinkedHashMap[hashInt, int](0),
+		},
+		{
+			name:        "linkedTreeMap 有100个元素,遍历所有元素",
+			expectedLen: 100,
+			inputStart:  1,
+			inputEnd:    100,
+			endConditionFunc: func(key hashInt) bool {
+				return false
+			},
+			currentMap: newLinkedTreeMapFunc(),
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			linkedMap := testCase.currentMap
+			for i := testCase.inputStart; i <= testCase.inputEnd; i++ {
+				assert.Nil(t, linkedMap.Put(newHashInt(i), i))
+			}
+			arr := make([]int, 0)
+			linkedMap.Iterate(func(key hashInt, value int) bool {
+				if testCase.endConditionFunc(key) {
+					return false
+				}
+				arr = append(arr, value)
+				return true
+			})
+			assert.Equal(t, testCase.expectedLen, len(arr))
+			sort.Ints(arr)
+			for i := 0; i < testCase.expectedLen; i++ {
+				assert.Equal(t, testCase.inputStart+i, arr[i])
+			}
+		})
+	}
+}
+
+func TestLinkedMap_Iterate_OnlyIterateHalf(t *testing.T) {
+	for _, testCase := range []struct {
+		name       string
+		currentMap *LinkedMap[hashInt, int]
+	}{
+		{
+			name:       "linkedHashMap",
+			currentMap: NewLinkedHashMap[hashInt, int](0),
+		},
+		{
+			name:       "linkedTreeMap",
+			currentMap: newLinkedTreeMapFunc(),
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			linkedMap := testCase.currentMap
+			n := 100
+			for i := 1; i <= n; i++ {
+				assert.Nil(t, linkedMap.Put(newHashInt(i), i))
+			}
+			arr := make([]int, 0)
+			linkedMap.Iterate(func(key hashInt, value int) bool {
+				if len(arr) >= n/2 {
+					return false
+				}
+				arr = append(arr, value)
+				return true
+			})
+			assert.Equal(t, n/2, len(arr))
+			sort.Ints(arr)
+		})
+	}
+}
+
+func newLinkedTreeMapFunc() (mp *LinkedMap[hashInt, int]) {
+	mp, _ = NewLinkedTreeMap[hashInt, int](hashIntCompare)
+	return
 }
