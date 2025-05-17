@@ -208,3 +208,54 @@ func TestToMap(t *testing.T) {
 		assert.Equal(t, c.result, result)
 	}
 }
+
+func TestMerge(t *testing.T) {
+	input1 := []map[int]int{
+		{1: 1, 2: 2},
+		{3: 3, 4: 4},
+	}
+	want1 := map[int]int{
+		1: 1, 2: 2, 3: 3, 4: 4,
+	}
+	got := Merge(input1...)
+	assert.Equal(t, want1, got)
+
+	input2 := []map[int]int{
+		{1: 1, 2: 2},
+		{3: 3, 4: 4},
+		{2: 3, 4: 5},
+	}
+	want2 := map[int]int{
+		1: 1, 2: 3, 3: 3, 4: 5,
+	}
+	got = Merge(input2...)
+	assert.Equal(t, want2, got)
+}
+
+func TestMergeFunc(t *testing.T) {
+	input1 := []map[int]int{
+		{1: 1, 2: 2},
+		{1: 3, 2: 4},
+		{3: 3, 4: 4},
+	}
+	want1 := map[int]int{
+		1: 4, 2: 6, 3: 3, 4: 4,
+	}
+	got := MergeFunc(func(val1, val2 int) int {
+		return val1 + val2
+	}, input1...)
+	assert.Equal(t, want1, got)
+
+	input2 := []map[int]int{
+		{1: 1, 2: 2},
+		{1: 3, 2: 4},
+		{3: 3, 4: 4},
+	}
+	want2 := map[int]int{
+		1: 3, 2: 8, 3: 3, 4: 4,
+	}
+	got = MergeFunc(func(val1, val2 int) int {
+		return val1 * val2
+	}, input2...)
+	assert.Equal(t, want2, got)
+}

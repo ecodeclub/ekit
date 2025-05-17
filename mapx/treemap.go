@@ -101,4 +101,9 @@ func (treeMap *TreeMap[T, V]) Len() int64 {
 	return int64(treeMap.tree.Size())
 }
 
+// Iterate 按照key的顺序遍历并执行cb，如果cb返回值为false则结束遍历，否则继续遍历
+func (treeMap *TreeMap[K, V]) Iterate(cb func(key K, value V) bool) {
+	treeMap.tree.Iterate(cb)
+}
+
 var _ mapi[any, any] = (*TreeMap[any, any])(nil)

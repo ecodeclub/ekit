@@ -62,3 +62,36 @@ func (m MockKey) Equals(key any) bool {
 	}
 	return true
 }
+
+func ExampleMerge() {
+	m1 := map[int]int{1: 1, 2: 2, 3: 3}
+	m2 := map[int]int{4: 4, 5: 5, 6: 6}
+	got := mapx.Merge(m1, m2)
+	fmt.Println(got)
+
+	m3 := map[int]int{1: 1, 2: 2, 3: 3}
+	m4 := map[int]int{1: 5, 2: 6, 3: 7}
+	got = mapx.Merge(m3, m4)
+	fmt.Println(got)
+
+	var m map[int]int
+	got = mapx.Merge(m)
+	fmt.Println(got == nil) // 不会返回 nil map
+
+	// Output:
+	// map[1:1 2:2 3:3 4:4 5:5 6:6]
+	// map[1:5 2:6 3:7]
+	// false
+}
+
+func ExampleMergeFunc() {
+	m1 := map[int]int{1: 1, 2: 2, 3: 3}
+	m2 := map[int]int{1: 2, 2: 3, 3: 4}
+	got := mapx.MergeFunc(func(val1, val2 int) int {
+		return val1 + val2
+	}, m1, m2)
+	fmt.Println(got)
+
+	// Output:
+	// map[1:3 2:5 3:7]
+}

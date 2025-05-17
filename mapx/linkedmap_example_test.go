@@ -12,43 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mapx_test
+package mapx
 
 import (
 	"fmt"
-
-	"github.com/ecodeclub/ekit"
-	"github.com/ecodeclub/ekit/mapx"
+	"sort"
 )
 
-func ExampleNewTreeMap() {
-	m, _ := mapx.NewTreeMap[int, int](ekit.ComparatorRealNumber[int])
-	_ = m.Put(1, 11)
-	val, _ := m.Get(1)
-	fmt.Println(val)
-	// Output:
-	// 11
-}
+func ExampleLinkedMap_Iterate() {
+	linkedMap := NewLinkedHashMap[testStringData, int](0)
+	strArr := make([]string, 0)
+	_ = linkedMap.Put(testStringData{data: "hello"}, 1)
+	_ = linkedMap.Put(testStringData{data: "world"}, 2)
+	_ = linkedMap.Put(testStringData{data: "ekit"}, 3)
 
-func ExampleTreeMap_Iterate() {
-	m, _ := mapx.NewTreeMap[int, int](ekit.ComparatorRealNumber[int])
-	_ = m.Put(1, 11)
-	_ = m.Put(-1, 12)
-	_ = m.Put(100, 13)
-	_ = m.Put(-100, 14)
-	_ = m.Put(-101, 15)
+	linkedMap.Iterate(
+		func(key testStringData, val int) bool {
+			strArr = append(strArr, key.data)
+			return true
+		})
 
-	m.Iterate(func(key, value int) bool {
-		if key > 1 {
-			return false
-		}
-		fmt.Println(key, value)
-		return true
-	})
+	sort.Strings(strArr)
+	for _, s := range strArr {
+		fmt.Println(s)
+	}
 
 	// Output:
-	// -101 15
-	// -100 14
-	// -1 12
-	// 1 11
+	// ekit
+	// hello
+	// world
 }

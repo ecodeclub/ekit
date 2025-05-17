@@ -15,6 +15,7 @@
 package mapx
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/ecodeclub/ekit"
@@ -671,4 +672,72 @@ func TestMultiMap_Len(t *testing.T) {
 			assert.Equal(t, tt.wantLen, tt.multiHashMap.Len())
 		})
 	}
+}
+
+func TestMultiMap_Iterate(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		expectedLen int
+		inputStart  int
+		inputEnd    int
+		// 如果为true则遍历结束
+		endConditionFunc func(key int) bool
+	}{
+		{
+			name:        "multiMap 为空",
+			expectedLen: 0,
+			inputStart:  1,
+			inputEnd:    0,
+			endConditionFunc: func(key int) bool {
+				return false
+			},
+		},
+		{
+			name:        "multiMap 有100个元素,遍历所有元素",
+			expectedLen: 100,
+			inputStart:  1,
+			inputEnd:    100,
+			endConditionFunc: func(key int) bool {
+				return false
+			},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			multiMap := NewMultiBuiltinMap[int, int](0)
+			for i := testCase.inputStart; i <= testCase.inputEnd; i++ {
+				assert.Nil(t, multiMap.Put(i, i))
+			}
+			arr := make([]int, 0)
+			multiMap.Iterate(func(key, value int) bool {
+				if testCase.endConditionFunc(key) {
+					return false
+				}
+				arr = append(arr, value)
+				return true
+			})
+			assert.Equal(t, testCase.expectedLen, len(arr))
+			sort.Ints(arr)
+			for i := 0; i < testCase.expectedLen; i++ {
+				assert.Equal(t, testCase.inputStart+i, arr[i])
+			}
+		})
+	}
+}
+
+func TestMultiMap_Iterate_OnlyIterateHalf(t *testing.T) {
+	multiMap := NewMultiBuiltinMap[int, int](0)
+	n := 100
+	for i := 1; i <= n; i++ {
+		assert.Nil(t, multiMap.Put(i, i))
+	}
+	arr := make([]int, 0)
+	multiMap.Iterate(func(key, value int) bool {
+		if len(arr) >= n/2 {
+			return false
+		}
+		arr = append(arr, value)
+		return true
+	})
+	assert.Equal(t, n/2, len(arr))
+	sort.Ints(arr)
 }

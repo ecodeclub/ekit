@@ -445,6 +445,74 @@ func TestTreeMap_Len(t *testing.T) {
 	}
 }
 
+func TestRBTree_Iterate(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		expectedLen int
+		inputStart  int
+		inputEnd    int
+		// 如果为true则遍历结束
+		endConditionFunc func(key int) bool
+	}{
+		{
+			name:        "treeMap为空",
+			expectedLen: 0,
+			inputStart:  1,
+			inputEnd:    0,
+			endConditionFunc: func(key int) bool {
+				return false
+			},
+		},
+		{
+			name:        "treeMap 有10000个元素,遍历所有小于等于8000的元素",
+			expectedLen: 8000,
+			inputStart:  1,
+			inputEnd:    10000,
+			endConditionFunc: func(key int) bool {
+				return key > 8000
+			},
+		},
+		{
+			name:        "treeMap 有10000个元素,遍历所有元素",
+			expectedLen: 10000,
+			inputStart:  1,
+			inputEnd:    10000,
+			endConditionFunc: func(key int) bool {
+				return false
+			},
+		},
+		{
+			name:        "treeMap 有10个元素,由于第一个就不符合条件所以遍历立刻中断",
+			expectedLen: 0,
+			inputStart:  1,
+			inputEnd:    10,
+			endConditionFunc: func(key int) bool {
+				return key < 5
+			},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			treeMap, err := NewTreeMap[int, int](compare())
+			assert.Nil(t, err)
+			for i := testCase.inputStart; i <= testCase.inputEnd; i++ {
+				assert.Nil(t, treeMap.Put(i, i))
+			}
+			arr := make([]int, 0)
+			treeMap.Iterate(func(key, value int) bool {
+				if testCase.endConditionFunc(key) {
+					return false
+				}
+				arr = append(arr, value)
+				return true
+			})
+			assert.Equal(t, testCase.expectedLen, len(arr))
+			for i := 0; i < testCase.expectedLen; i++ {
+				assert.Equal(t, testCase.inputStart+i, arr[i])
+			}
+		})
+	}
+}
+
 func compare() ekit.Comparator[int] {
 	return ekit.ComparatorRealNumber[int]
 }

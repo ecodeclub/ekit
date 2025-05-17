@@ -15,6 +15,7 @@
 package retry
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -82,12 +83,14 @@ func TestNewExponentialBackoffRetryStrategy_New(t *testing.T) {
 func TestExponentialBackoffRetryStrategy_Next(t *testing.T) {
 	testCases := []struct {
 		name     string
+		ctx      context.Context
 		strategy *ExponentialBackoffRetryStrategy
 
 		wantIntervals []time.Duration
 	}{
 		{
 			name: "stop if retries reaches maxRetries",
+			ctx:  context.Background(),
 			strategy: func() *ExponentialBackoffRetryStrategy {
 				s, err := NewExponentialBackoffRetryStrategy(1*time.Second, 10*time.Second, 3)
 				require.NoError(t, err)
@@ -98,6 +101,7 @@ func TestExponentialBackoffRetryStrategy_Next(t *testing.T) {
 		},
 		{
 			name: "initialInterval over maxInterval",
+			ctx:  context.Background(),
 			strategy: func() *ExponentialBackoffRetryStrategy {
 				s, err := NewExponentialBackoffRetryStrategy(1*time.Second, 4*time.Second, 5)
 				require.NoError(t, err)
