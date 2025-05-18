@@ -83,11 +83,14 @@ func Merge[K comparable, V any](ms ...map[K]V) map[K]V {
 
 // MergeFunc 如果同一个键对应多个值，需要指定合并方式
 func MergeFunc[K comparable, V any](mergeFunc func(val1, val2 V) V, ms ...map[K]V) map[K]V {
-	total := 0
+	expectCapacity := 0
 	for _, m := range ms {
-		total += len(m)
+		mlen := len(m)
+		if mlen > expectCapacity {
+			expectCapacity = mlen
+		}
 	}
-	merged := make(map[K]V, total)
+	merged := make(map[K]V, expectCapacity)
 
 	for _, m := range ms {
 		for k, v := range m {
